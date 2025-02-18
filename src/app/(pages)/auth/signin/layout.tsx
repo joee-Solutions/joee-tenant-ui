@@ -7,13 +7,13 @@ export const metadata: Metadata = {
   description: "Welcome to Joee Solutions",
 };
 
-function TenantLoginLayout ({children}: any){
-    return(
-        <React.Fragment>
-        <NextTopLoader color="#000" showSpinner={false}/>
-        {children}
-        </React.Fragment>
-    )
+function TenantLoginLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <NextTopLoader color="#000" showSpinner={false} />
+      {children}
+    </>
+  );
 }
 
 export default TenantLoginLayout;

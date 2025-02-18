@@ -5,12 +5,19 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
 
-const TenantLogin = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const TenantLoginPage = () => {
+  const [state, setState] = useState({
+    email: "",
+    password: "",
+  });
+
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setState((prev) => ({ ...prev, [name]: value }));
+  };
   return (
-    <React.Fragment>
+    <>
       <div className="container grid grid-cols-1 md:grid-cols-2">
         <div className="content flex flex-col gap-12 text-white">
           <h1 className="header font-bold text-4xl md:text-6xl">Welcome!</h1>
@@ -45,8 +52,8 @@ const TenantLogin = () => {
                 placeholder="username@gmail.com"
                 type="email"
                 name="email"
-                value={email}
-                // onChange={}
+                value={state.email}
+                onChange={handleChange}
                 className="text-gray-700"
                 suffix={
                   <Tooltip
@@ -64,10 +71,11 @@ const TenantLogin = () => {
               </label>
               <Input
                 id="login-password"
-                value={password}
+                value={state.password}
                 type={showPassword ? "text" : "password"}
                 name="password"
                 size="large"
+                onChange={handleChange}
                 placeholder="Enter Password"
                 className="text-gray-700"
                 suffix={
@@ -112,8 +120,8 @@ const TenantLogin = () => {
           </form>
         </div>
       </div>
-    </React.Fragment>
+    </>
   );
 };
 
-export default TenantLogin;
+export default TenantLoginPage;
