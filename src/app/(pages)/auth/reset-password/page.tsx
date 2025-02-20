@@ -1,5 +1,6 @@
 "use client";
-import { Button, Input, Tooltip } from "antd";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Eye, EyeSlash, InfoCircle } from "iconsax-react";
 import Image from "next/image";
 import React, { useState } from "react";
@@ -11,26 +12,30 @@ const ResetPassword = () => {
 
   return (
     <React.Fragment>
-      <div className="container grid place-items-center">
-        <div className="form grid items-center justify-center space-y-4 bg-[#5882C17D] rounded-md border border-blue-500 text-white">
+      <div className="font-poppins container grid place-items-center  bg-[#5882C17D] shadow-lg rounded-2xl border border-blue-500 text-white w-full max-w-[350px] md:max-w-[450px] md:px-8 px-8 py-20 ">
+        <div className="form flex flex-col items-center justify-center space-y-12">
           <div className="orgDeatails flex flex-col items-center justify-center gap-4">
             <Image
               src="/assets/auth/reset-password.png"
-              width={20}
+              width={30}
               height={20}
               alt="logo"
               className="logo"
             />
-            <h2 className="login">Enter New Password</h2>
-            <span className="">Enter and confirm your new password</span>
+            <h2 className="login font-bold text-2xl md:text-3xl">
+              Enter New Password
+            </h2>
+            <span className="text-base">
+              Enter and confirm your new password
+            </span>
           </div>
           <form
             action=""
-            className="grid w-full max-w-[648px] text-white"
+            className="w-full text-white flex flex-col space-y-6"
             onSubmit={(e) => e.preventDefault()}
           >
-            <div className="grid gap-[6px] mb-3">
-              <label htmlFor="new-password" className="text-sm font-medium">
+            <div className="grid gap-[6px]">
+              <label htmlFor="new-password" className="text-sm ">
                 Password
               </label>
               <Input
@@ -38,33 +43,12 @@ const ResetPassword = () => {
                 value={password}
                 type={showPassword ? "text" : "password"}
                 name="password"
-                size="large"
                 placeholder="Enter New Password"
                 className="text-gray-700"
-                suffix={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                  >
-                    {showPassword ? (
-                      <Eye
-                        size={16}
-                        className="text-brand-500"
-                        variant="Bold"
-                      />
-                    ) : (
-                      <EyeSlash
-                        size={16}
-                        className="text-gray-400"
-                        variant="Bold"
-                      />
-                    )}
-                  </button>
-                }
               />
             </div>
-            <div className="grid gap-[6px] mb-3">
-              <label htmlFor="confirm-password" className="text-sm font-medium">
+            <div className="grid gap-[6px]">
+              <label htmlFor="confirm-password" className="text-sm ">
                 Confirm Password
               </label>
               <Input
@@ -72,36 +56,13 @@ const ResetPassword = () => {
                 value={password}
                 type={showPassword ? "text" : "password"}
                 name="password"
-                size="large"
-                placeholder="confirm Password"
-                className="text-gray-700"
-                suffix={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                  >
-                    {showPassword ? (
-                      <Eye
-                        size={16}
-                        className="text-brand-500"
-                        variant="Bold"
-                      />
-                    ) : (
-                      <EyeSlash
-                        size={16}
-                        className="text-gray-400"
-                        variant="Bold"
-                      />
-                    )}
-                  </button>
-                }
+                placeholder="Confirm Password"
+                className="text-gray-400"
               />
             </div>
             <Button
-              type="primary"
-              size="large"
-              className="font-medium mb-3"
-              htmlType="submit"
+              className="font-medium text-md mt-3 bg-[#003465]"
+
               //   onClick={}
             >
               Submit

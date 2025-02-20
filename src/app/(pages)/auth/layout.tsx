@@ -1,3 +1,4 @@
+
 import React from "react";
 
 // didn't export this layout
@@ -6,20 +7,14 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const backgroundStyles: React.CSSProperties = {
-    background: `url('/assets/auth/authbg.jpeg')`,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-  };
 
   return (
-    <main
-      className="w-full min-h-[100vh] grid place-items-center p-5 md:p-8"
-      style={backgroundStyles}
-    >
-      <div className="auth-container w-full max-w-[480px] md:max-w-[950px] rounded-lg bg-white px-5 md:px-8 py-8 flex flex-col place-items-center shadow-lg">
+    <main className="w-full relative min-h-[100vh] grid place-items-center p-5 md:p-8 [background:radial-gradient(#0085FF,#003465)]">
+      <div className="auth-container w-full relative px-5 md:px-8 py-8 flex flex-col place-items-center">
         {children}
-        <p className="footer">footer</p>
+        <p className="footer fixed left-40 text-gray-400 bottom-40">
+          Copywright © 2025 JOEE Solutions. All Rights Reserved
+        </p>
       </div>
     </main>
   );

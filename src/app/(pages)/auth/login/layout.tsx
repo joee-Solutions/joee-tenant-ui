@@ -9,10 +9,14 @@ export const metadata: Metadata = {
 
 function TenantLoginLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+     <main
+      className=""
+    >
+      <div className="auth-container w-full place-items-center">
       <NextTopLoader color="#000" showSpinner={false} />
       {children}
-    </>
+    </div>
+    </main>
   );
 }
 

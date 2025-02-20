@@ -1,21 +1,24 @@
 "use client";
-import { Button, Input, Tooltip } from "antd";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Eye, EyeSlash, InfoCircle } from "iconsax-react";
 import Image from "next/image";
 import React, { useState } from "react";
 
- export const ForgetPassword = () => {
+ const ForgetPassword = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   return (
     <>
-      <div className="container grid place-items-center">
-        <div className="form grid items-center justify-center space-y-4 bg-[#5882C17D] rounded-md border border-blue-500 text-white">
-          <div className="orgDeatails flex flex-col items-center justify-center gap-4">
-            <h2 className="login">Forget Password?</h2>
-            <span className="">Enter your email for instructions</span>
+      <div className="font-poppins container grid place-items-center  bg-[#5882C17D] shadow-lg rounded-2xl border border-blue-500 text-white w-full max-w-[350px] md:max-w-[450px] md:px-8 px-8 py-20 ">
+        <div className="form flex flex-col items-center justify-center space-y-12 ">
+          <div className="orgDeatails text-center flex flex-col items-center justify-center gap-4">
+            <h2 className="login font-bold text-2xl md:text-3xl">
+              Forget Password?
+            </h2>
+            <span className="text-base">Enter your email for instructions</span>
           </div>
           <form
             action=""
@@ -23,33 +26,21 @@ import React, { useState } from "react";
             onSubmit={(e) => e.preventDefault()}
           >
             <div className="grid gap-[6px] mb-7">
-              <label htmlFor="login-email" className="text-sm font-medium">
+              <label htmlFor="login-email" className="text-sm ">
                 Email
               </label>
               <Input
                 id="login-email"
-                size="large"
-                placeholder="username@gmail.com"
+                placeholder="Enter your email here"
                 type="email"
                 name="email"
                 value={email}
                 // onChange={}
-                className="text-gray-700"
-                suffix={
-                  <Tooltip
-                    className="text-center"
-                    title="Enter your email address."
-                  >
-                    <InfoCircle size={16} className="text-gray-400" />
-                  </Tooltip>
-                }
+                className="text-gray-400"
               />
             </div>
             <Button
-              type="primary"
-              size="large"
-              className="font-medium mb-3"
-              htmlType="submit"
+              className="font-medium mt-3 bg-[#003465]"
               //   onClick={}
             >
               Reset Password
@@ -60,3 +51,5 @@ import React, { useState } from "react";
     </>
   );
 };
+
+export default ForgetPassword;
