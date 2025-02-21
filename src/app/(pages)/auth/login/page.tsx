@@ -1,21 +1,58 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeSlash, InfoCircle } from "iconsax-react";
+import { EyeOffIcon, EyeClosedIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { processRequestNoAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { Spinner } from "@/components/icons/Spinner";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
+type LoginProps = z.infer<typeof schema>;
+
+const schema = z.object({
+  email: z.string().email({ message: "Invalid email address" }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" }),
+});
 const TenantLoginPage = () => {
-  const [state, setState] = useState({
-    email: "",
-    password: "",
-  });
-
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setState((prev) => ({ ...prev, [name]: value }));
+  const {
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    register,
+  } = useForm<LoginProps>({
+    resolver: zodResolver(schema),
+  });
+  const handleShowPassword = () => {
+    setShowPassword((prev) => !prev);
+  };
+  const handleFormSubmit = async (data: LoginProps) => {
+    try {
+      const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
+      if (rt) {
+        Cookies.set("auth_token", rt.token, {
+          expires: 1 / 48,
+        });
+        Cookies.set("refresh_token", rt.refresh_token, { expires: 1 });
+        Cookies.set("user", JSON.stringify(rt.user), {
+          expires: 1 / 48,
+        });
+        router.push("/");
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+      console.log(error);
+    }
   };
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-24  items-center justify-center font-poppins place-items-center">
@@ -48,7 +85,7 @@ const TenantLoginPage = () => {
           <form
             action=""
             className="grid w-full text-white"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={handleSubmit(handleFormSubmit)}
           >
             <div className="grid gap-[6px] mb-7">
               <label htmlFor="login-email" className="text-sm font-medium">
@@ -58,10 +95,9 @@ const TenantLoginPage = () => {
                 id="login-email"
                 placeholder="username@gmail.com"
                 type="email"
-                name="email"
-                value={state.email}
-                onChange={handleChange}
+                {...register("email")}
                 className="text-gray-700"
+                error={errors.email?.message}
               />
             </div>
             <div className="grid gap-[6px] mb-3">
@@ -70,11 +106,23 @@ const TenantLoginPage = () => {
               </label>
               <Input
                 id="login-password"
-                value={state.password}
                 type={showPassword ? "text" : "password"}
-                name="password"
-                onChange={handleChange}
+                {...register("password")}
+                icon={
+                  showPassword ? (
+                    <EyeOffIcon
+                      className="size-5"
+                      onClick={handleShowPassword}
+                    />
+                  ) : (
+                    <EyeClosedIcon
+                      className="size-5"
+                      onClick={handleShowPassword}
+                    />
+                  )
+                }
                 placeholder="Enter Password"
+                error={errors.password?.message}
                 className="text-gray-700"
               />
             </div>
@@ -88,9 +136,10 @@ const TenantLoginPage = () => {
             </div>
             <Button
               className="font-medium mb-3 bg-[#003465]"
-              //   onClick={}
+              type="submit"
+              disabled={isSubmitting}
             >
-              Login
+              {isSubmitting ? <Spinner /> : "Login"}
             </Button>
           </form>
         </div>

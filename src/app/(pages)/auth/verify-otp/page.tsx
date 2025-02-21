@@ -1,7 +1,7 @@
-"use client"
-import Image from 'next/image';
-import Link from 'next/link';
-import React, { useState } from 'react'
+"use client";
+import Image from "next/image";
+import Link from "next/link";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/input-otp";
 
 const VerifyOTP = () => {
-
   const [OTP, setOTP] = useState("");
 
   return (
@@ -38,12 +37,14 @@ const VerifyOTP = () => {
           className="[--size:large] flex flex-col gap-7 mb-3"
           onSubmit={(e) => e.preventDefault()}
         >
-          <InputOTP maxLength={4} pattern={REGEXP_ONLY_DIGITS_AND_CHARS}>
+          <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS_AND_CHARS}>
             <InputOTPGroup>
               <InputOTPSlot index={0} />
               <InputOTPSlot index={1} />
               <InputOTPSlot index={2} />
               <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
             </InputOTPGroup>
           </InputOTP>
           <Button
@@ -63,7 +64,6 @@ const VerifyOTP = () => {
       </div>
     </div>
   );
-}
+};
 
 export default VerifyOTP;
-

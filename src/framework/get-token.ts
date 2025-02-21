@@ -15,4 +15,3 @@ export const getRefreshToken = () => {
   const AUTH_TOKEN = Cookies.get('refresh_token');
   return AUTH_TOKEN;
 };
-
