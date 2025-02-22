@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,11 @@ const HomePage = () => {
     Cookies.remove("user");
     router.push("/auth/login");
   };
+  useEffect(() => {
+    if (!Cookies.get("auth_token")) {
+      router.push("/auth/login");
+    }
+  }, []);
   return (
     <div>
       <button onClick={handleLogout}>Logout</button>

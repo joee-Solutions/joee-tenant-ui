@@ -40,14 +40,8 @@ const TenantLoginPage = () => {
     try {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
       if (rt) {
-        Cookies.set("auth_token", rt.token, {
-          expires: 1 / 48,
-        });
-        Cookies.set("refresh_token", rt.refresh_token, { expires: 1 });
-        Cookies.set("user", JSON.stringify(rt.user), {
-          expires: 1 / 48,
-        });
-        router.push("/");
+        Cookies.set("mfa_token", rt.data.token, { expires: 1 / 48 });
+        router.push("/auth/verify-otp");
       }
     } catch (error: any) {
       toast.error(error.message);
