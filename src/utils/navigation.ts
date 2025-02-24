@@ -1,4 +1,8 @@
-import { ActiveUserIcon, DashboardIcon, OrgIcon } from "@/components/icons/icon";
+import {
+  ActiveUserIcon,
+  DashboardIcon,
+  OrgIcon,
+} from "@/components/icons/icon";
 import { icons, UserRoundMinusIcon } from "lucide-react";
 
 export const sideNavigation = [
@@ -50,7 +54,6 @@ export const sideNavigation = [
         title: "notification list",
         icon: icons.FileChartColumn,
         href: "/dashboard/notifications",
-        showRuler: true,
       },
       {
         title: "Send Notifications",
@@ -62,7 +65,7 @@ export const sideNavigation = [
   {
     name: "Admin",
     icon: OrgIcon,
-    href: "/dashboard",
+    href: "/dashboard/admin",
     showRuler: true,
     isTitle: true,
 
@@ -71,7 +74,6 @@ export const sideNavigation = [
         title: "Admin Profile",
         icon: icons.CircleUserRound,
         href: "/dashboard/admin/profile",
-        showRuler: true,
       },
       {
         title: "Create Admin",
@@ -97,7 +99,6 @@ export const sideNavigation = [
         title: "User training Guide",
         icon: icons.FileArchive,
         href: "/dashboard/user-training-guide",
-        showRuler: true,
       },
       {
         title: "System Settings",
@@ -107,8 +108,6 @@ export const sideNavigation = [
       {
         title: "Logout",
         icon: icons.LogOut,
-        href: "/dashboard/settings",
-        btn: true,
       },
     ],
   },

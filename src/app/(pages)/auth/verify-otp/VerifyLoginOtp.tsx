@@ -59,7 +59,7 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
         Cookies.set("user", JSON.stringify(rt.data.user), {
           expires: 1 / 48,
         });
-        router.push(`/`);
+        router.push(`/dashboard`);
       }
     } catch (error: any) {
       console.log(error, "ekekek");
