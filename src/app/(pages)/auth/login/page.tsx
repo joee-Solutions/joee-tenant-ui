@@ -19,9 +19,17 @@ type LoginProps = z.infer<typeof schema>;
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
+  // password must contain a lowercase, uppercase letter, a number and a special character but must be validated seperately
   password: z
     .string()
-    .min(6, { message: "Password must be at least 6 characters" }),
+    .min(8, { message: "Password must be at least 8 characters long" })
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
+      {
+        message:
+          "Password must contain at least one lowercase, uppercase, number and one special character",
+      }
+    ),
 });
 const TenantLoginPage = () => {
   const router = useRouter();
@@ -93,7 +101,7 @@ const TenantLoginPage = () => {
             <span className=" ">
               <span className="font-medium text-2xl md:text-3xl">
                 {" "}
-                LociCare {" "}
+                LociCare{" "}
               </span>
               by Joee
             </span>

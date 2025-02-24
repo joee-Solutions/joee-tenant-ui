@@ -16,8 +16,26 @@ import { Spinner } from "@/components/icons/Spinner";
 type ResetPasswordProps = z.infer<typeof schema>;
 
 const schema = z.object({
-  password: z.string().min(6),
-  confirmPassword: z.string().min(6),
+  password: z
+    .string()
+    .min(6)
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
+      {
+        message:
+          "Password must contain at least one lowercase, uppercase, number and one special character",
+      }
+    ),
+  confirmPassword: z
+    .string()
+    .min(6)
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
+      {
+        message:
+          "Password must contain at least one lowercase, uppercase, number and one special character",
+      }
+    ),
 });
 const ResetPasswordClient = () => {
   const params = useSearchParams();
