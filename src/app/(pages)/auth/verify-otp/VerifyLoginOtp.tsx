@@ -25,8 +25,7 @@ const schema = z.object({
   otp: z.string().length(6),
 });
 const VerifyOtpLoginClient = ({ token }: { token: string }) => {
-  useEffect(() => {
-  }, []);
+  useEffect(() => {}, []);
   const router = useRouter();
   const {
     handleSubmit,
@@ -64,7 +63,36 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
       }
     } catch (error: any) {
       console.log(error, "ekekek");
-      toast.error(error?.response?.data?.error);
+      if (
+        error.status === 401 &&
+        error.response.data.error === "Invalid Session"
+      ) {
+        router.push("/auth/login");
+      }
+      toast.error(error?.response?.data?.error, {
+        toastId: "error",
+        delay: 2000,
+      });
+    }
+  };
+  const timer = 60 * 5;
+
+  const handleResendOtp = async () => {
+    try {
+      const rt = await processRequestNoAuth("post", API_ENDPOINTS.RESEND_OTP, {
+        token,
+      });
+      if (rt.status === true) {
+        toast.success(rt.message, {
+          toastId: "success",
+          delay: 2000,
+        });
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error, {
+        toastId: "error",
+        delay: 2000,
+      });
     }
   };
   return (
@@ -115,9 +143,12 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
 
       <div className="extra-details flex justify-center gap-2 text-xs md:text-sm mb-7">
         Didn&apos;t receive the email?
-        <Link href={"/auth/login"} className="text-brand-400 hover:underline">
+        <button
+          onClick={handleResendOtp}
+          className="text-brand-400 hover:underline"
+        >
           Click to resend?
-        </Link>
+        </button>
       </div>
     </div>
   );

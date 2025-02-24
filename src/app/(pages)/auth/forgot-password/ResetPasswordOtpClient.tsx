@@ -38,7 +38,6 @@ const ResetPasswordOtpClient = ({ token }: { token: string }) => {
       toast.error("Otp is required");
       return;
     }
-    console.log(data);
     try {
       const res = await processRequestNoAuth("post", API_ENDPOINTS.VERIFY_OTP, {
         otp: data.otp,
@@ -48,9 +47,9 @@ const ResetPasswordOtpClient = ({ token }: { token: string }) => {
         router.push(`/auth/reset-password?token=${res.token}`);
       }
       console.log("res-->", res);
-    } catch (error) {
+    } catch (error:any) {
       console.log(error, "ekekek");
-      toast.error(error.response.data.error);
+      toast.error(error?.response?.data.error);
     }
   };
   return (

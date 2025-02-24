@@ -12,7 +12,6 @@ const VerifyOTP = () => {
       router.push("/auth/login");
     }
   }, []);
-  console.log("token-->", token);
 
   return <VerifyOtpLoginClient token={token!} />;
 };

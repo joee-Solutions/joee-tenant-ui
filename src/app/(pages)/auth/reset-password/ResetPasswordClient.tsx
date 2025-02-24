@@ -50,7 +50,7 @@ const ResetPasswordClient = () => {
           password: data.password,
         }
       );
-      if (res.status === "success") {
+      if (res.status) {
         router.push("/auth/login");
       }
     } catch (error) {

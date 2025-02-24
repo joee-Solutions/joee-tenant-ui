@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { EyeOffIcon, EyeClosedIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,12 +26,15 @@ const schema = z.object({
 const TenantLoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [errMessage, setErrMessage] = useState<string>("");
   const {
     handleSubmit,
     formState: { errors, isSubmitting },
     register,
+    setError,
   } = useForm<LoginProps>({
     resolver: zodResolver(schema),
+    // reValidateMode: "onChange",
   });
   const handleShowPassword = () => {
     setShowPassword((prev) => !prev);
@@ -44,10 +47,26 @@ const TenantLoginPage = () => {
         router.push("/auth/verify-otp");
       }
     } catch (error: any) {
-      toast.error(error.message);
-      console.log(error);
+      toast.error(error?.response?.data.error);
+      if (error?.status === 401) {
+        setErrMessage(error?.response?.data.error);
+      }
     }
   };
+
+  useEffect(() => {
+    if (errMessage.toLowerCase().includes("user")) {
+      setError("email", {
+        type: "manual",
+        message: errMessage,
+      });
+    } else if (errMessage.toLowerCase().includes("password")) {
+      setError("password", {
+        type: "manual",
+        message: errMessage,
+      });
+    }
+  }, [errMessage]);
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-24  items-center justify-center font-poppins place-items-center">
       <div className="content col-span-1 text-white hidden md:flex flex-col justify-center space-y-8">
@@ -72,7 +91,10 @@ const TenantLoginPage = () => {
               className="logo"
             />
             <span className=" ">
-              <span className="font-medium text-2xl md:text-3xl">LociCare</span>
+              <span className="font-medium text-2xl md:text-3xl">
+                {" "}
+                LociCare {" "}
+              </span>
               by Joee
             </span>
           </div>
