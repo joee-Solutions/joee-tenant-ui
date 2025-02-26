@@ -88,7 +88,7 @@ const TenantLoginPage = () => {
           error doloremque?
         </span>
       </div>
-      <div className=" col-span-1 shadow-lg rounded-2xl  border border-blue-500 text-white w-full max-w-[350px] md:max-w-[550px] md:px-8 px-8 py-20">
+      <div className=" col-span-1 shadow-lg rounded-2xl  border border-blue-500 text-white z-40 w-full max-w-[350px] md:max-w-[550px] md:px-8 px-8 py-20">
         <div className="form flex flex-col px-12 md:px-20  items-center justify-center space-y-4  ">
           <div className="orgDeatails flex flex-col items-center justify-center gap-4">
             <Image
