@@ -63,3 +63,321 @@ export const ActiveUserIcon = ({ className }: { className?: string }) => {
     </svg>
   );
 };
+
+export const AllOrgChart = ({ className }: { className?: string }) => {
+  return (
+    <svg
+      width="266"
+      height="144"
+      viewBox="0 0 266 144"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M37.4605 47.5291C24.512 47.5291 12.5547 54.4519 6.72561 58.4527C4.29445 60.1213 3 62.9236 3 65.8723V132.999C3 138.522 7.47715 142.999 13 142.999H253C258.523 142.999 263 138.522 263 132.999V33.8826C263 31.4547 262.125 29.1014 260.303 27.4955C256.807 24.4122 250.087 19.45 241.188 17.3743C217.103 11.7565 213.741 52.7693 192.583 52.7694C177.042 52.7694 175.969 27.1427 155.247 24.8068C134.525 22.4709 125.178 81.3202 91.7732 80.6568C66.7491 80.1599 51.5333 47.5291 37.4605 47.5291Z"
+        fill="#D9E1E8"
+      />
+      <path
+        d="M3.43359 61.0462C3.43359 61.0462 19.2503 47.478 37.4608 47.478C52.6169 47.478 66.7494 80.0544 91.7735 80.5505C125.178 81.2128 134.526 22.4615 155.247 24.7936C175.969 27.1256 177.043 52.7096 192.584 52.7095C213.741 52.7095 217.103 11.7649 241.188 17.3734C254.55 20.485 263 30.0937 263 30.0937"
+        stroke="#003465"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <g filter="url(#filter0_d_518_9989)">
+        <ellipse
+          cx="169.4"
+          cy="30.7699"
+          rx="10.8333"
+          ry="10.5479"
+          fill="#003465"
+        />
+        <path
+          d="M177.233 30.7699C177.233 34.8635 173.802 38.3178 169.4 38.3178C164.998 38.3178 161.567 34.8635 161.567 30.7699C161.567 26.6762 164.998 23.2219 169.4 23.2219C173.802 23.2219 177.233 26.6762 177.233 30.7699Z"
+          stroke="white"
+          strokeWidth="6"
+        />
+      </g>
+      <path opacity="0.1" d="M3 143H263" stroke="#454459" />
+      <defs>
+        <filter
+          id="filter0_d_518_9989"
+          x="133.567"
+          y="0.221924"
+          width="71.6667"
+          height="71.0959"
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dy="5" />
+          <feGaussianBlur stdDeviation="12.5" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"
+          />
+          <feBlend
+            mode="normal"
+            in2="BackgroundImageFix"
+            result="effect1_dropShadow_518_9989"
+          />
+          <feBlend
+            mode="normal"
+            in="SourceGraphic"
+            in2="effect1_dropShadow_518_9989"
+            result="shape"
+          />
+        </filter>
+      </defs>
+    </svg>
+  );
+};
+
+export const ActiveOrgChart = ({ className }: { className?: string }) => {
+  return (
+    <svg
+      width="266"
+      height="144"
+      viewBox="0 0 266 144"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M37.4606 47.5291C24.512 47.5291 12.5547 54.4519 6.72561 58.4527C4.29445 60.1213 3 62.9236 3 65.8723V132.999C3 138.522 7.47715 142.999 13 142.999H253C258.523 142.999 263 138.522 263 132.999V33.8826C263 31.4547 262.125 29.1014 260.303 27.4955C256.807 24.4122 250.087 19.45 241.188 17.3743C217.103 11.7565 213.741 52.7693 192.583 52.7694C177.042 52.7694 175.969 27.1427 155.247 24.8068C134.525 22.4709 125.178 81.3202 91.7732 80.6568C66.7491 80.1599 51.5333 47.5291 37.4606 47.5291Z"
+        fill="#C8F1B3"
+      />
+      <path
+        d="M3.43359 61.0462C3.43359 61.0462 19.2503 47.478 37.4608 47.478C52.6169 47.478 66.7494 80.0544 91.7735 80.5505C125.178 81.2128 134.526 22.4615 155.247 24.7936C175.969 27.1256 177.043 52.7096 192.584 52.7095C213.741 52.7095 217.103 11.7649 241.188 17.3734C254.55 20.485 263 30.0937 263 30.0937"
+        stroke="#4FD309"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <g filter="url(#filter0_d_518_10009)">
+        <ellipse
+          cx="169.4"
+          cy="30.7699"
+          rx="10.8333"
+          ry="10.5479"
+          fill="#47BE08"
+        />
+        <path
+          d="M177.233 30.7699C177.233 34.8635 173.802 38.3178 169.4 38.3178C164.998 38.3178 161.566 34.8635 161.566 30.7699C161.566 26.6762 164.998 23.2219 169.4 23.2219C173.802 23.2219 177.233 26.6762 177.233 30.7699Z"
+          stroke="white"
+          strokeWidth="6"
+        />
+      </g>
+      <path opacity="0.1" d="M3 143H263" stroke="#454459" />
+      <defs>
+        <filter
+          id="filter0_d_518_10009"
+          x="133.566"
+          y="0.221924"
+          width="71.6667"
+          height="71.0959"
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dy="5" />
+          <feGaussianBlur stdDeviation="12.5" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"
+          />
+          <feBlend
+            mode="normal"
+            in2="BackgroundImageFix"
+            result="effect1_dropShadow_518_10009"
+          />
+          <feBlend
+            mode="normal"
+            in="SourceGraphic"
+            in2="effect1_dropShadow_518_10009"
+            result="shape"
+          />
+        </filter>
+      </defs>
+    </svg>
+  );
+};
+
+export const InactiveOrgChart = ({ className }: { className?: string }) => {
+  return (
+    <svg
+      width="266"
+      height="144"
+      viewBox="0 0 266 144"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M37.4606 47.5291C24.512 47.5291 12.5547 54.4519 6.72561 58.4527C4.29445 60.1213 3 62.9236 3 65.8723V132.999C3 138.522 7.47715 142.999 13 142.999H253C258.523 142.999 263 138.522 263 132.999V33.8826C263 31.4547 262.125 29.1014 260.303 27.4955C256.807 24.4122 250.087 19.45 241.188 17.3743C217.103 11.7565 213.741 52.7693 192.583 52.7694C177.042 52.7694 175.969 27.1427 155.247 24.8068C134.525 22.4709 125.178 81.3202 91.7732 80.6568C66.7491 80.1599 51.5333 47.5291 37.4606 47.5291Z"
+        fill="#FDF3B0"
+      />
+      <path
+        d="M3.43335 61.0462C3.43335 61.0462 19.25 47.478 37.4606 47.478C52.6167 47.478 66.7492 80.0544 91.7732 80.5505C125.178 81.2128 134.525 22.4615 155.247 24.7936C175.969 27.1256 177.042 52.7096 192.583 52.7095C213.741 52.7095 217.103 11.7649 241.188 17.3734C254.55 20.485 263 30.0937 263 30.0937"
+        stroke="#FAD900"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <g filter="url(#filter0_d_518_10023)">
+        <ellipse
+          cx="169.4"
+          cy="30.7699"
+          rx="10.8333"
+          ry="10.5479"
+          fill="#FAD900"
+        />
+        <path
+          d="M177.233 30.7699C177.233 34.8635 173.802 38.3178 169.4 38.3178C164.998 38.3178 161.567 34.8635 161.567 30.7699C161.567 26.6762 164.998 23.2219 169.4 23.2219C173.802 23.2219 177.233 26.6762 177.233 30.7699Z"
+          stroke="white"
+          strokeWidth="6"
+        />
+      </g>
+      <path opacity="0.1" d="M3 143H263" stroke="#454459" />
+      <defs>
+        <filter
+          id="filter0_d_518_10023"
+          x="133.567"
+          y="0.221924"
+          width="71.6667"
+          height="71.0959"
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dy="5" />
+          <feGaussianBlur stdDeviation="12.5" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"
+          />
+          <feBlend
+            mode="normal"
+            in2="BackgroundImageFix"
+            result="effect1_dropShadow_518_10023"
+          />
+          <feBlend
+            mode="normal"
+            in="SourceGraphic"
+            in2="effect1_dropShadow_518_10023"
+            result="shape"
+          />
+        </filter>
+      </defs>
+    </svg>
+  );
+};
+
+export const DeactivatedOrgChart = ({ className }: { className?: string }) => {
+  return (
+    <svg
+      width="266"
+      height="144"
+      viewBox="0 0 266 144"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M37.4606 47.5291C24.512 47.5291 12.5547 54.4519 6.72561 58.4527C4.29445 60.1213 3 62.9236 3 65.8723V132.999C3 138.522 7.47715 142.999 13 142.999H253C258.523 142.999 263 138.522 263 132.999V33.8826C263 31.4547 262.125 29.1014 260.303 27.4955C256.807 24.4122 250.087 19.45 241.188 17.3743C217.103 11.7565 213.741 52.7693 192.583 52.7694C177.042 52.7694 175.969 27.1427 155.247 24.8068C134.525 22.4709 125.178 81.3202 91.7732 80.6568C66.7491 80.1599 51.5333 47.5291 37.4606 47.5291Z"
+        fill="#FCDADA"
+      />
+      <path
+        d="M3.43359 61.0462C3.43359 61.0462 19.2503 47.478 37.4608 47.478C52.6169 47.478 66.7494 80.0544 91.7735 80.5505C125.178 81.2128 134.526 22.4615 155.247 24.7936C175.969 27.1256 177.043 52.7096 192.584 52.7095C213.741 52.7095 217.103 11.7649 241.188 17.3734C254.55 20.485 263 30.0937 263 30.0937"
+        stroke="#EC0909"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <g filter="url(#filter0_d_518_10043)">
+        <ellipse
+          cx="169.4"
+          cy="30.7699"
+          rx="10.8333"
+          ry="10.5479"
+          fill="#EC0909"
+        />
+        <path
+          d="M177.233 30.7699C177.233 34.8635 173.802 38.3178 169.4 38.3178C164.998 38.3178 161.566 34.8635 161.566 30.7699C161.566 26.6762 164.998 23.2219 169.4 23.2219C173.802 23.2219 177.233 26.6762 177.233 30.7699Z"
+          stroke="white"
+          strokeWidth="6"
+        />
+      </g>
+      <path opacity="0.1" d="M3 143H263" stroke="#454459" />
+      <defs>
+        <filter
+          id="filter0_d_518_10043"
+          x="133.566"
+          y="0.221924"
+          width="71.6667"
+          height="71.0959"
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dy="5" />
+          <feGaussianBlur stdDeviation="12.5" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"
+          />
+          <feBlend
+            mode="normal"
+            in2="BackgroundImageFix"
+            result="effect1_dropShadow_518_10043"
+          />
+          <feBlend
+            mode="normal"
+            in="SourceGraphic"
+            in2="effect1_dropShadow_518_10043"
+            result="shape"
+          />
+        </filter>
+      </defs>
+    </svg>
+  );
+};
+
+export const BellIcon = ({ className }: { className?: string }) => {
+  return (
+    <svg
+      width="32"
+      height="40"
+      viewBox="0 0 32 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M2.44892 33.5484C1.90053 33.5484 1.44118 33.3626 1.07085 32.991C0.700531 32.6193 0.514725 32.16 0.513434 31.6129C0.512144 31.0658 0.697951 30.6064 1.07085 30.2348C1.44376 29.8632 1.90311 29.6774 2.44892 29.6774H4.3844V16.129C4.3844 13.4516 5.19085 11.0729 6.80376 8.99289C8.41666 6.91289 10.5134 5.54966 13.0941 4.90321V3.54837C13.0941 2.74192 13.3767 2.05676 13.9418 1.49289C14.507 0.929017 15.1921 0.646436 15.9973 0.645146C16.8025 0.643856 17.4883 0.926436 18.0547 1.49289C18.6212 2.05934 18.9031 2.7445 18.9005 3.54837V4.90321C21.4812 5.54837 23.578 6.9116 25.1909 8.99289C26.8038 11.0742 27.6102 13.4529 27.6102 16.129V29.6774H29.5457C30.0941 29.6774 30.5541 29.8632 30.9257 30.2348C31.2973 30.6064 31.4825 31.0658 31.4812 31.6129C31.4799 32.16 31.2941 32.62 30.9238 32.9929C30.5534 33.3658 30.0941 33.551 29.5457 33.5484H2.44892ZM15.9973 39.3548C14.9328 39.3548 14.0218 38.9761 13.2644 38.2187C12.507 37.4613 12.1276 36.5497 12.1263 35.4839H19.8683C19.8683 36.5484 19.4896 37.46 18.7321 38.2187C17.9747 38.9774 17.0631 39.3561 15.9973 39.3548ZM8.25537 29.6774H23.7392V16.129C23.7392 14 22.9812 12.1774 21.465 10.6613C19.9489 9.14515 18.1263 8.38708 15.9973 8.38708C13.8683 8.38708 12.0457 9.14515 10.5296 10.6613C9.01343 12.1774 8.25537 14 8.25537 16.129V29.6774Z"
+        fill="#003465"
+      />
+    </svg>
+  );
+};
