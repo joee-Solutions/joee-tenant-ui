@@ -34,7 +34,7 @@ export default function DataTableFilter() {
             setSortBy(sortVal);
           }}
         >
-          <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
+          <SelectTrigger className="h-full text-xs font-normal text-[#595959] focus:ring-transparent bg-[#EDF0F6] rounded-none">
             <SelectValue placeholder={sortBy ? sortBy : "Sort by"} />
           </SelectTrigger>
           <SelectContent className="bg-white">
@@ -42,7 +42,7 @@ export default function DataTableFilter() {
               <SelectItem
                 key={currSortVal}
                 value={`${currSortVal}`}
-                className="cursor-pointer"
+                className="cursor-pointer text-xs font-normal"
               >
                 {currSortVal}
               </SelectItem>
@@ -59,7 +59,7 @@ export default function DataTableFilter() {
             setStatus(statusVal);
           }}
         >
-          <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
+          <SelectTrigger className="h-full rounded-none text-xs font-normal text-[#595959]  bg-[#EDF0F6] focus:ring-transparent">
             <SelectValue placeholder={status ? status : "Status"} />
           </SelectTrigger>
           <SelectContent className="bg-white">
@@ -67,7 +67,7 @@ export default function DataTableFilter() {
               <SelectItem
                 key={currSortVal}
                 value={`${currSortVal}`}
-                className="cursor-pointer"
+                className="cursor-pointer text-xs font-normal"
               >
                 {currSortVal}
               </SelectItem>
@@ -100,15 +100,18 @@ export function ListView({ pageSize, setPageSize }: ListViewProps) {
           setPageSize(Number(value));
         }}
       >
-        <SelectTrigger className="h-9 w-[66px] rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
-          <SelectValue placeholder={pageSize} />
+        <SelectTrigger className="h-[30px] w-[66px] rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
+          <SelectValue
+            placeholder={pageSize}
+            className="text-xs font-normal text-[#595959]"
+          />
         </SelectTrigger>
         <SelectContent side="top" className="bg-white">
           {[10, 15, 20, 25, 50].map((currPageSize) => (
             <SelectItem
               key={currPageSize}
               value={`${currPageSize}`}
-              className="cursor-pointer"
+              className="cursor-pointer text-xs font-normal"
             >
               {currPageSize}
             </SelectItem>
