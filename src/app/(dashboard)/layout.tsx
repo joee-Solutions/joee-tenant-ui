@@ -8,10 +8,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       <div className="">
         <SideNavigation />
       </div>
-      <div className="px-10 lg:pl-72 w-full">
+      <div className="flex flex-col gap-[49px] lg:pl-72 w-full">
         <MainHeader />
         {children}
-        </div>
+      </div>
     </div>
   );
 };
