@@ -38,7 +38,6 @@ const ForgetPassword = () => {
         router.push(`/auth/forgot-password/${res.data.token}`);
       }
     } catch (error) {
-      
       console.log(error);
     }
   };
