@@ -1,8 +1,12 @@
 import React from 'react'
+import Chart from '../Chart'
 
 const DashboardPage = () => {
   return (
-    <div>DashboardPage</div>
+    <div>
+      <h1>Dashboard Page</h1>
+      <Chart/>
+    </div>
   )
 }
 

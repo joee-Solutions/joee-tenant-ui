@@ -31,6 +31,7 @@ const schema = z.object({
       }
     ),
 });
+
 const TenantLoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState<boolean>(false);
