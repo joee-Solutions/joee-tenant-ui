@@ -14,7 +14,7 @@ import { Ellipsis, Plus } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
-export default function page() {
+export default function Page() {
   const [pageSize, setPageSize] = useState(10);
 
   return (

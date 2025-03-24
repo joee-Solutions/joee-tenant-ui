@@ -17,7 +17,7 @@ import NewOrg from "./NewOrg";
 import EditOrg from "./EditOrg";
 import OrgManagement from "./OrgManagement";
 
-export default function page() {
+export default function Page() {
   const [pageSize, setPageSize] = useState(10);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
 
