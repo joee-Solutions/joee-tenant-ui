@@ -1,7 +1,9 @@
 "use client"
 
 import React, { FC } from 'react';
-import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { ChartNoAxesColumn } from "lucide-react";
+
 
 interface StatCardProps {
   title: string;
@@ -17,7 +19,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon }) => {
       bg: 'bg-blue-50',
       text: 'text-[#000000]',
       lineColor: 'rgba(10, 49, 97, 0.8)',
-      fillColor: 'rgba(10, 49, 97, 0.1)',
+      fillColor: 'rgb(217, 225, 232)',
       bgColor: 'bg-[#003465]',
       growthText: 'text-blue-800',
     },
@@ -25,7 +27,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon }) => {
       bg: 'bg-green-50',
       text: 'text-green-900',
       lineColor: 'rgba(34, 197, 94, 0.8)',
-      fillColor: 'rgba(34, 197, 94, 0.1)',
+      fillColor: 'rgb(200, 241, 179)',
       bgColor: 'bg-[#3fa907]',
       growthText: 'text-green-800',
     },
@@ -33,7 +35,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon }) => {
       bg: 'bg-yellow-50',
       text: 'text-yellow-900',
       lineColor: 'rgba(234, 179, 8, 0.8)',
-      fillColor: 'rgba(234, 179, 8, 0.1)',
+      fillColor: 'rgb(253, 243, 176)',
       bgColor: 'bg-[#fad902]',
       growthText: 'text-yellow-800',
     },
@@ -41,7 +43,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon }) => {
       bg: 'bg-red-50',
       text: 'text-red-900',
       lineColor: 'rgba(239, 68, 68, 0.8)',
-      fillColor: 'rgba(239, 68, 68, 0.1)',
+      fillColor: 'rgb(252, 218, 218)',
       bgColor: 'bg-[#ec090a]',
       growthText: 'text-red-800',
     },
@@ -61,9 +63,9 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon }) => {
   return (
 
 
-    <div className=" rounded-lg my-8 shadow-xl relative overflow-hidden bg-white">
+    <div className=" rounded-lg my-8 shadow-xl hover:shadow-2xl relative overflow-hidden bg-white h-[300px] p-0">
 
-    <div className="my-4 p-4 flex flex-col space-y-4">
+    <div className=" p-4 flex flex-col space-y-4">
       <h3 className="text-black text-[16px] font-medium">{title}</h3>
       <div className="flex items-center justify-between">
         <p className={`text-[32px] font-medium ${colors.text}`}>{value}</p>
@@ -81,12 +83,14 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon }) => {
     </div>
 
 
-    <div className={`h-24 w-full relative bottom-0 ${colors.bg}`}>
+    <ChartNoAxesColumn className={`${colors.text} flex items-center justify-center text-lg font-medium p-2 bg-white z-10 rounded-lg h-[43px] w-[43px] absolute bottom-4 right-6`}/>
+    <div className="absolute bottom-0 left-0 w-full h-[150px] p-0">
       <ResponsiveContainer width="100%" height="100%" className="" >
-        <LineChart data={data} >
-        <Tooltip />
-          <Line type="monotone" dataKey="value" stroke={colors.lineColor} strokeWidth={4} fill={colors.bg} dot={true} />
-        </LineChart>
+        <AreaChart data={data} >
+        {/* <Tooltip /> */}
+        <Area type="monotone" dataKey="value" stroke={colors.lineColor} strokeWidth={4} fill={colors.fillColor} dot={true} fillOpacity={1} />
+         
+        </AreaChart>
       </ResponsiveContainer>
     </div>
 
