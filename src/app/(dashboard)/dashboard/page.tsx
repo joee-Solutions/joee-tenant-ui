@@ -27,9 +27,7 @@ const DashboardPage: NextPage = () => {
 
   return (
     <div className="min-h-screen w-full  mb-10">
-      
-      <DashboardHeader username="Daniel James" role="Admin" />
-      
+            
       <main className="container mx-auto  py-6 px-[30px]">
         <div className="flex flex-col items-center md:items-start gap-1 py-2">
           <div className='flex md:flex-col items-center md:items-start gap-1'>

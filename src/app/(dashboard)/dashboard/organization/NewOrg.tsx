@@ -14,7 +14,7 @@ const NewOrganizationSchema = z.object({
   address: z.string().min(1, "This field is required"),
   city: z.string().min(1, "This field is required"),
   state: z.string().min(1, "This field is required"),
-  zipCode: z.string().min(1, "This field is required"),
+  zipCode: z.string().min(1, "This field is required").optional(),
   country: z.string().min(1, "This field is required"),
   organizationPhoneNumber: z.string().min(1, "This field is required"),
   organizationFax: z.string().min(1, "This field is required"),
