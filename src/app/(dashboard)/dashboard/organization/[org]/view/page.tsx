@@ -19,7 +19,7 @@ export type TabVal =
   | "Appointments"
   | "Schedule"
   | "Manage Organization";
-export default function View() {
+const ViewPage = () => {
   const [activeTab, setActiveTab] = useState<TabVal>("Departments");
 
   return (
@@ -44,10 +44,13 @@ export default function View() {
           </button>
         ))}
       </div>
-
+      {/* can be refactored instead of nesting condition */}
       {activeTab === "Departments" && (
         <DynamicTabCompContent tabName={activeTab} />
       )}
     </div>
   );
-}
+};
+
+export default ViewPage;
+
