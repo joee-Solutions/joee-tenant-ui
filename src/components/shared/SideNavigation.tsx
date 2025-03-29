@@ -15,7 +15,9 @@ const SideNavigation = () => {
       Cookies.remove("user")
       // Cookies.remove()
       router.push("/auth/login");
-    } catch (error) {}
+    } catch (error) {
+      console.log("Logout error:", error);
+    }
   };
   const pathName = usePathname();
   const isPathNameMatch = (path: string) => {

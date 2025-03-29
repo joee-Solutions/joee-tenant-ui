@@ -16,7 +16,6 @@ const HomePage = () => {
   return (
     <div>
       <button>Logout</button>
-      <Chart />
     </div>
   );
 };
