@@ -21,8 +21,6 @@ const SideNavigation = () => {
   };
   const pathName = usePathname();
   const isPathNameMatch = (path: string) => {
-    console.log("pathname", pathName);
-    console.log("path", path);
     return pathName === path;
   };
   return (
@@ -85,11 +83,11 @@ const SideNavigation = () => {
               {item.children &&
                 item.children.map((child) => {
                   return (
-                    <div key={child.title} className="py-2 w-full">
-                      <div className="flex items-center gap-1">
+                    <div key={child.title} className="py-2  w-full">
+                      <div className="flex   gap-1">
                         {!child.href ? (
                           <button
-                            className="capitalize whitespace-nowrap text-white flex gap-3"
+                            className="capitalize whitespace-nowrap pl-16 text-white flex gap-3"
                             onClick={handleLogout}
                           >
                             {child.icon && (
@@ -118,7 +116,7 @@ const SideNavigation = () => {
                                   className={cn(
                                     "text-white h-5 w-5 relative z-10 ",
                                     isPathNameMatch(child.href)
-                                      ? "fill-[#0085FF] !text-[#0085FF]"
+                                      ? "fill-[#0085FF] text-[#0085FF]"
                                       : ""
                                   )}
                                 />
