@@ -9,7 +9,7 @@ interface DashboardHeaderProps {
 const DashboardHeader: FC<DashboardHeaderProps> = ({ username, role }) => {
   return (
     <header className="bg-[#003465] mx-auto px-[30px] md:bg-transparent shadow-b shadow-md  py-4 w-full">
-      <div className=" container flex gap-4 justify-between items-center">
+      <div className="container flex gap-4 justify-between items-center">
         <div className="text-white  flex md:hidden">
           <svg
             width="24"

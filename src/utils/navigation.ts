@@ -16,7 +16,7 @@ export const sideNavigation = [
   {
     name: "Organization",
     icon: OrgIcon,
-    href: "/dashboard/organization",
+    // href: "/dashboard/organization",
     isTitle: true,
     // showRuler: true,
     children: [

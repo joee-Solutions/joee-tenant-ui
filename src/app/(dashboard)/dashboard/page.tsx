@@ -40,7 +40,6 @@ const DashboardPage: NextPage = () => {
     },
     networkTab: { icon: <NetworkrIcon /> },
   };
-
   return (
     <div className="min-h-screen w-full  mb-10">
       <main className="container mx-auto  py-6 px-[30px]">

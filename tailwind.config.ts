@@ -10,6 +10,6 @@ export default {
         poppins: ["Poppins", "sans-serif"],
       },
     },
-    // plugins: [tailwindcssAnimate],
+    plugins: [],
   },
 } satisfies Config;

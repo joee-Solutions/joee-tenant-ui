@@ -6,6 +6,7 @@ import FormComposer from "@/components/shared/form/FormComposer";
 import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -46,6 +47,7 @@ interface NewOrgProps {
 }
 
 export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
+  const router = useRouter();
   const form = useForm<NewOrganizationSchemaType>({
     resolver: zodResolver(NewOrganizationSchema),
     mode: "onChange",
@@ -69,8 +71,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
 
   const onSubmit = (payload: NewOrganizationSchemaType) => {
     console.log(payload);
-
-    setIsAddOrg("edit");
+    router.push("/dashboard/organization/test");
   };
 
   return (

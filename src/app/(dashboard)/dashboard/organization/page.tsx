@@ -14,7 +14,6 @@ import { Ellipsis, Plus } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import NewOrg from "./NewOrg";
-import EditOrg from "./EditOrg";
 import OrgManagement from "./OrgManagement";
 
 export default function Page() {

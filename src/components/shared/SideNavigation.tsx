@@ -12,7 +12,7 @@ const SideNavigation = () => {
   const handleLogout = async () => {
     try {
       Cookies.remove("auth_token");
-      Cookies.remove("user")
+      Cookies.remove("user");
       // Cookies.remove()
       router.push("/auth/login");
     } catch (error) {
@@ -21,6 +21,8 @@ const SideNavigation = () => {
   };
   const pathName = usePathname();
   const isPathNameMatch = (path: string) => {
+    console.log("pathname", pathName);
+    console.log("path", path);
     return pathName === path;
   };
   return (
@@ -37,48 +39,54 @@ const SideNavigation = () => {
       </div>
       <div className="border-b border-white"></div>
       {sideNavigation.map((item, index) => (
-        <div key={item.name} className="">
+        <div key={item.name} className="w-full">
           {item.showRuler && <div className="border-b border-white"></div>}
-          <div
-            className={cn(
-              "flex flex-col items-start gap-4 pl-16 py-7",
-              isPathNameMatch(item.href) ? "pl-8" : ""
-            )}
-          >
+          <div className={cn("flex flex-col items-start gap-4  py-6 w-full")}>
             {item.isTitle ? (
-              <p className="text-[#E6E6E6] flex gap-3 uppercase">{item.name}</p>
+              <p className="text-[#E6E6E6] flex gap-3 uppercase pl-16">
+                {item.name}
+              </p>
             ) : (
-              <Link
-                className={cn(
-                  "text-white flex gap-3 uppercase w-full py-4 items-center",
-                  isPathNameMatch(item.href)
-                    ? "text-black bg-white rounded-l-full pl-3"
-                    : ""
-                )}
-                href={item.href}
-              >
-                {item.icon && (
-                  <item.icon
+              item.href && (
+                <div
+                  className={cn(
+                    " w-full",
+                    isPathNameMatch(item.href) ? "pl-8" : "pl-16"
+                  )}
+                >
+                  <Link
                     className={cn(
-                      "text-inherit",
+                      "text-white flex gap-3 uppercase w-full py-4 items-center",
                       isPathNameMatch(item.href)
-                        ? "fill-[#0085FF] text-[#0085FF]"
+                        ? "text-black bg-white rounded-l-full pl-8"
                         : ""
                     )}
-                  />
-                )}
-                {item.name}
-                {isPathNameMatch(item.href) && (
-                  <span className="bg-black  h-1.5 w-1.5 rounded-full"></span>
-                )}
-              </Link>
+                    href={item.href}
+                  >
+                    {item.icon && (
+                      <item.icon
+                        className={cn(
+                          "text-inherit",
+                          isPathNameMatch(item.href)
+                            ? "fill-[#0085FF] text-[#0085FF]"
+                            : ""
+                        )}
+                      />
+                    )}
+                    {item.name}
+                    {isPathNameMatch(item.href) && (
+                      <span className="bg-black  h-1.5 w-1.5 rounded-full"></span>
+                    )}
+                  </Link>
+                </div>
+              )
             )}
-            <div className="flex flex-col ">
+            <div className="flex flex-col w-full">
               {item.children &&
                 item.children.map((child) => {
                   return (
-                    <div key={child.title} className="py-4">
-                      <div className="flex items-center gap-4">
+                    <div key={child.title} className="py-2 w-full">
+                      <div className="flex items-center gap-1">
                         {!child.href ? (
                           <button
                             className="capitalize whitespace-nowrap text-white flex gap-3"
@@ -90,17 +98,37 @@ const SideNavigation = () => {
                             {child.title}
                           </button>
                         ) : (
-                          <Link
-                            href={child.href}
-                            className="capitalize whitespace-nowrap text-white flex gap-3"
-                          >
-                            {child.icon && (
-                              <child.icon
-                                className={cn("text-white h-5 w-5")}
-                              />
+                          <div
+                            className={cn(
+                              "pl-16 w-full",
+                              isPathNameMatch(child.href) ? "pl-8" : ""
                             )}
-                            {child.title}
-                          </Link>
+                          >
+                            <Link
+                              href={child.href}
+                              className={cn(
+                                `capitalize whitespace-nowrap text-white items-center w-full flex gap-3 py-4`,
+                                isPathNameMatch(child.href)
+                                  ? "text-black  bg-white  rounded-l-full pl-8"
+                                  : ""
+                              )}
+                            >
+                              {child.icon && (
+                                <child.icon
+                                  className={cn(
+                                    "text-white h-5 w-5 relative z-10 ",
+                                    isPathNameMatch(child.href)
+                                      ? "fill-[#0085FF] !text-[#0085FF]"
+                                      : ""
+                                  )}
+                                />
+                              )}
+                              {child.title}
+                              {isPathNameMatch(child.href) && (
+                                <span className="bg-black  h-1.5 w-1.5 rounded-full"></span>
+                              )}
+                            </Link>
+                          </div>
                         )}
                       </div>
                     </div>
