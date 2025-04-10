@@ -79,9 +79,9 @@ export default function AddAppointment() {
               <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-10 bg-white">
                 {patients.map((patient) => (
-                  <SelectItem key={patient} value={patient}>
+                  <SelectItem key={patient} value={patient} className="hover:bg-gray-200">
                     {patient}
                   </SelectItem>
                 ))}
@@ -93,12 +93,12 @@ export default function AddAppointment() {
           <div>
             <label className="block text-base text-black font-normal mb-2">Department</label>
             <Select onValueChange={(value) => form.setValue("department", value)}>
-              <SelectTrigger className="w-full p-3 border bg-white border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectTrigger className="w-full p-3 border  border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
               <SelectContent className="z-10 bg-white">
                 {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept} className="z-10 bg-white">
+                  <SelectItem key={dept} value={dept} className="hover:bg-gray-200">
                     {dept}
                   </SelectItem>
                 ))}
@@ -113,9 +113,9 @@ export default function AddAppointment() {
               <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-10 bg-white">
                 {doctors.map((doctor) => (
-                  <SelectItem key={doctor} value={doctor}>
+                  <SelectItem key={doctor} value={doctor} className="hover:bg-gray-200">
                     {doctor}
                   </SelectItem>
                 ))}
@@ -137,7 +137,7 @@ export default function AddAppointment() {
           {/* Appointment Date */}
           <div>
             <label className="block text-base text-black font-normal mb-2">Appointment Date</label>
-            <div className="relative">
+            <div className="relative w-full">
               <Input 
                 placeholder="DD/MM/YYYY"
                 type="date"
@@ -162,9 +162,9 @@ export default function AddAppointment() {
               <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-10 bg-white">
                 {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>
+                  <SelectItem key={status} value={status} className="hover:bg-gray-200">
                     {status}
                   </SelectItem>
                 ))}
