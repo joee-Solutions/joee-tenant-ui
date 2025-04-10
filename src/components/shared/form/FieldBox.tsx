@@ -18,6 +18,7 @@ interface FieldBoxProps<T extends FieldValues> {
   iconText?: string;
   fieldDescription?: string;
   bgInputClass?: string;
+  disabled?: boolean;
 }
 
 function FieldBox<T extends FieldValues>({
@@ -29,6 +30,7 @@ function FieldBox<T extends FieldValues>({
   iconText,
   fieldDescription,
   bgInputClass,
+  disabled,
 }: FieldBoxProps<T>) {
   return (
     <FormField
@@ -50,6 +52,7 @@ function FieldBox<T extends FieldValues>({
                 } text-sm font-normal text-[#737373] border border-[#737373] h-[60px] focus:ring-transparent rounded px-[21px] ${
                   bgInputClass ? bgInputClass : "bg-white"
                 }`}
+                disabled={disabled}
               />
               {iconText && (
                 <span className="font-semibold text-base text-[#1E1E1E] absolute left-4 top-1/2 -translate-y-1/2">

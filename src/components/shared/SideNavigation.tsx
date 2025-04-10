@@ -83,7 +83,7 @@ const SideNavigation = () => {
               {item.children &&
                 item.children.map((child) => {
                   return (
-                    <div key={child.title} className="py-2  w-full">
+                    <div key={child.title} className="py-1  w-full">
                       <div className="flex   gap-1">
                         {!child.href ? (
                           <button
@@ -116,7 +116,7 @@ const SideNavigation = () => {
                                   className={cn(
                                     "text-white h-5 w-5 relative z-10 ",
                                     isPathNameMatch(child.href)
-                                      ? "fill-[#0085FF] text-[#0085FF]"
+                                      ? " text-[#0085FF]"
                                       : ""
                                   )}
                                 />

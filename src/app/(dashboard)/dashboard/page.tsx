@@ -2,13 +2,6 @@
 import { NextPage } from "next";
 // import Head from 'next/head';
 import StatCard from "@/components/dashboard/StatCard";
-import {
-  AllOrgIcon,
-  DeactivateUserIcon,
-  InactiveUserIcon,
-  UserIcon,
-  NetworkrIcon,
-} from "@/components/icons/icon";
 import AppointmentsChart from "@/components/dashboard/AppointmentsChart";
 import EmployeeSection from "@/components/dashboard/EmployeeSection";
 import PatientsDonut from "@/components/dashboard/PatientsDonut";
@@ -26,19 +19,19 @@ import {
 
 const DashboardPage: NextPage = () => {
   const stats = {
-    allOrganizations: { count: 490, growth: null, icon: <AllOrgIcon /> },
-    activeOrganizations: { count: 250, growth: 2.45, icon: <UserIcon /> },
+    allOrganizations: { count: 490, growth: null, icon: <></> },
+    activeOrganizations: { count: 250, growth: 2.45, icon: <></>},
     inactiveOrganizations: {
       count: 100,
       growth: 2.45,
-      icon: <InactiveUserIcon />,
+      icon: <></>,
     },
     deactivatedOrganizations: {
       count: 140,
       growth: -2.45,
-      icon: <DeactivateUserIcon />,
+      icon: <></>,
     },
-    networkTab: { icon: <NetworkrIcon /> },
+    networkTab: { icon: <></> },
   };
   return (
     <div className="min-h-screen w-full  mb-10">

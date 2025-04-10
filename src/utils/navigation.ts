@@ -73,17 +73,17 @@ export const sideNavigation = [
       {
         title: "Admin Profile",
         icon: icons.CircleUserRound,
-        href: "/dashboard/admin/profile",
+        href: "/dashboard/profile",
       },
       {
         title: "Create Admin",
         icon: icons.BookUser,
-        href: "/dashboard/admin/create-admin",
+        href: "/dashboard/admin/create",
       },
       {
         title: "Admin List",
         icon: icons.Users,
-        href: "/dashboard/admin/admin-list",
+        href: "/dashboard/admin/list",
       },
     ],
   },

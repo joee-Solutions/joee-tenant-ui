@@ -15,6 +15,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import NewOrg from "./NewOrg";
 import OrgManagement from "./OrgManagement";
+import Link from "next/link";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
@@ -97,9 +98,9 @@ export default function Page() {
                       {data.status}
                     </TableCell>
                     <TableCell>
-                      <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
+                      <Link href={'/dashboard/organization/1234'} className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
                         <Ellipsis className="text-black size-5" />
-                      </button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 );

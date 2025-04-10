@@ -6,12 +6,12 @@ import profileImage from "./../../../public/assets/profile.png";
 
 const MainHeader = () => {
   return (
-    <header className="flex items-center justify-between gap-5 h-[180px] px-[30px] py-12 shadow-[0px_4px_25px_0px_#0000001A]">
-      <div className="relative flex items-center justify-center px-5 py-[15px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566]">
+    <header className="flex items-center justify-between gap-5 h-[150px] px-[24px] py-12 shadow-[0px_4px_25px_0px_#0000001A]">
+      <div className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] basis-[50%]">
         <input
           type="search"
           placeholder="search..."
-          className="px-5 h-[60px] rounded-[30px] pl-5 pr-12 bg-[#E4E8F2] outline-none focus:outline-1 focus:outline-slate-400"
+          className="px-5 h-[60px] rounded-[30px] pl-5 pr-12 bg-[#E4E8F2] outline-none focus:outline-1 focus:outline-slate-400 w-full"
         />
         <SearchIcon className="absolute right-10" />
       </div>
