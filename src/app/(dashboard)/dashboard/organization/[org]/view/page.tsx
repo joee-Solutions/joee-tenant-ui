@@ -35,7 +35,7 @@ const ViewPage = () => {
               `px-4 py-2 border-b-4`,
               activeTab === tab
                 ? "border-[#003465] font-semibold"
-                : "border-transparent text-gray-500",
+                : "border-transparent hover:border-[#003465] text-gray-500 hover:text-[#003465]",
               index === 0 ? "pl-0" : "pl-4"
             )}
             onClick={() => setActiveTab(tab as TabVal)}
@@ -44,10 +44,9 @@ const ViewPage = () => {
           </button>
         ))}
       </div>
-      {/* can be refactored instead of nesting condition */}
-      {activeTab === "Departments" && (
+
         <DynamicTabCompContent tabName={activeTab} />
-      )}
+ 
     </div>
   );
 };
