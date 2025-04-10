@@ -28,7 +28,7 @@ export default function Page() {
   
         <>
           <section className="p-[29px_14px_30px_24px] my-8 shadow-[0px_0px_4px_1px_#0000004D]">
-            <header className="flex items-center justify-between gap-5 py-2">
+            <header className="flex items-center justify-between border-b-2 gap-5 py-2">
               <h2 className="font-semibold text-xl text-black">
                 Department List
               </h2>
@@ -46,9 +46,10 @@ export default function Page() {
 
               
             </header>
-            <DataTable tableDataObj={DepartmentList[0]}>
+            <DataTable tableDataObj={DepartmentList[0]} >
               {DepartmentList.map((data) => {
                 return (
+                  
                   <TableRow key={data.id} className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100">
                     <TableCell>{data.id}</TableCell>
                     <TableCell className="py-[21px]">
@@ -82,6 +83,7 @@ export default function Page() {
                       </button>
                     </TableCell>
                   </TableRow>
+                 
                 );
               })}
             </DataTable>

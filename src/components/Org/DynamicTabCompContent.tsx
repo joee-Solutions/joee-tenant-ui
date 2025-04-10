@@ -1,7 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
-import { FaPlus, FaUpload } from "react-icons/fa";
+import { FaPlus } from "react-icons/fa";
 import { Button } from "../ui/button";
 import { TabVal } from "@/app/(dashboard)/dashboard/organization/[org]/view/page";
 import DepartmentList from "@/components/Org/Departments/DepartmentList";
@@ -10,6 +10,7 @@ import OrgDetails from "@/components/Org/Manage Organization/OrgDetails";
 import EmployeesList from "@/components/Org/Employees/EmployeeList";
 import PatienceList from "@/components/Org/Patients/PatientList";
 import AppointmentList from "@/components/Org/Appointments/AppointmentList";
+import AddAppointment from "@/components/Org/Appointments/AddAppointment";
 import ScheduleList from "@/components/Org/Schedule/ScheduleList";
 
 // example , Default Tab based on parent tab 
@@ -95,7 +96,7 @@ export default function DynamicTabCompContent({
 
   {/* Appointments */}
   {tabName === "Appointments" && activeTab === "List" && <AppointmentList />}
-  {tabName === "Appointments" && activeTab === "Add" && <div>Add Appointment</div>}
+  {tabName === "Appointments" && activeTab === "Add" && <AddAppointment />}
 
   {/* Schedule */}
   {tabName === "Schedule" && activeTab === "List" && <ScheduleList />}
