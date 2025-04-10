@@ -166,9 +166,7 @@ export const DepartmentList: {
     date_created: "20 Jan 2024",
     status: "Active",
   },
-
 ];
-
 
 export const EmployeesData: {
   id: number;
@@ -223,7 +221,7 @@ export const EmployeesData: {
   {
     id: 5,
     employee: {
-      employee_name: "Jemimah Oluwaseun", 
+      employee_name: "Jemimah Oluwaseun",
       image: orgPlaceholder,
     },
     department: "Orthopedics",
@@ -240,7 +238,6 @@ export const EmployeesData: {
     designation: "Doctor",
     status: "Active",
   },
-
 ];
 
 export const PatientData: {
@@ -311,7 +308,7 @@ export const PatientData: {
   {
     id: 5,
     patience: {
-      name: " Timon Oluwaseun", 
+      name: " Timon Oluwaseun",
       image: orgPlaceholder,
     },
     address: "Lagos, Nigeria ",
@@ -334,9 +331,56 @@ export const PatientData: {
     email: "tobiah4everyone@gmail.com",
     status: "Active",
   },
-
 ];
-
+export const AdminListData: {
+  ID: string;
+  name: string;
+  role: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+}[] = [
+  {
+    ID: "ADM001",
+    name: "Richard Adebayo",
+    role: "Super Admin",
+    address: "23 Marine Drive, Lagos Island, Lagos",
+    phoneNumber: "08012345678",
+    email: "richard.adebayo@company.com",
+  },
+  {
+    ID: "ADM002",
+    name: "Chioma Okafor",
+    role: "HR Manager",
+    address: "5 Ikorodu Road, Ojota, Lagos",
+    phoneNumber: "08087654321",
+    email: "chioma.okafor@company.com",
+  },
+  {
+    ID: "ADM003",
+    name: "Tunde Balogun",
+    role: "Finance Admin",
+    address: "18 Bourdillon Road, Ikoyi, Lagos",
+    phoneNumber: "07023456789",
+    email: "tunde.balogun@company.com",
+  },
+  {
+    ID: "ADM004",
+    name: "Maryam Sule",
+    role: "Operations Lead",
+    address: "45 Ahmadu Bello Way, Kaduna",
+    phoneNumber: "09034567890",
+    email: "maryam.sule@company.com",
+  },
+  {
+    ID: "ADM005",
+    name: "John Uche",
+    role: "IT Admin",
+    address: "12 Trans Amadi Layout, Port Harcourt",
+    phoneNumber: "08123456789",
+    email: "john.uche@company.com",
+  },
+];
 
 export const AppointmentData: {
   ID: string;
@@ -401,7 +445,7 @@ export const AppointmentData: {
   {
     ID: "JOE105",
     appointment: {
-      patient_name: "  Oluwaseun", 
+      patient_name: "  Oluwaseun",
       image: orgPlaceholder,
     },
     age: 38,
@@ -409,7 +453,6 @@ export const AppointmentData: {
     department: "Orthopedics",
     date: "5 Dec 2022",
     time: "10am-12am",
-
   },
   {
     ID: "JOE106",
@@ -423,10 +466,7 @@ export const AppointmentData: {
     date: "2 Dec 2022",
     time: "10am-12am",
   },
-
 ];
-
-
 
 export const ScheduleList: {
   id: number;
@@ -498,5 +538,4 @@ export const ScheduleList: {
     start_time: "11:00am",
     end_time: "12:00pm",
   },
-
 ];

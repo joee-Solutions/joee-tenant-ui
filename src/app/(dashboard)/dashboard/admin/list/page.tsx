@@ -1,9 +1,12 @@
-import React from 'react'
+import AdminList from "@/components/admin/AdminList";
+import React from "react";
 
 const ListAdminPage = () => {
   return (
-    <div>ListAdminPage</div>
-  )
-}
+    <div>
+      <AdminList />
+    </div>
+  );
+};
 
-export default ListAdminPage
+export default ListAdminPage;
