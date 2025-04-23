@@ -8,10 +8,13 @@ import DepartmentList from "@/components/Org/Departments/DepartmentList";
 import AddDepartmentForm from "@/components/Org/Departments/AddDepartmentForm";
 import OrgDetails from "@/components/Org/Manage Organization/OrgDetails";
 import EmployeesList from "@/components/Org/Employees/EmployeeList";
+import AddEmployee from "@/components/Org/Employees/AddEmployee";
 import PatienceList from "@/components/Org/Patients/PatientList";
+import AddPatience from "@/components/Org/Patients/AddPatient";
 import AppointmentList from "@/components/Org/Appointments/AppointmentList";
 import AddAppointment from "@/components/Org/Appointments/AddAppointment";
 import ScheduleList from "@/components/Org/Schedule/ScheduleList";
+import AddSchedule from "@/components/Org/Schedule/AddSchedule";
 
 // example , Default Tab based on parent tab 
 const innerTabs = [
@@ -88,11 +91,11 @@ export default function DynamicTabCompContent({
 
   {/* Employees */}
   {tabName === "Employees" && activeTab === "List" && <EmployeesList />}
-  {tabName === "Employees" && activeTab === "Add" && <div>Add Employee</div>}
+  {tabName === "Employees" && activeTab === "Add" && <AddEmployee />}
 
   {/* Patients */}
   {tabName === "Patients" && activeTab === "List" && <PatienceList />}
-  {tabName === "Patients" && activeTab === "Add" && <div>Add Patient</div>}
+  {tabName === "Patients" && activeTab === "Add" && <AddPatience />}
 
   {/* Appointments */}
   {tabName === "Appointments" && activeTab === "List" && <AppointmentList />}
@@ -100,7 +103,7 @@ export default function DynamicTabCompContent({
 
   {/* Schedule */}
   {tabName === "Schedule" && activeTab === "List" && <ScheduleList />}
-  {tabName === "Schedule" && activeTab === "Add" && <div>Add Schedule</div>}
+  {tabName === "Schedule" && activeTab === "Add" && <AddSchedule />}
 
   {/* Manage Organization */}
   {tabName === "Manage Organization" && activeTab === "Details" && <OrgDetails />}

@@ -151,7 +151,7 @@ export const DepartmentList: {
   {
     id: 5,
     department: {
-      department_name: "JOrthopedics",
+      department_name: "Jorthopedics",
     },
     no_of_empployees: 36,
     date_created: "20 Jan 2024",
@@ -160,7 +160,7 @@ export const DepartmentList: {
   {
     id: 6,
     department: {
-      department_name: "JDentistary",
+      department_name: "Dentistary",
     },
     no_of_empployees: 46,
     date_created: "20 Jan 2024",
