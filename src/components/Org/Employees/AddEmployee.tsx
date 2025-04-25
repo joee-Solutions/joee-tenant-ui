@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
-import Link from "next/link";
 import {
   Select,
   SelectContent,
@@ -76,7 +75,7 @@ export default function AddEmployee() {
 
   return (
     <div className="py-8 p-[29px_14px_30px_24px] my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">ADD EMPLOYEE</h1>
        
           <Button
@@ -144,12 +143,12 @@ export default function AddEmployee() {
           <div>
             <label className="block text-base text-black font-normal mb-2">Region/State</label>
             <Select onValueChange={(value) => form.setValue("regionState", value)}>
-              <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded flex justify-between items-center">
+              <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-10 bg-white">
                 {regions.map((region) => (
-                  <SelectItem key={region} value={region}>
+                  <SelectItem key={region} value={region} className="hover:bg-gray-200">
                     {region}
                   </SelectItem>
                 ))}
@@ -167,14 +166,7 @@ export default function AddEmployee() {
                 {...form.register("dateOfBirth")}
                 className="w-full h-14 p-3 border border-[#737373] rounded"
               />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-calendar">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </div>
+              
             </div>
           </div>
           
@@ -202,12 +194,12 @@ export default function AddEmployee() {
           <div>
             <label className="block text-base text-black font-normal mb-2">Department</label>
             <Select onValueChange={(value) => form.setValue("department", value)}>
-              <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded flex justify-between items-center">
+              <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-10 bg-white">
                 {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
+                  <SelectItem key={dept} value={dept} className="hover:bg-gray-200">
                     {dept}
                   </SelectItem>
                 ))}
@@ -222,9 +214,9 @@ export default function AddEmployee() {
               <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-10 bg-white">
                 {genders.map((gender) => (
-                  <SelectItem key={gender} value={gender}>
+                  <SelectItem key={gender} value={gender} className="hover:bg-gray-200">
                     {gender}
                   </SelectItem>
                 ))}
@@ -234,9 +226,9 @@ export default function AddEmployee() {
           
           {/* Upload Employee Image */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">Upload Employee Image</label>
+            <label htmlFor="file-upload" className="block text-base text-black font-normal mb-2">Upload Employee Image</label>
             <div className="flex">
-              <div className="flex-1 border rounded flex items-center px-4">
+              <div className="flex-1 border rounded flex items-center px-4 h-14 border-[#737373]">
                 <span className="mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -250,7 +242,7 @@ export default function AddEmployee() {
               </div>
               <Button 
                 type="button"
-                className="bg-blue-900 text-white px-6 py-2 ml-2 rounded"
+                className="bg-[#003465] hover:bg-[#0d2337] text-white px-6 py-2 h-14 rounded"
                 onClick={() => document.getElementById('fileInput')?.click()}
               >
                 Browse
@@ -288,7 +280,7 @@ export default function AddEmployee() {
           <Textarea 
             placeholder="Your Message"
             {...form.register("shortBiography")}
-            className="w-full p-3 min-h-32 border rounded"
+            className="w-full p-3 min-h-52 border border-[#737373] rounded"
           />
         </div>
         
@@ -301,6 +293,7 @@ export default function AddEmployee() {
                 id="active"
                 checked={!form.watch("status")}
                 onCheckedChange={() => form.setValue("status", false)}
+                className="accent-green-600 w-6 h-6 rounded"
               />
               <label htmlFor="active">Active</label>
             </div>
@@ -309,6 +302,7 @@ export default function AddEmployee() {
                 id="inactive"
                 checked={form.watch("status")}
                 onCheckedChange={() => form.setValue("status", true)}
+                className="accent-green-600 w-6 h-6 rounded"
               />
               <label htmlFor="inactive">Inactive</label>
             </div>
@@ -317,16 +311,16 @@ export default function AddEmployee() {
         
         {/* Action Buttons */}
         <div className="flex space-x-4 pt-4">
-          <Button
+        <Button
             type="button"
-            className="flex-1 border border-red-500 text-red-500 py-3 rounded hover:bg-red-50"
+            className=" border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
             onClick={() => router.back()}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            className="flex-1 bg-blue-900 text-white py-3 rounded hover:bg-blue-800"
+            className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded"
           >
             Submit
           </Button>

@@ -28,7 +28,7 @@ export default function Page() {
   
         <>
           <section className="p-[29px_14px_30px_24px] my-8 shadow-[0px_0px_4px_1px_#0000004D]">
-            <header className="flex items-center justify-between gap-5 py-2">
+            <header className="flex justify-between items-center border-b-2  py-4 mb-8">
               <h2 className="font-semibold text-xl text-black">
                 Schedule List
               </h2>

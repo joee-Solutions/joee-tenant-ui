@@ -1,4 +1,42 @@
-import { useState } from 'react';
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "lucide-react";
+
+// Validation schema
+const schema = z.object({
+  country: z.string().min(1, "Country is required"),
+  state: z.string().min(1, "State is required"),
+  city: z.string().min(1, "City is required"),
+  postal: z.string().min(1, "Postal/Zip code is required"),
+  email: z.string().email("Invalid email address"),
+  workEmail: z.string().email("Invalid work email address").optional(),
+  homePhone: z.string().min(1, "Home phone is required"),
+  mobilePhone: z.string().min(1, "Mobile phone is required"),
+  address: z.string().min(1, "Address is required"),
+  addressFrom: z.string().optional(),
+  addressTo: z.string().optional(),
+  currentAddress: z.string().optional(),
+  contactMethod: z.string().min(1, "Preferred method of contact is required"),
+  livingSituation: z.string().min(1, "Living situation is required"),
+  referralSource: z.string().min(1, "Referral source is required"),
+  occupationStatus: z.string().min(1, "Occupation status is required"),
+  industry: z.string().min(1, "Industry is required"),
+  householdSize: z.number().min(1, "Household size is required"),
+  notes: z.string().optional(),
+});
+
+type FormData = z.infer<typeof schema>;
 
 export default function ContactDemographicForm() {
   // Arrays for dropdown options
@@ -12,383 +50,366 @@ export default function ContactDemographicForm() {
   const occupationStatusOptions = ["Employed", "Self-Employed", "Unemployed", "Retired", "Student", "Unable to Work", "Other"];
   const industryOptions = ["Healthcare", "Education", "Technology", "Finance", "Manufacturing", "Retail", "Government", "Construction", "Food Service", "Transportation", "Other"];
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      householdSize: 1,
+    }
+  });
+
+  const onSubmit = (data: FormData) => {
+    console.log(data);
+  };
+
+  // Convert register to work with shadcn/ui Select
+  const registerSelect = (name: keyof FormData) => ({
+    value: watch(name) as string,
+    onValueChange: (value: string) => setValue(name, value),
+  });
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className=" mx-auto p-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Country */}
         <div>
-          <label htmlFor="country" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="country" className="block text-base text-black font-normal mb-2">
             Country
           </label>
-          <div className="relative">
-            <select 
-              id="country"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("country")}>
+            <SelectTrigger className=" w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select country" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {countryOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.country && <p className="text-red-500 text-sm">{errors.country.message}</p>}
         </div>
 
         {/* State */}
         <div>
-          <label htmlFor="state" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="state" className="block text-base text-black font-normal mb-2">
             State
           </label>
-          <div className="relative">
-            <select 
-              id="state"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("state")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {stateOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.state && <p className="text-red-500 text-sm">{errors.state.message}</p>}
         </div>
 
         {/* City */}
         <div>
-          <label htmlFor="city" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="city" className="block text-base text-black font-normal mb-2">
             City
           </label>
-          <div className="relative">
-            <select 
-              id="city"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("city")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select city" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {cityOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.city && <p className="text-red-500 text-sm">{errors.city.message}</p>}
         </div>
 
         {/* Postal/Zip code */}
         <div>
-          <label htmlFor="postal" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="postal" className="block text-base text-black font-normal mb-2">
             Postal/Zip code
           </label>
-          <div className="relative">
-            <select 
-              id="postal"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("postal")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select postal code" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {postalOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.postal && <p className="text-red-500 text-sm">{errors.postal.message}</p>}
         </div>
 
         {/* Email */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="email" className="block text-base text-black font-normal mb-2">
             Email
           </label>
-          <input
+          <Input
             type="email"
             id="email"
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("email")}
           />
+          {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
         </div>
 
         {/* Email (work) */}
         <div>
-          <label htmlFor="workEmail" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="workEmail" className="block text-base text-black font-normal mb-2">
             Email (work)
           </label>
-          <input
+          <Input
             type="email"
             id="workEmail"
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("workEmail")}
           />
+          {errors.workEmail && <p className="text-red-500 text-sm">{errors.workEmail.message}</p>}
         </div>
 
         {/* Phone (Home) */}
         <div>
-          <label htmlFor="homePhone" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="homePhone" className="block text-base text-black font-normal mb-2">
             Phone (Home)
           </label>
-          <input
+          <Input
             type="tel"
             id="homePhone"
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("homePhone")}
           />
+          {errors.homePhone && <p className="text-red-500 text-sm">{errors.homePhone.message}</p>}
         </div>
 
         {/* Phone (Mobile) */}
         <div>
-          <label htmlFor="mobilePhone" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="mobilePhone" className="block text-base text-black font-normal mb-2">
             Phone (Mobile)
           </label>
-          <input
+          <Input
             type="tel"
             id="mobilePhone"
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("mobilePhone")}
           />
+          {errors.mobilePhone && <p className="text-red-500 text-sm">{errors.mobilePhone.message}</p>}
         </div>
 
         {/* Address - Full width */}
         <div className="md:col-span-2">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="address" className="block text-base text-black font-normal mb-2">
             Address
           </label>
-          <input
+          <Input
             type="text"
             id="address"
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("address")}
           />
+          {errors.address && <p className="text-red-500 text-sm">{errors.address.message}</p>}
         </div>
 
         {/* You lived in the above address (From) */}
         <div>
-          <label htmlFor="addressFrom" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="addressFrom" className="block text-base text-black font-normal mb-2">
             You lived in the above address (From)
           </label>
           <div className="relative">
-            <input
-              type="text"
+            <Input
+              type="date"
               id="addressFrom"
-              className="block w-full px-4 py-3 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="DD/MM/YYYY"
+              className="w-full h-14 p-3 border border-[#737373] rounded"
+              {...register("addressFrom")}
             />
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <svg className="h-5 w-5 text-gray-400 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
+            <Calendar className="absolute left-3 top-3 text-gray-400" size={20} />
           </div>
+          {errors.addressFrom && <p className="text-red-500 text-sm">{errors.addressFrom.message}</p>}
         </div>
 
         {/* To date */}
         <div>
-          <label htmlFor="addressTo" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="addressTo" className="block text-base text-black font-normal mb-2">
             To
           </label>
           <div className="relative">
-            <input
-              type="text"
+            <Input
+              type="date"
               id="addressTo"
-              className="block w-full px-4 py-3 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full h-14 p-3 border border-[#737373] rounded"
               placeholder="DD/MM/YYYY"
+              {...register("addressTo")}
             />
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <svg className="h-5 w-5 text-gray-400 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
+            <Calendar className="absolute left-3 top-3 text-gray-400" size={20} />
           </div>
+          {errors.addressTo && <p className="text-red-500 text-sm">{errors.addressTo.message}</p>}
         </div>
 
         {/* Current Address (if any) - Full width */}
         <div className="md:col-span-2">
-          <label htmlFor="currentAddress" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="currentAddress" className="block text-base text-black font-normal mb-2">
             Current Address (if any)
           </label>
-          <input
+          <Input
             type="text"
             id="currentAddress"
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("currentAddress")}
           />
+          {errors.currentAddress && <p className="text-red-500 text-sm">{errors.currentAddress.message}</p>}
         </div>
 
         {/* Preferred Method of Contact */}
         <div>
-          <label htmlFor="contactMethod" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="contactMethod" className="block text-base text-black font-normal mb-2">
             Preferred Method of Contact
           </label>
-          <div className="relative">
-            <select 
-              id="contactMethod"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("contactMethod")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select contact method" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {contactMethodOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.contactMethod && <p className="text-red-500 text-sm">{errors.contactMethod.message}</p>}
         </div>
 
         {/* Current Living Situation */}
         <div>
-          <label htmlFor="livingSituation" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="livingSituation" className="block text-base text-black font-normal mb-2">
             Current Living Situation
           </label>
-          <div className="relative">
-            <select 
-              id="livingSituation"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("livingSituation")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select living situation" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {livingSituationOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.livingSituation && <p className="text-red-500 text-sm">{errors.livingSituation.message}</p>}
         </div>
 
         {/* Referral Source */}
         <div>
-          <label htmlFor="referralSource" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="referralSource" className="block text-base text-black font-normal mb-2">
             Referral Source
           </label>
-          <div className="relative">
-            <select 
-              id="referralSource"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-500"
-              defaultValue=""
-            >
-              <option value="" disabled>select</option>
+          <Select {...registerSelect("referralSource")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select referral source" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {referralSourceOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.referralSource && <p className="text-red-500 text-sm">{errors.referralSource.message}</p>}
         </div>
 
         {/* Occupation Status */}
         <div>
-          <label htmlFor="occupationStatus" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="occupationStatus" className="block text-base text-black font-normal mb-2">
             Occupation Status
           </label>
-          <div className="relative">
-            <select 
-              id="occupationStatus"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              defaultValue="Employed"
-            >
+          <Select {...registerSelect("occupationStatus")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select occupation status" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {occupationStatusOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.occupationStatus && <p className="text-red-500 text-sm">{errors.occupationStatus.message}</p>}
         </div>
 
         {/* Industry */}
         <div>
-          <label htmlFor="industry" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="industry" className="block text-base text-black font-normal mb-2">
             Industry
           </label>
-          <div className="relative">
-            <select 
-              id="industry"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              defaultValue="Employed"
-            >
+          <Select {...registerSelect("industry")}>
+            <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+              <SelectValue placeholder="Select industry" />
+            </SelectTrigger>
+            <SelectContent className="z-10 bg-white">
               {industryOptions.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
+                <SelectItem key={index} value={option} className="hover:bg-gray-200">{option}</SelectItem>
               ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
+          {errors.industry && <p className="text-red-500 text-sm">{errors.industry.message}</p>}
         </div>
 
         {/* Household size */}
         <div>
-          <label htmlFor="householdSize" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="householdSize" className="block text-base text-black font-normal mb-2">
             Household size
           </label>
-          <div className="relative">
-            <input
-              type="number"
-              id="householdSize"
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter here"
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
+          <Input
+            type="number"
+            id="householdSize"
+            placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+            {...register("householdSize", { valueAsNumber: true })}
+          />
+          {errors.householdSize && <p className="text-red-500 text-sm">{errors.householdSize.message}</p>}
         </div>
 
         {/* Notes - Full width */}
         <div className="md:col-span-2">
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-900 mb-1">
+          <label htmlFor="notes" className="block text-base text-black font-normal mb-2">
             Notes
           </label>
-          <textarea
+          <Textarea
             id="notes"
+            className="w-full h-32 p-3 border border-[#737373] rounded"
             rows={4}
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            {...register("notes")}
           />
+          {errors.notes && <p className="text-red-500 text-sm">{errors.notes.message}</p>}
         </div>
-      </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-4 pt-4">
+        <Button
+            type="button"
+            className=" border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
+          
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded"
+          >
+            Submit
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

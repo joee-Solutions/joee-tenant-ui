@@ -184,16 +184,16 @@ export default function AddAppointment() {
         
         {/* Action Buttons */}
         <div className="flex space-x-4 pt-4">
-          <Button
+        <Button
             type="button"
-            className=" border border-red-500 text-red-500 py-3 rounded hover:bg-red-50"
+            className=" border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
             onClick={() => router.back()}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            className=" bg-blue-900 text-white py-3 rounded hover:bg-blue-800"
+            className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded"
           >
             Submit
           </Button>
