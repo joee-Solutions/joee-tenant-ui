@@ -1,122 +1,191 @@
-import { useState } from 'react';
+import { useState, ChangeEvent } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Define interfaces for our data structures
+interface MedicalCondition {
+  id: number;
+  condition: string;
+  onsetDate: string;
+  endDate: string;
+  comments: string;
+}
+
+interface Medication {
+  id: number;
+  medication: string;
+  startDate: string;
+  endDate: string;
+  dosage: string;
+  frequency: string;
+  route: string;
+  prescribersName: string;
+  comments: string;
+}
 
 export default function MedicalHistoryForm() {
   const medicalConditionOptions = [
-    "Asthma", 
-    "Diabetes", 
-    "Hypertension", 
-    "Arthritis", 
-    "Allergies", 
-    "Heart Disease", 
-    "Cancer", 
-    "Depression", 
-    "Anxiety", 
-    "COPD"
-  ];
-  
-  const medicationOptions = [
-    "Lisinopril", 
-    "Metformin", 
-    "Albuterol", 
-    "Atorvastatin", 
-    "Levothyroxine", 
-    "Amlodipine", 
-    "Metoprolol", 
-    "Omeprazole", 
-    "Simvastatin", 
-    "Losartan"
-  ];
-  
-  const frequencyOptions = [
-    "Once daily", 
-    "Twice daily", 
-    "Three times daily", 
-    "Four times daily", 
-    "Every 4 hours", 
-    "Every 6 hours", 
-    "Every 12 hours", 
-    "Weekly", 
-    "As needed"
-  ];
-  
-  const routeOptions = [
-    "Oral", 
-    "Intravenous", 
-    "Intramuscular", 
-    "Subcutaneous", 
-    "Topical", 
-    "Inhalation", 
-    "Nasal", 
-    "Rectal", 
-    "Ophthalmic"
+    "Asthma",
+    "Diabetes",
+    "Hypertension",
+    "Arthritis",
+    "Allergies",
+    "Heart Disease",
+    "Cancer",
+    "Depression",
+    "Anxiety",
+    "COPD",
   ];
 
-  const [medicalConditions, setMedicalConditions] = useState([
-    { id: 1, condition: '', onsetDate: '', endDate: '', comments: '' }
+  const medicationOptions = [
+    "Lisinopril",
+    "Metformin",
+    "Albuterol",
+    "Atorvastatin",
+    "Levothyroxine",
+    "Amlodipine",
+    "Metoprolol",
+    "Omeprazole",
+    "Simvastatin",
+    "Losartan",
+  ];
+
+  const frequencyOptions = [
+    "Once daily",
+    "Twice daily",
+    "Three times daily",
+    "Four times daily",
+    "Every 4 hours",
+    "Every 6 hours",
+    "Every 12 hours",
+    "Weekly",
+    "As needed",
+  ];
+
+  const routeOptions = [
+    "Oral",
+    "Intravenous",
+    "Intramuscular",
+    "Subcutaneous",
+    "Topical",
+    "Inhalation",
+    "Nasal",
+    "Rectal",
+    "Ophthalmic",
+  ];
+
+  const [medicalConditions, setMedicalConditions] = useState<MedicalCondition[]>([
+    { id: 1, condition: "", onsetDate: "", endDate: "", comments: "" },
   ]);
-  
-  const [medications, setMedications] = useState([
-    { id: 1, medication: '', startDate: '', endDate: '', dosage: '', frequency: '', route: '', prescribersName: '', comments: '' }
+
+  const [medications, setMedications] = useState<Medication[]>([
+    {
+      id: 1,
+      medication: "",
+      startDate: "",
+      endDate: "",
+      dosage: "",
+      frequency: "",
+      route: "",
+      prescribersName: "",
+      comments: "",
+    },
   ]);
 
   const addMedicalCondition = () => {
-    const newId = medicalConditions.length > 0 
-      ? Math.max(...medicalConditions.map(item => item.id)) + 1 
-      : 1;
-    
+    const newId =
+      medicalConditions.length > 0
+        ? Math.max(...medicalConditions.map((item) => item.id)) + 1
+        : 1;
+
     setMedicalConditions([
-      ...medicalConditions, 
-      { id: newId, condition: '', onsetDate: '', endDate: '', comments: '' }
+      ...medicalConditions,
+      { id: newId, condition: "", onsetDate: "", endDate: "", comments: "" },
     ]);
   };
 
-  const removeMedicalCondition = (id) => {
+  const removeMedicalCondition = (id: number) => {
     if (medicalConditions.length > 1) {
-      setMedicalConditions(medicalConditions.filter(item => item.id !== id));
+      setMedicalConditions(medicalConditions.filter((item) => item.id !== id));
     }
   };
 
-  const updateMedicalCondition = (id, field, value) => {
-    setMedicalConditions(medicalConditions.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    ));
+  const updateMedicalCondition = (id: number, field: keyof MedicalCondition, value: string) => {
+    setMedicalConditions(
+      medicalConditions.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
   };
 
   const addMedication = () => {
-    const newId = medications.length > 0 
-      ? Math.max(...medications.map(item => item.id)) + 1 
-      : 1;
-    
+    const newId =
+      medications.length > 0
+        ? Math.max(...medications.map((item) => item.id)) + 1
+        : 1;
+
     setMedications([
-      ...medications, 
-      { id: newId, medication: '', startDate: '', endDate: '', dosage: '', frequency: '', route: '', prescribersName: '', comments: '' }
+      ...medications,
+      {
+        id: newId,
+        medication: "",
+        startDate: "",
+        endDate: "",
+        dosage: "",
+        frequency: "",
+        route: "",
+        prescribersName: "",
+        comments: "",
+      },
     ]);
   };
 
-  const removeMedication = (id) => {
+  const removeMedication = (id: number) => {
     if (medications.length > 1) {
-      setMedications(medications.filter(item => item.id !== id));
+      setMedications(medications.filter((item) => item.id !== id));
     }
   };
 
-  const updateMedication = (id, field, value) => {
-    setMedications(medications.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    ));
+  const updateMedication = (id: number, field: keyof Medication, value: string) => {
+    setMedications(
+      medications.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const handleInputChange = (
+    id: number,
+    field: keyof MedicalCondition | keyof Medication,
+    setter: React.Dispatch<React.SetStateAction<MedicalCondition[]>> | React.Dispatch<React.SetStateAction<Medication[]>>,
+    items: MedicalCondition[] | Medication[]
+  ) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setter(
+      items.map((item) =>
+        item.id === id ? { ...item, [field]: e.target.value } : item
+      ) as any
+    );
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className=" mx-auto p-6">
       {/* Medical History Section */}
       <h1 className="text-2xl font-bold mb-6">Medical History</h1>
-      
+
       {medicalConditions.map((condition, index) => (
         <div key={condition.id} className="mb-8 border-b pb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Medical Condition {index + 1}</h2>
             <div className="flex gap-2">
               {medicalConditions.length > 1 && (
-                <button 
+                <button
                   onClick={() => removeMedicalCondition(condition.id)}
                   className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                 >
@@ -124,7 +193,7 @@ export default function MedicalHistoryForm() {
                 </button>
               )}
               {index === medicalConditions.length - 1 && (
-                <button 
+                <button
                   onClick={addMedicalCondition}
                   className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
                 >
@@ -133,89 +202,80 @@ export default function MedicalHistoryForm() {
               )}
             </div>
           </div>
-          
+
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Medical Condition</label>
-              <div className="relative">
-                <select 
-                  value={condition.condition}
-                  onChange={(e) => updateMedicalCondition(condition.id, 'condition', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded appearance-none pr-10"
-                >
-                  <option value="">Enter here</option>
-                  {medicalConditionOptions.map(option => (
-                    <option key={option} value={option.toLowerCase()}>
+              <label className="block text-base text-black font-normal mb-2">Medical Condition</label>
+              <Select
+                value={condition.condition}
+                onValueChange={(value) =>
+                  updateMedicalCondition(condition.id, "condition", value)
+                }
+              >
+                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                  <SelectValue placeholder="Select condition" />
+                </SelectTrigger>
+                <SelectContent className="z-10 bg-white">
+                  {medicalConditionOptions.map((option) => (
+                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
                       {option}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                  </svg>
-                </div>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-            
+
             <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Onset date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={condition.onsetDate}
-                  onChange={(e) => updateMedicalCondition(condition.id, 'onsetDate', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded"
-                  placeholder="DD/MM/YYYY"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center px-2">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </div>
-              </div>
+              <label className="block text-base text-black font-normal mb-2">Onset Date</label>
+              <Input
+                type="date"
+                value={condition.onsetDate}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateMedicalCondition(condition.id, "onsetDate", e.target.value)
+                }
+              />
             </div>
           </div>
-          
-          <div className="mb-4">
-            <label className="block font-medium mb-2">End date</label>
-            <div className="relative max-w-md">
-              <input
+
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="w-full md:w-1/2">
+              <label className="block text-base text-black font-normal mb-2">End Date</label>
+              <Input
                 type="date"
                 value={condition.endDate}
-                onChange={(e) => updateMedicalCondition(condition.id, 'endDate', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded"
-                placeholder="DD/MM/YYYY"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateMedicalCondition(condition.id, "endDate", e.target.value)
+                }
               />
-              <div className="absolute inset-y-0 right-0 flex items-center px-2">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </div>
             </div>
-          </div>
-          
-          <div>
-            <label className="block font-medium mb-2">Comments</label>
-            <textarea
-              value={condition.comments}
-              onChange={(e) => updateMedicalCondition(condition.id, 'comments', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded h-32"
-            ></textarea>
-          </div>
+            </div>
+
+            <div className="w-full">
+              <label className="block text-base text-black font-normal mb-2">Comments</label>
+              <Textarea
+                value={condition.comments}
+            className="w-full h-32 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateMedicalCondition(condition.id, "comments", e.target.value)
+                }
+                rows={4}
+              />
+            </div>
         </div>
       ))}
-      
+
       {/* Medication History Section */}
       <h1 className="text-2xl font-bold mb-6">Medication History</h1>
-      
+
       {medications.map((medication, index) => (
         <div key={medication.id} className="mb-8 border-b pb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Medication {index + 1}</h2>
             <div className="flex gap-2">
               {medications.length > 1 && (
-                <button 
+                <button
                   onClick={() => removeMedication(medication.id)}
                   className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                 >
@@ -223,7 +283,7 @@ export default function MedicalHistoryForm() {
                 </button>
               )}
               {index === medications.length - 1 && (
-                <button 
+                <button
                   onClick={addMedication}
                   className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
                 >
@@ -232,161 +292,146 @@ export default function MedicalHistoryForm() {
               )}
             </div>
           </div>
-          
+
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Medication</label>
-              <div className="relative">
-                <select 
-                  value={medication.medication}
-                  onChange={(e) => updateMedication(medication.id, 'medication', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded appearance-none pr-10"
-                >
-                  <option value="">select</option>
-                  {medicationOptions.map(option => (
-                    <option key={option} value={option.toLowerCase()}>
+              <label className="block text-base text-black font-normal mb-2">Medication</label>
+              <Select
+                value={medication.medication}
+                onValueChange={(value) =>
+                  updateMedication(medication.id, "medication", value)
+                }
+              >
+                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                  <SelectValue placeholder="Select medication" />
+                </SelectTrigger>
+                <SelectContent className="z-10 bg-white">
+                  {medicationOptions.map((option) => (
+                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
                       {option}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                  </svg>
-                </div>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-            
+
             <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Start date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={medication.startDate}
-                  onChange={(e) => updateMedication(medication.id, 'startDate', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded"
-                  placeholder="DD/MM/YYYY"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center px-2">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">End date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={medication.endDate}
-                  onChange={(e) => updateMedication(medication.id, 'endDate', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded"
-                  placeholder="DD/MM/YYYY"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center px-2">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            
-            <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Dosage</label>
-              <input
-                type="text"
-                value={medication.dosage}
-                onChange={(e) => updateMedication(medication.id, 'dosage', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded"
-                placeholder="Enter here"
+              <label className="block text-base text-black font-normal mb-2">Start Date</label>
+              <Input
+                type="date"
+                value={medication.startDate}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateMedication(medication.id, "startDate", e.target.value)
+                }
               />
             </div>
           </div>
-          
+
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Frequency</label>
-              <div className="relative">
-                <select
-                  value={medication.frequency}
-                  onChange={(e) => updateMedication(medication.id, 'frequency', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded appearance-none pr-10"
-                >
-                  <option value="">Enter here</option>
-                  {frequencyOptions.map(option => (
-                    <option key={option} value={option.toLowerCase()}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                  </svg>
-                </div>
-              </div>
+              <label className="block text-base text-black font-normal mb-2">End Date</label>
+              <Input
+                type="date"
+                value={medication.endDate}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateMedication(medication.id, "endDate", e.target.value)
+                }
+              />
             </div>
-            
+
             <div className="w-full md:w-1/2">
-              <label className="block font-medium mb-2">Route</label>
-              <div className="relative">
-                <select
-                  value={medication.route}
-                  onChange={(e) => updateMedication(medication.id, 'route', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded appearance-none pr-10"
-                >
-                  <option value="">Enter here</option>
-                  {routeOptions.map(option => (
-                    <option key={option} value={option.toLowerCase()}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                  </svg>
-                </div>
-              </div>
+              <label className="block text-base text-black font-normal mb-2">Dosage</label>
+              <Input
+                type="text"
+                value={medication.dosage}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateMedication(medication.id, "dosage", e.target.value)
+                }
+                placeholder="Enter dosage"
+              />
             </div>
           </div>
-          
+
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="w-full md:w-1/2">
+              <label className="block text-base text-black font-normal mb-2">Frequency</label>
+              <Select
+                value={medication.frequency}
+                onValueChange={(value) =>
+                  updateMedication(medication.id, "frequency", value)
+                }
+              >
+                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent className="z-10 bg-white">
+                  {frequencyOptions.map((option) => (
+                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full md:w-1/2">
+              <label className="block text-base text-black font-normal mb-2">Route</label>
+              <Select
+                value={medication.route}
+                onValueChange={(value) =>
+                  updateMedication(medication.id, "route", value)
+                }
+              >
+                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                  <SelectValue placeholder="Select route" />
+                </SelectTrigger>
+                <SelectContent className="z-10 bg-white">
+                  {routeOptions.map((option) => (
+                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="mb-4">
-            <label className="block font-medium mb-2">Prescriber's name</label>
-            <input
+            <label className="block text-base text-black font-normal mb-2">Prescriber's Name</label>
+            <Input
               type="text"
               value={medication.prescribersName}
-              onChange={(e) => updateMedication(medication.id, 'prescribersName', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded"
-              placeholder="Enter here"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+              onChange={(e) =>
+                updateMedication(medication.id, "prescribersName", e.target.value)
+              }
+              placeholder="Enter prescriber's name"
             />
           </div>
-          
+
           <div>
-            <label className="block font-medium mb-2">Comments</label>
-            <textarea
+            <label className="block text-base text-black font-normal mb-2">Comments</label>
+            <Textarea
               value={medication.comments}
-              onChange={(e) => updateMedication(medication.id, 'comments', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded h-32"
-            ></textarea>
+            className="w-full h-32 p-3 border border-[#737373] rounded"
+              onChange={(e) =>
+                updateMedication(medication.id, "comments", e.target.value)
+              }
+              rows={4}
+            />
           </div>
         </div>
       ))}
 
       {/* Submit button */}
       <div className="mt-8">
-        <button 
+        <button
           className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-6 rounded"
-          onClick={() => {
-            console.log('Form Data:', { medicalConditions, medications });
-            // Handle form submission here
-          }}
         >
-          Save Information
+          Save
         </button>
       </div>
     </div>

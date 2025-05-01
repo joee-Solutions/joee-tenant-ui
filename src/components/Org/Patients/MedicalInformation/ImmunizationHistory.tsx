@@ -1,5 +1,21 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+// Define the type for an immunization entry
+type ImmunizationEntry = {
+  id: number;
+  immunizationType: string;
+  date: string;
+  additionalInfo: string;
+};
 
 const immunizationTypes = [
   "Influenza (Flu)",
@@ -10,84 +26,168 @@ const immunizationTypes = [
   "Hepatitis B",
   "Pneumococcal",
   "Varicella (Chickenpox)",
-  "Meningococcal"
+  "Meningococcal",
 ];
 
-export default function ImmunizationForm(){
-  const [date, setDate] = useState('');
-  const [immunizationType, setImmunizationType] = useState('');
-  const [additionalInfo, setAdditionalInfo] = useState('');
+export default function ImmunizationForm() {
+  const [immunizationEntries, setImmunizationEntries] = useState<ImmunizationEntry[]>([
+    {
+      id: 1,
+      immunizationType: "",
+      date: "",
+      additionalInfo: "",
+    },
+  ]);
+
+  const addImmunizationEntry = (): void => {
+    const newId =
+      immunizationEntries.length > 0
+        ? Math.max(...immunizationEntries.map((entry) => entry.id)) + 1
+        : 1;
+
+    setImmunizationEntries([
+      ...immunizationEntries,
+      {
+        id: newId,
+        immunizationType: "",
+        date: "",
+        additionalInfo: "",
+      },
+    ]);
+  };
+
+  const removeImmunizationEntry = (id: number): void => {
+    if (immunizationEntries.length > 1) {
+      setImmunizationEntries(immunizationEntries.filter((entry) => entry.id !== id));
+    }
+  };
+
+  const updateImmunizationEntry = (
+    id: number,
+    field: keyof ImmunizationEntry,
+    value: string
+  ): void => {
+    setImmunizationEntries(
+      immunizationEntries.map((entry) =>
+        entry.id === id ? { ...entry, [field]: value } : entry
+      )
+    );
+  };
+
+  const handleSubmit = (e: React.FormEvent): void => {
+    e.preventDefault();
+    console.log("Immunization Form submitted:", immunizationEntries);
+    // Handle form submission logic here
+  };
 
   return (
-    <div>
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:space-x-4">
-          <div className="w-full md:w-1/2 mb-4 md:mb-0">
-            <label className="block text-lg font-medium mb-2">
-              Immunization Type
-            </label>
-            <div className="relative">
-              <select
-                className="w-full border border-gray-300 rounded-md p-3 appearance-none focus:outline-none"
-                value={immunizationType}
-                onChange={(e) => setImmunizationType(e.target.value)}
-              >
-                <option value="" disabled selected>Enter here</option>
-                {immunizationTypes.map((type, index) => (
-                  <option key={index} value={type}>{type}</option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <div className="w-full md:w-1/2">
-            <label className="block text-lg font-medium mb-2">
-              Date
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-md p-3 pl-10 focus:outline-none"
-                placeholder="DD/MM/YYYY"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              {date && (
-                <button 
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  onClick={() => setDate('')}
-                  aria-label="Clear date"
-                >
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className=" mx-auto p-6 ">
+      <h1 className="text-2xl font-bold mb-6">Immunization History</h1>
 
-      <div>
-        <label className="block text-lg font-medium mb-2">
-          Additional Information
-        </label>
-        <textarea
-          className="w-full border border-gray-300 rounded-md p-3 h-40 focus:outline-none"
-          value={additionalInfo}
-          onChange={(e) => setAdditionalInfo(e.target.value)}
-        ></textarea>
-      </div>
+      <form onSubmit={handleSubmit}>
+        {immunizationEntries.map((entry, index) => (
+          <div key={entry.id} className="mb-8 border-b pb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Immunization Entry {index + 1}</h2>
+              <div className="flex gap-2">
+                {immunizationEntries.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeImmunizationEntry(entry.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Remove
+                  </button>
+                )}
+                {index === immunizationEntries.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={addImmunizationEntry}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Add Another
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Immunization Type */}
+              <div>
+                <label
+                  htmlFor={`immunizationType-${entry.id}`}
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  Immunization Type
+                </label>
+                <Select
+                  value={entry.immunizationType}
+                  onValueChange={(value) =>
+                    updateImmunizationEntry(entry.id, "immunizationType", value)
+                  }
+                >
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder="Select immunization type" />
+                  </SelectTrigger>
+                  <SelectContent className="z-10 bg-white">
+                    {immunizationTypes.map((type) => (
+                      <SelectItem key={type} value={type} className="hover:bg-gray-200">
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label
+                  htmlFor={`date-${entry.id}`}
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  Date
+                </label>
+                <Input
+                  type="date"
+                  value={entry.date}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                  onChange={(e) =>
+                    updateImmunizationEntry(entry.id, "date", e.target.value)
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="mt-6">
+              <label
+                htmlFor={`additionalInfo-${entry.id}`}
+                className="block text-base text-black font-normal mb-2"
+              >
+                Additional Information
+              </label>
+              <Textarea
+                value={entry.additionalInfo}
+            className="w-full h-32 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateImmunizationEntry(entry.id, "additionalInfo", e.target.value)
+                }
+                rows={4}
+                placeholder="Enter additional information"
+              />
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-8">
+          <button
+            type="submit"
+            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            Save
+          </button>
+        </div>
+      </form>
     </div>
   );
-};
+}

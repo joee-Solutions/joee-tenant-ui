@@ -394,7 +394,7 @@ export default function ContactDemographicForm() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex space-x-4 pt-4">
+        {/* <div className="flex space-x-4 pt-4">
         <Button
             type="button"
             className=" border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
@@ -408,7 +408,7 @@ export default function ContactDemographicForm() {
           >
             Submit
           </Button>
-        </div>
+        </div> */}
       </form>
     </div>
   );

@@ -1,4 +1,21 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Define the type for a surgery entry
+type SurgeryEntry = {
+  id: number;
+  surgeryType: string;
+  date: string;
+  additionalInfo: string;
+};
 
 const surgeryTypes = [
   "Appendectomy",
@@ -10,84 +27,169 @@ const surgeryTypes = [
   "Heart surgery",
   "Cataract surgery",
   "Hernia repair",
-  "Thyroid surgery"
+  "Thyroid surgery",
+  "Other",
 ];
 
-export default function SurgeryHistoryForm(){
-  const [surgeryType, setSurgeryType] = useState('');
-  const [date, setDate] = useState('');
-  const [additionalInfo, setAdditionalInfo] = useState('');
+export default function SurgeryHistoryForm() {
+  const [surgeryEntries, setSurgeryEntries] = useState<SurgeryEntry[]>([
+    {
+      id: 1,
+      surgeryType: "",
+      date: "",
+      additionalInfo: "",
+    },
+  ]);
+
+  const addSurgeryEntry = (): void => {
+    const newId =
+      surgeryEntries.length > 0
+        ? Math.max(...surgeryEntries.map((entry) => entry.id)) + 1
+        : 1;
+
+    setSurgeryEntries([
+      ...surgeryEntries,
+      {
+        id: newId,
+        surgeryType: "",
+        date: "",
+        additionalInfo: "",
+      },
+    ]);
+  };
+
+  const removeSurgeryEntry = (id: number): void => {
+    if (surgeryEntries.length > 1) {
+      setSurgeryEntries(surgeryEntries.filter((entry) => entry.id !== id));
+    }
+  };
+
+  const updateSurgeryEntry = (
+    id: number,
+    field: keyof SurgeryEntry,
+    value: string
+  ): void => {
+    setSurgeryEntries(
+      surgeryEntries.map((entry) =>
+        entry.id === id ? { ...entry, [field]: value } : entry
+      )
+    );
+  };
+
+  const handleSubmit = (e: React.FormEvent): void => {
+    e.preventDefault();
+    console.log("Surgery History Form submitted:", surgeryEntries);
+    // Handle form submission logic here
+  };
 
   return (
-    <div>
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:space-x-4">
-          <div className="w-full md:w-1/2 mb-4 md:mb-0">
-            <label className="block text-lg font-medium mb-2">
-              Surgery History
-            </label>
-            <div className="relative">
-              <select
-                className="w-full border border-gray-300 rounded-md p-3 appearance-none focus:outline-none"
-                value={surgeryType}
-                onChange={(e) => setSurgeryType(e.target.value)}
-              >
-                <option value="" disabled selected>select</option>
-                {surgeryTypes.map((type, index) => (
-                  <option key={index} value={type}>{type}</option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <div className="w-full md:w-1/2">
-            <label className="block text-lg font-medium mb-2">
-              Date
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-md p-3 pl-10 focus:outline-none"
-                placeholder="DD/MM/YYYY"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              {date && (
-                <button 
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  onClick={() => setDate('')}
-                  aria-label="Clear date"
-                >
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className=" mx-auto p-6 ">
+      <h1 className="text-2xl font-bold mb-6">Surgery History</h1>
 
-      <div>
-        <label className="block text-lg font-medium mb-2">
-          Additional Information
-        </label>
-        <textarea
-          className="w-full border border-gray-300 rounded-md p-3 h-40 focus:outline-none"
-          value={additionalInfo}
-          onChange={(e) => setAdditionalInfo(e.target.value)}
-        ></textarea>
-      </div>
+      <form onSubmit={handleSubmit}>
+        {surgeryEntries.map((entry, index) => (
+          <div key={entry.id} className="mb-8 border-b pb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Surgery Entry {index + 1}</h2>
+              <div className="flex gap-2">
+                {surgeryEntries.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeSurgeryEntry(entry.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Remove
+                  </button>
+                )}
+                {index === surgeryEntries.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={addSurgeryEntry}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Add Another
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Surgery Type */}
+              <div>
+                <label
+                  htmlFor={`surgeryType-${entry.id}`}
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  Surgery Type
+                </label>
+                <Select
+                  value={entry.surgeryType}
+                  onValueChange={(value) =>
+                    updateSurgeryEntry(entry.id, "surgeryType", value)
+                  }
+                >
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder="Select surgery type" />
+                  </SelectTrigger>
+                  <SelectContent className="z-10 bg-white">
+                    {surgeryTypes.map((type) => (
+                      <SelectItem key={type} value={type} className="hover:bg-gray-200">
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label
+                  htmlFor={`date-${entry.id}`}
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  Date
+                </label>
+                <Input
+                  type="date"
+                  value={entry.date}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                  onChange={(e) =>
+                    updateSurgeryEntry(entry.id, "date", e.target.value)
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="mt-6">
+              <label
+                htmlFor={`additionalInfo-${entry.id}`}
+                className="block text-base text-black font-normal mb-2"
+              >
+                Additional Information
+              </label>
+              <Textarea
+                value={entry.additionalInfo}
+            className="w-full h-32 p-3 border border-[#737373] rounded"
+                onChange={(e) =>
+                  updateSurgeryEntry(entry.id, "additionalInfo", e.target.value)
+                }
+                rows={4}
+                placeholder="Enter additional information"
+              />
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-8">
+          <button
+            type="submit"
+            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            Save
+          </button>
+        </div>
+      </form>
     </div>
   );
-};
+}

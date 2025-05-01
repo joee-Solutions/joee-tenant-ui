@@ -8,6 +8,10 @@ import FamilyHistoryForm from './MedicalInformation/FamilyHistory';
 import SurgeryHistoryForm from '@/components/Org/Patients/MedicalInformation/SurgeryInformation';
 import LifestyleForm from './MedicalInformation/SocialHistory';
 import VitalSignsForm from './MedicalInformation/VitalsForm';
+import ReviewOfSystem from './MedicalInformation/ReviewOfSystem';
+import AdditionalReview from './MedicalInformation/AdditionalReview';
+import Prescriptions from './MedicalInformation/Prescriptions';
+import Visit from './MedicalInformation/Visit';
 
 
 export default function MedicalInformationTab(): React.ReactElement {
@@ -46,20 +50,19 @@ export default function MedicalInformationTab(): React.ReactElement {
       </AccordionSection>
       
       <AccordionSection title="Review of System">
-      <VitalSignsForm />
-        <p className="text-gray-500">ReviewOfSystem.tsx form fields will go here...</p>
+      <ReviewOfSystem />
       </AccordionSection>
       
       <AccordionSection title="Additional Review of System">
-        <p className="text-gray-500">Additional review form fields will go here...</p>
+      <AdditionalReview />
       </AccordionSection>
       
       <AccordionSection title="Prescriptions">
-        <p className="text-gray-500">Prescription form fields will go here...</p>
+      <Prescriptions />
       </AccordionSection>
       
       <AccordionSection title="Visit">
-        <p className="text-gray-500">Visit information form fields will go here...</p>
+      <Visit />
       </AccordionSection>
     </div>
   );

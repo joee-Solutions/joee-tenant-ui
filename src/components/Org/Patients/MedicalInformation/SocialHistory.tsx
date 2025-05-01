@@ -1,281 +1,213 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Data for sexual history options
 const partnerOptions = ["0", "1", "2-5", "6-10", "11-20", "20+"];
 const protectionOptions = ["Always", "Sometimes", "Never", "Not applicable"];
 
-export default function LifestyleForm (){
-  // Tobacco use state
-  const [tobaccoUse, setTobaccoUse] = useState('');
-  const [tobaccoQuantity, setTobaccoQuantity] = useState('');
-  const [tobaccoDuration, setTobaccoDuration] = useState('');
-  
-  // Alcohol use state
-  const [alcoholUse, setAlcoholUse] = useState('');
-  const [alcoholInfo, setAlcoholInfo] = useState('');
-  
-  // Illicit drug use state
-  const [drugUse, setDrugUse] = useState('');
-  const [drugInfo, setDrugInfo] = useState('');
-  
-  // Diet and exercise state
-  const [dietExercise, setDietExercise] = useState('');
-  const [dietExerciseInfo, setDietExerciseInfo] = useState('');
-  
-  // Sexual history state
-  const [partners, setPartners] = useState('');
-  const [protection, setProtection] = useState('');
-  const [comment, setComment] = useState('');
+export default function LifestyleForm() {
+  const [formState, setFormState] = useState({
+    tobaccoUse: "",
+    tobaccoQuantity: "",
+    tobaccoDuration: "",
+    alcoholUse: "",
+    alcoholInfo: "",
+    drugUse: "",
+    drugInfo: "",
+    dietExercise: "",
+    dietExerciseInfo: "",
+    partners: "",
+    protection: "",
+    comment: "",
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Tobacco Use Section */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Tobacco Use:</h3>
-        <div className="flex space-x-8 mb-4">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={tobaccoUse === 'never'}
-              onChange={() => setTobaccoUse('never')}
-            />
-            <span>Never</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={tobaccoUse === 'former'}
-              onChange={() => setTobaccoUse('former')}
-            />
-            <span>Former</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={tobaccoUse === 'current'}
-              onChange={() => setTobaccoUse('current')}
-            />
-            <span>Current</span>
-          </label>
-        </div>
-        
-        {(tobaccoUse === 'former' || tobaccoUse === 'current') && (
-          <div className="mb-4">
-            <div className="flex flex-col md:flex-row md:items-center mb-4">
-              <span className="mr-2">*If former/Current, Specify: Quantity (Packs per day):</span>
-              <input
+    <div className=" mx-auto p-6 ">
+      <h1 className="text-2xl font-bold mb-6">Lifestyle Information</h1>
+
+      <form>
+        {/* Tobacco Use Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Tobacco Use</h3>
+          <div className="flex space-x-4">
+            {["Never", "Former", "Current"].map((option) => (
+              <label key={option} className="flex items-center space-x-2  text-base text-black font-normal mb-2">
+                <Input
+                  type="checkbox"
+                  className="accent-green-600 w-6 h-6 rounded"
+                  checked={formState.tobaccoUse === option.toLowerCase()}
+                  onChange={() => handleChange("tobaccoUse", option.toLowerCase())}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+
+          {(formState.tobaccoUse === "former" || formState.tobaccoUse === "current") && (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
                 type="text"
-                className="border-b border-gray-300 w-32 focus:outline-none"
-                value={tobaccoQuantity}
-                onChange={(e) => setTobaccoQuantity(e.target.value)}
+                placeholder="Quantity (Packs per day)"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                value={formState.tobaccoQuantity}
+                onChange={(e) => handleChange("tobaccoQuantity", e.target.value)}
               />
-              <span className="mx-2 md:mx-4">Duration(Years):</span>
-              <input
+              <Input
                 type="text"
-                className="border-b border-gray-300 w-32 focus:outline-none"
-                value={tobaccoDuration}
-                onChange={(e) => setTobaccoDuration(e.target.value)}
+                placeholder="Duration (Years)"
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+                value={formState.tobaccoDuration}
+                onChange={(e) => handleChange("tobaccoDuration", e.target.value)}
               />
             </div>
+          )}
+        </div>
+
+        {/* Alcohol Use Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Alcohol Use</h3>
+          <div className="flex space-x-4">
+            {["Never", "Social", "Regular", "Heavy"].map((option) => (
+              <label key={option} className="flex items-center space-x-2 text-base text-black font-normal mb-2">
+                <Input
+                  type="checkbox"
+                  className="accent-green-600 w-6 h-6 rounded"
+                  checked={formState.alcoholUse === option.toLowerCase()}
+                  onChange={() => handleChange("alcoholUse", option.toLowerCase())}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
           </div>
-        )}
-        <hr className="my-6" />
-      </div>
 
-      {/* Alcohol Use Section */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Alcohol Use:</h3>
-        <div className="flex flex-wrap gap-8 mb-4">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={alcoholUse === 'never'}
-              onChange={() => setAlcoholUse('never')}
-            />
-            <span>Never</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={alcoholUse === 'social'}
-              onChange={() => setAlcoholUse('social')}
-            />
-            <span>Social</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={alcoholUse === 'regular'}
-              onChange={() => setAlcoholUse('regular')}
-            />
-            <span>Regular</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={alcoholUse === 'heavy'}
-              onChange={() => setAlcoholUse('heavy')}
-            />
-            <span>Heavy</span>
-          </label>
+          <Textarea
+            placeholder="Additional Information"
+            className="w-full h-32 p-3 border border-[#737373] rounded mt-4"
+            value={formState.alcoholInfo}
+            onChange={(e) => handleChange("alcoholInfo", e.target.value)}
+          />
         </div>
-        
-        <div className="mb-4">
-          <label className="block text-lg font-medium mb-2">
-            Additional Information
-          </label>
-          <textarea
-            className="w-full border border-gray-300 rounded-md p-3 h-24 focus:outline-none"
-            value={alcoholInfo}
-            onChange={(e) => setAlcoholInfo(e.target.value)}
-          ></textarea>
-        </div>
-        <hr className="my-6" />
-      </div>
 
-      {/* Illicit Drug Use Section */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Illicit Drug Use:</h3>
-        <div className="flex space-x-8 mb-4">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={drugUse === 'yes'}
-              onChange={() => setDrugUse('yes')}
-            />
-            <span>Yes</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={drugUse === 'no'}
-              onChange={() => setDrugUse('no')}
-            />
-            <span>No</span>
-          </label>
-        </div>
-        
-        {drugUse === 'yes' && (
-          <div className="mb-4">
-            <label className="block mb-2">
-              If Yes, please specify:
-            </label>
-            <textarea
-              className="w-full border border-gray-300 rounded-md p-3 h-24 focus:outline-none"
-              value={drugInfo}
-              onChange={(e) => setDrugInfo(e.target.value)}
-            ></textarea>
+        {/* Illicit Drug Use Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Illicit Drug Use</h3>
+          <div className="flex space-x-4">
+            {["Yes", "No"].map((option) => (
+              <label key={option} className="flex items-center space-x-2 text-base text-black font-normal mb-2">
+                <Input
+                  type="checkbox"
+                  className="accent-green-600 w-6 h-6 rounded"
+                  checked={formState.drugUse === option.toLowerCase()}
+                  onChange={() => handleChange("drugUse", option.toLowerCase())}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
           </div>
-        )}
-        <hr className="my-6" />
-      </div>
 
-      {/* Diet and Exercise Section */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Diet and Exercise:</h3>
-        <div className="flex space-x-8 mb-4">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={dietExercise === 'yes'}
-              onChange={() => setDietExercise('yes')}
+          {formState.drugUse === "yes" && (
+            <Textarea
+              placeholder="If Yes, please specify"
+            className="w-full h-32 p-3 border border-[#737373] rounded mt-4"
+              value={formState.drugInfo}
+              onChange={(e) => handleChange("drugInfo", e.target.value)}
             />
-            <span>Yes</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="h-5 w-5 mr-2"
-              checked={dietExercise === 'no'}
-              onChange={() => setDietExercise('no')}
-            />
-            <span>No</span>
-          </label>
+          )}
         </div>
-        
-        {dietExercise === 'yes' && (
-          <div className="mb-4">
-            <label className="block mb-2">
-              If Yes, please specify:
-            </label>
-            <textarea
-              className="w-full border border-gray-300 rounded-md p-3 h-24 focus:outline-none"
-              value={dietExerciseInfo}
-              onChange={(e) => setDietExerciseInfo(e.target.value)}
-            ></textarea>
-          </div>
-        )}
-        <hr className="my-6" />
-      </div>
 
-      {/* Sexual History Section */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Sexual History:</h3>
-        <div className="flex flex-col md:flex-row md:space-x-8 space-y-4 md:space-y-0 mb-4">
-          <div className="flex items-center">
-            <span className="mr-2">Number of Partners</span>
-            <div className="relative w-40">
-              <select
-                className="w-full border border-gray-300 rounded-md p-2 appearance-none focus:outline-none"
-                value={partners}
-                onChange={(e) => setPartners(e.target.value)}
-              >
-                <option value="" disabled selected>select here</option>
-                {partnerOptions.map((option, index) => (
-                  <option key={index} value={option}>{option}</option>
+        {/* Diet and Exercise Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Diet and Exercise</h3>
+          <div className="flex space-x-4">
+            {["Yes", "No"].map((option) => (
+              <label key={option} className="flex items-center space-x-2 text-base text-black font-normal mb-2">
+                <Input
+                  type="checkbox"
+                  className="accent-green-600 w-6 h-6 rounded"
+                  checked={formState.dietExercise === option.toLowerCase()}
+                  onChange={() => handleChange("dietExercise", option.toLowerCase())}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+
+          {formState.dietExercise === "yes" && (
+            <Textarea
+            className="w-full h-32 p-3 border border-[#737373] rounded mt-4"
+              placeholder="If Yes, please specify"
+              value={formState.dietExerciseInfo}
+              onChange={(e) => handleChange("dietExerciseInfo", e.target.value)}
+            />
+          )}
+        </div>
+
+        {/* Sexual History Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Sexual History</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              value={formState.partners}
+              onValueChange={(value) => handleChange("partners", value)}
+            >
+              <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                <SelectValue placeholder="Number of Partners" />
+              </SelectTrigger>
+              <SelectContent className="z-10 bg-white">
+                {partnerOptions.map((option) => (
+                  <SelectItem key={option} value={option} className="hover:bg-gray-200">
+                    {option}
+                  </SelectItem>
                 ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            <span className="mr-2">Protection used</span>
-            <div className="relative w-40">
-              <select
-                className="w-full border border-gray-300 rounded-md p-2 appearance-none focus:outline-none"
-                value={protection}
-                onChange={(e) => setProtection(e.target.value)}
-              >
-                <option value="" disabled selected>select here</option>
-                {protectionOptions.map((option, index) => (
-                  <option key={index} value={option}>{option}</option>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={formState.protection}
+              onValueChange={(value) => handleChange("protection", value)}
+            >
+              <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                <SelectValue placeholder="Protection Used" />
+              </SelectTrigger>
+              <SelectContent className="z-10 bg-white">
+                {protectionOptions.map((option) => (
+                  <SelectItem key={option} value={option} className="hover:bg-gray-200">
+                    {option}
+                  </SelectItem>
                 ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+              </SelectContent>
+            </Select>
           </div>
+
+          <Textarea
+            placeholder="Comment"
+            className="w-full h-32 p-3 border border-[#737373] rounded mt-4"
+            value={formState.comment}
+            onChange={(e) => handleChange("comment", e.target.value)}
+          />
         </div>
-        
-        <div>
-          <label className="block mb-2">
-            Comment
-          </label>
-          <textarea
-            className="w-full border border-gray-300 rounded-md p-3 h-24 focus:outline-none"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          ></textarea>
+
+        <div className="mt-8">
+          <button
+            type="submit"
+            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            Save
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
-};
+}
