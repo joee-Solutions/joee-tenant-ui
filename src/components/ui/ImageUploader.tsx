@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 
-export default function ProfileImageUploader() {
+export default function ProfileImageUploader({ title="Upload Profile Image" }: { title?: string }) {
   const [image, setImage] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -91,7 +91,7 @@ export default function ProfileImageUploader() {
   return (
     <div className="w-full ">
       <label className="block text-lg font-medium text-gray-700 mb-2">
-        Profile Image
+        {title || "Upload Profile Image"}
       </label>
       <div className="flex gap-10 w-full">
         <div

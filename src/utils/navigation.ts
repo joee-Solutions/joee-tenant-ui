@@ -58,7 +58,7 @@ export const sideNavigation = [
       {
         title: "Send Notifications",
         icon: icons.Send,
-        href: "/dashboard/send-notifcations",
+        href: "/dashboard/notifications/send",
       },
     ],
   },
@@ -87,7 +87,7 @@ export const sideNavigation = [
       },
     ],
   },
-  {
+  { 
     name: "Settings & Support",
     icon: OrgIcon,
     href: "/dashboard/settings",

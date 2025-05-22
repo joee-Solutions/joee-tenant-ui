@@ -1,3 +1,4 @@
+import { title } from "process";
 import orgPlaceholder from "./../../../../public/assets/orgPlaceholder.png";
 import { StaticImageData } from "next/image";
 
@@ -242,7 +243,7 @@ export const EmployeesData: {
 
 export const PatientData: {
   id: number;
-  patience: {
+  patient: {
     name: string;
     image: StaticImageData;
   };
@@ -255,7 +256,7 @@ export const PatientData: {
 }[] = [
   {
     id: 1,
-    patience: {
+    patient: {
       name: "Jenifa Chicago",
       image: orgPlaceholder,
     },
@@ -268,7 +269,7 @@ export const PatientData: {
   },
   {
     id: 2,
-    patience: {
+    patient: {
       name: " David  Ayo",
       image: orgPlaceholder,
     },
@@ -281,7 +282,7 @@ export const PatientData: {
   },
   {
     id: 3,
-    patience: {
+    patient: {
       name: "Haruna Newton",
       image: orgPlaceholder,
     },
@@ -294,7 +295,7 @@ export const PatientData: {
   },
   {
     id: 4,
-    patience: {
+    patient: {
       name: "Mariam  Gloria",
       image: orgPlaceholder,
     },
@@ -307,7 +308,7 @@ export const PatientData: {
   },
   {
     id: 5,
-    patience: {
+    patient: {
       name: " Timon Oluwaseun",
       image: orgPlaceholder,
     },
@@ -320,7 +321,7 @@ export const PatientData: {
   },
   {
     id: 6,
-    patience: {
+    patient: {
       name: "Tobiah Joshua",
       image: orgPlaceholder,
     },
@@ -537,5 +538,68 @@ export const ScheduleList: {
     day: "29 Nov 2023",
     start_time: "11:00am",
     end_time: "12:00pm",
+  },
+];
+
+export const notificationData = [
+  {
+    id: 1,
+    sender: {
+      name: "Dr. Sarah Johnson",
+      image: orgPlaceholder,
+    },
+    title: "Appointment Reminder",
+    message: "Reminder: Your appointment is scheduled for tomorrow at 10 AM.",
+    date: "2023-10-01",
+    organization: "Joee Care",
+    to: "richardebrain20@gmail.com",
+  },
+  {
+    id: 2,
+    sender: {
+      name: "System User",
+      image: orgPlaceholder,
+    },
+    title: "Teeth Reminder",
+    message: "Reminder: Your appointment is scheduled for tomorrow at 10 AM.",
+    date: "2023-10-01",
+    organization: "Joee Care",
+    to: "richardebrain20@gmail.com",
+  },
+  {
+    id: 3,
+    sender: {
+      name: "Eshter Obasola",
+      image: orgPlaceholder,
+    },
+    title: "Gym Reminder",
+    message: "Reminder: Your appointment is scheduled for tomorrow at 10 AM.",
+    date: "2023-10-01",
+    organization: "Joee Care",
+    to: "richardebrain20@gmail.com",
+  },
+  {
+    id: 4,
+    sender: {
+      name: "Dr. Sarah Johnson",
+      image: orgPlaceholder,
+    },
+    title: "SPA Reminder",
+    message: "Reminder: Your appointment is scheduled for tomorrow at 10 AM.",
+    date: "2023-10-01",
+    organization: "Joee Care",
+    to: "richardebrain20@gmail.com",
+  },
+  {
+    id: 5,
+    sender: {
+      name: "Dr. Sarah Johnson",
+      image: orgPlaceholder,
+    },
+    title: "Surgery Reminder",
+    message: "Reminder: Your appointment is scheduled for tomorrow at 10 AM.",
+    date: "2023-10-01",
+    organization: "Joee Care",
+    to: "richardebrain20@gmail.com",
   },
 ];

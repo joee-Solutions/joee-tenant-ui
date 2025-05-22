@@ -1,5 +1,5 @@
 import { siteConfig } from "@/framework/site-config";
-import axios, { AxiosInstance, AxiosStatic } from "axios";
+import axios from "axios";
 import { getRefreshToken, getToken } from "./get-token";
 import Router from "next/router";
 import Cookies from "js-cookie";
@@ -7,6 +7,12 @@ import { API_ENDPOINTS } from "./api-endpoints";
 
 let httpNoAuth: any;
 let refreshingToking = false;
+let controller = new AbortController();
+
+export const resetController = () => {
+  controller.abort();
+  controller = new AbortController(); // reassign
+};
 
 if (typeof window !== undefined) {
   httpNoAuth = axios.create({
@@ -86,7 +92,9 @@ const processRequestNoAuth = async (
     if (method === "post") {
       rt = await httpNoAuth.post(`/api/${path}`, data);
     } else if (method === "get") {
-      rt = await httpNoAuth.get(path);
+      rt = await httpNoAuth.get(path,{
+        signal: controller.signal,
+      });
     } else if (method === "put") {
       rt = await httpNoAuth.put(path, data);
     } else if (method === "delete") {
@@ -130,7 +138,9 @@ const processRequestAuth = async (
     if (method === "post") {
       rt = await httpAuth.post(`/api/${path}`, data);
     } else if (method === "get") {
-      rt = await httpAuth.get(path);
+      rt = await httpAuth.get(path, {
+        signal: controller.signal,
+      });
     } else if (method === "put") {
       rt = await httpAuth.put(path, data);
     } else if (method === "delete") {

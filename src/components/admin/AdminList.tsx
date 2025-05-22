@@ -78,7 +78,7 @@ export default function AdminList() {
           </DataTable>
           <Pagination
             dataLength={AppointmentData.length}
-            numOfPages={1000}
+            numOfPages={100}
             pageSize={pageSize}
           />
         </section>

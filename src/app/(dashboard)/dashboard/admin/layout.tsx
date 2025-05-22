@@ -1,18 +1,25 @@
-import React from 'react'
+"use client";
+import { Button } from "@/components/ui/button";
+import { CircleArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React from "react";
 
-const layout = ({ children }: { children: React.ReactNode }) => {
+const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
   return (
     <div className="px-12 pb-20 flex flex-col gap-[30px] w-full ">
-      {/* <header>
-        <h3
-          className="font-semibold text-2xl text-black gap-1 p-0 flex items-center"
+      <div className="flex gap-2 ">
+        <Button
+          className="font-semibold text-xl text-black gap-1 p-0 flex items-center rounded-full"
+          onClick={() => router.back()}
         >
-         Admin Settings
-        </h3>
-      </header> */}
-      {children}
+          <CircleArrowLeft className="fill-[#003465] text-white size-[30px]" />
+          Go Back
+        </Button>
       </div>
-  )
-}
+      {children}
+    </div>
+  );
+};
 
-export default layout
+export default AdminLayout;

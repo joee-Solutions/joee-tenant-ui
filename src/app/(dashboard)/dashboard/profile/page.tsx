@@ -1,8 +1,6 @@
 "use client";
-import { CloudIcon, WebIcon } from "@/components/icons/icon";
-import { BookUser, CircleUserRound, Hospital, Lock, Users } from "lucide-react";
+import { BookUser, CircleUserRound, Lock, Users } from "lucide-react";
 import React, { useState } from "react";
-import EditOrg from "../organization/EditOrg";
 import Image from "next/image";
 import orgProfileImage from "@public/assets/orgProfileImage.png";
 import Link from "next/link";
@@ -76,7 +74,11 @@ const ProfilePage = () => {
         </div>
       </aside>
       <div className="px-10 pt-[32px] pb-[56px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md h-fit">
-        {tab === "Change Password" ? <ChangePasswordComponent /> : <EditOrg />}
+        {tab === "Change Password" ? (
+          <ChangePasswordComponent />
+        ) : (
+          <ProfileForm />
+        )}
       </div>
     </div>
   );
