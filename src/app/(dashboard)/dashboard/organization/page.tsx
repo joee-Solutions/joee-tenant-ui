@@ -31,11 +31,12 @@ import {
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { formatDate } from "date-fns";
 
-const chartList = {
+export const chartList = {
   total: <AllOrgChart className="w-full h-full object-fit" />,
   active: <ActiveOrgChart className="w-full h-full object-fit" />,
   inactive: <InactiveOrgChart className="w-full h-full object-fit" />,
-  suspended: <DeactivatedOrgChart className="w-full h-full object-fit" />,
+  deactivated: <DeactivatedOrgChart className="w-full h-full object-fit" />,
+  all:<AllOrgChart className="w-full h-full object-fit" />,
 };
 
 export default function Page() {
@@ -45,7 +46,7 @@ export default function Page() {
     total: number;
     active: number;
     inactive: number;
-    suspended: number;
+    deactivated: number;
   }>(API_ENDPOINTS.GET_DASHBOARD_DATA, authFectcher);
 
   const { data: tenants, isLoading: tenantLoad } = useSWR(
@@ -55,7 +56,7 @@ export default function Page() {
 
   const datas = (
     Object.keys(data || {}) as Array<
-      "total" | "active" | "inactive" | "suspended"
+      "total" | "active" | "inactive" | "deactivated"
     >
   ).map((key) => {
     const value = data?.[key] || 0;
@@ -73,6 +74,8 @@ export default function Page() {
         key !== "total" && data?.total ? (value * 100) / data.total : 0,
     };
   });
+
+  console.log(datas)
 
   return (
     <section className="px-[30px] mb-10">
@@ -173,7 +176,7 @@ export default function Page() {
             </DataTable>
             <Pagination
               dataLength={AllOrgTableData.length}
-              numOfPages={2}
+              numOfPages={1}
               pageSize={pageSize}
             />
           </section>

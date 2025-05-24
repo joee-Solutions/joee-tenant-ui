@@ -95,6 +95,7 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
           ...changedFields,
         }
       );
+      console.log("Organization updated successfully:", res);
 
       setIsOpen(true);
     } catch (error) {

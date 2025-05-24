@@ -10,13 +10,46 @@ import DataTableFilter, {
 import Pagination from "@/components/shared/table/pagination";
 import { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Ellipsis, Plus } from "lucide-react";
+import { ChartNoAxesColumn, Ellipsis, Hospital, Plus } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import orgPlaceholder from "@public/assets/orgPlaceholder.png";
+import { AllOrgChart } from "@/components/icons/icon";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { authFectcher } from "@/hooks/swr";
+import { cn, formatDateFn } from "@/lib/utils";
+import useSWR from "swr";
+import { chartList } from "../page";
+
 
 export default function page() {
   const [pageSize, setPageSize] = useState(10);
+  const { data, isLoading, error } = useSWR(
+    `${API_ENDPOINTS.GET_ALL_TENANTS}/deactivated`,
+    authFectcher
+  );
 
+  const datas = (
+    Object.keys(data?.meta || {}) as Array<
+      "all" | "active" | "inactive" | "deactivated"
+    >
+  ).map((key) => {
+    const value = data?.meta?.[key] || 0;
+
+    return {
+      cardType: key,
+      title: key.charAt(0).toUpperCase() + key.slice(1) + " Organizations",
+      statNum: value,
+      orgIcon: <Hospital className={cn("text-white size-5")} />,
+      chart: chartList[key] || (
+        <AllOrgChart className="w-full h-full object-fit" />
+      ),
+      barChartIcon: <ChartNoAxesColumn />,
+      OrgPercentChanges:
+        key !== "all" && data?.meta?.all ? (value * 100) / data?.meta?.all : 0,
+    };
+  });
   return (
     <section className="px-[30px] mb-10">
       <header className="flex items-center gap-6 justify-between flex-wrap mb-[50px]">
@@ -27,7 +60,7 @@ export default function page() {
         </Button>
       </header>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[19px] mb-[48px]">
-        {deactivatedOrgCards.map((org) => (
+        {datas.map((org) => (
           <OrgCardStatus
             key={org.cardType}
             title={org.title}
@@ -51,51 +84,60 @@ export default function page() {
         </header>
         <DataTableFilter />
         <DataTable tableDataObj={AllOrgTableData[0]}>
-          {AllOrgTableData.map((data) => {
-            return (
-              <TableRow key={data.id} className="px-3">
-                <TableCell>{data.id}</TableCell>
-                <TableCell className="py-[21px]">
-                  <div className="flex items-center gap-[10px]">
-                    <span className="w-[42px] h-42px rounded-full overflow-hidden">
-                      <Image
-                        src={data.organization.image}
-                        alt="organization image"
-                        className="object-cover aspect-square w-full h-full"
-                      />
-                    </span>
-                    <p className="font-medium text-xs text-black">
-                      {data.organization.name}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell className="font-semibold text-xs text-[#737373]">
-                  {data.created_at}
-                </TableCell>
-                <TableCell className="font-semibold text-xs text-[#737373]">
-                  {data.location}
-                </TableCell>
-                <TableCell
-                  className={`font-semibold text-xs ${
-                    data.status.toLowerCase() === "active"
-                      ? "text-[#3FA907]"
-                      : "text-[#EC0909]"
-                  }`}
-                >
-                  {data.status}
-                </TableCell>
-                <TableCell>
-                  <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
-                    <Ellipsis className="text-black size-5" />
-                  </button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+          {!isLoading && data.length === 0 && (
+            <TableRow key={data.id} className="px-3 relative">
+              <TableCell className="py-[21px] ">Empty</TableCell>
+            </TableRow>
+          )}
+          {data?.data &&
+            data.data.length > 0 &&
+            data.data.map((data) => {
+              return (
+                <TableRow key={data.id} className="px-3 relative">
+                  <TableCell>{data.id}</TableCell>
+                  <TableCell className="py-[21px] ">
+                    <Link
+                      href={`/dashboard/organization/${data.id}`}
+                      className="absolute cursor-pointer inset-0"
+                    />
+                    <div className="flex items-center gap-[10px]">
+                      <span className="w-[42px] h-42px rounded-full overflow-hidden">
+                        <Image
+                          src={
+                            data?.profile?.organization_logo || orgPlaceholder
+                          }
+                          alt="organization image"
+                          className="object-cover aspect-square w-full h-full"
+                        />
+                      </span>
+                      <p className="font-medium text-xs text-black">
+                        {data.name}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-semibold text-xs text-[#737373]">
+                    {formatDateFn(data.createdAt)}
+                  </TableCell>
+                  <TableCell className="font-semibold text-xs text-[#737373]">
+                    {data?.profile?.address_metadata.state},{" "}
+                    {data?.profile?.address_metadata.country},{" "}
+                  </TableCell>
+                  <TableCell
+                    className={`font-semibold text-xs ${
+                      data.status.toLowerCase() === "active"
+                        ? "text-[#3FA907]"
+                        : "text-[#EC0909]"
+                    }`}
+                  >
+                    {data.status}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
         </DataTable>
         <Pagination
           dataLength={AllOrgTableData.length}
-          numOfPages={1000}
+          numOfPages={1}
           pageSize={pageSize}
         />
       </section>

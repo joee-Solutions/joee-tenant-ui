@@ -4,6 +4,7 @@ import {
   DeactivatedOrgChart,
   InactiveOrgChart,
 } from "@/components/icons/icon";
+import { cn } from "@/lib/utils";
 import { ChartNoAxesColumn, Hospital } from "lucide-react";
 
 export const cards: {
@@ -53,7 +54,7 @@ export const cards: {
 ];
 
 interface OrgCardStatusProps {
-  cardType: "all" | "active" | "inactive" | "deactivate";
+  cardType: "all" | "active" | "inactive" | "deactivated";
   title: string;
   statNum: number;
   orgIcon: React.ReactNode;
@@ -71,6 +72,7 @@ export default function OrgCardStatus({
   barChartIcon,
   OrgPercentChanges,
 }: OrgCardStatusProps) {
+  console.log(OrgPercentChanges, cardType);
   const color =
     cardType === "all"
       ? "#003465"
@@ -97,15 +99,18 @@ export default function OrgCardStatus({
       <div className="overflow-hidden">
         <div className="relative w-[103%] h-[102%] -translate-x-1">
           {chart}
-          {OrgPercentChanges && (
+          {cardType !== "all" && (
             <span
-              className={`absolute top-0 left-5 rounded-[58px] py-[7px] px-3 text-xs bg-[${color}] text-white font-bold -tracking-[2%]`}
+              className={cn(
+                `absolute top-0 h-12 w-12 flex items-center justify-center left-5 rounded-full py-[7px] px-3 text-xs  text-white font-bold -tracking-[2%]`,
+                `bg-[${color}]`
+              )}
             >
-              {OrgPercentChanges}%
+              {OrgPercentChanges || 0}%
             </span>
           )}
           <span
-            className={`w-[43px] h-[43px] bg-white text-[${color}] rounded-[7px] absolute right-[17px] bottom-[11px] flex items-center justify-center`}
+            className={`w-[43px] h-[43px] bg-white text-[${color}] rounded-full absolute right-[17px] bottom-[11px] flex items-center justify-center`}
           >
             {barChartIcon}
           </span>
