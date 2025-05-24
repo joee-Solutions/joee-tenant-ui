@@ -59,7 +59,7 @@ interface OrgCardStatusProps {
   orgIcon: React.ReactNode;
   chart: React.ReactNode;
   barChartIcon: React.ReactNode;
-  OrgPercentChanges?: string;
+  OrgPercentChanges?: number;
 }
 
 export default function OrgCardStatus({
@@ -101,7 +101,7 @@ export default function OrgCardStatus({
             <span
               className={`absolute top-0 left-5 rounded-[58px] py-[7px] px-3 text-xs bg-[${color}] text-white font-bold -tracking-[2%]`}
             >
-              {OrgPercentChanges}
+              {OrgPercentChanges}%
             </span>
           )}
           <span

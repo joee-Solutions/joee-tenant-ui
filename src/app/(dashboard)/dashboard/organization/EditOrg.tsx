@@ -12,16 +12,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { processRequestAuth } from "@/framework/https";
+import { getChangedFields } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Edit, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const EditOrganizationSchema = z.object({
-  organizationName: z.string().min(1, "This field is required"),
-  address: z.string().min(1, "This field is required"),
+  name: z.string().min(1, "This field is required"),
+  // address: z.string().min(1, "This field is required"),
   status: z.string().min(1, "This field is required"),
-  organizationPhoneNumber: z.string().min(1, "This field is required"),
+  phoneNumber: z.string().min(1, "This field is required"),
   organizationEmail: z
     .string()
     .email("Invalid email address")
@@ -37,26 +42,66 @@ const EditOrganizationSchema = z.object({
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
-const orgStatus = ["Active", "Inactive", "Deactivate"];
+const orgStatus = ["active", "inactive", "deactivated"];
 
-export default function EditOrg() {
+export default function EditOrg({ data, slug }: { data: any; slug: string }) {
+  const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const [defaults, setDefault] = useState<null>();
+  const [isOpen, setIsOpen] = useState(false);
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
     mode: "onChange",
     defaultValues: {
-      organizationName: "",
-      address: "",
+      name: "",
+      // address: "",
       adminEmail: "",
       adminName: "",
       adminPhoneNumber: "",
       organizationEmail: "",
-      organizationPhoneNumber: "",
+      phoneNumber: "",
       status: "",
     },
   });
+  useEffect(() => {
+    const datas = {
+      name: data?.name || "",
+      adminEmail: data?.profile?.admin_email || "",
+      phoneNumber: data?.phone_number || "",
+      adminPhoneNumber: data?.profile?.phone_number || "",
+      organizationEmail: data?.email || "",
+      status: data?.status || "inactive",
+      adminName:
+        (data?.profile.first_name || "") +
+        " " +
+        (data?.profile.last_name || ""),
+    };
+    form.reset({
+      ...datas,
+    });
+    setDefault(datas as any);
+  }, [data]);
+  const onSubmit = async (payload: EditOrganizationSchemaType) => {
+    try {
+      const changedFields = getChangedFields(defaults, payload);
+      console.log(changedFields);
+      if (Object.keys(changedFields).length === 0) {
+        console.log("No changes detected");
+        return;
+      }
+      const res = await processRequestAuth(
+        "put",
+        API_ENDPOINTS.EDIT_ORGANIZATION(slug),
+        {
+          ...changedFields,
+        }
+      );
 
-  const onSubmit = (payload: EditOrganizationSchemaType) => {
-    console.log(payload);
+      setIsOpen(true);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      // Handle error appropriately, e.g., show a toast notification
+    } finally {
+    }
   };
 
   return (
@@ -68,20 +113,20 @@ export default function EditOrg() {
         <div className="flex flex-col gap-[30px]">
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-            name="organizationName"
+            name="name"
             control={form.control}
             labelText="Organization name"
             type="text"
             placeholder="Enter here"
           />
-          <FieldBox
+          {/* <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
             name="address"
             control={form.control}
             labelText="Address"
             type="text"
             placeholder="Enter here"
-          />
+          /> */}
 
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -95,7 +140,7 @@ export default function EditOrg() {
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
             type="text"
-            name="organizationPhoneNumber"
+            name="phoneNumber"
             control={form.control}
             labelText="Organization Phone number"
             placeholder="Enter here"
@@ -133,14 +178,18 @@ export default function EditOrg() {
             name="status"
             control={form.control}
             options={orgStatus}
+            defaultOption={data?.status}
             labelText="Status"
             placeholder="Select"
           />
 
           <div className="flex items-center gap-7">
-            <AlertDialog>
+            <AlertDialog open={isOpen} onOpenChange={(open) => open && isOpen}>
               <AlertDialogTrigger asChild>
-                <Button className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full">
+                <Button
+                  className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
+                  type="submit"
+                >
                   Edit <Edit size={20} />
                 </Button>
               </AlertDialogTrigger>
@@ -155,7 +204,10 @@ export default function EditOrg() {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogAction className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base">
+                  <AlertDialogAction
+                    className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base"
+                    onClick={() => setIsOpen(false)}
+                  >
                     Continue
                   </AlertDialogAction>
                 </AlertDialogFooter>

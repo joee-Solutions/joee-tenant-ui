@@ -3,6 +3,9 @@ import { getRequestInfo } from "@/framework/log-request-helper";
 import { siteConfig } from "@/framework/site-config";
 import axios from "axios";
 import { NextResponse, type NextRequest } from "next/server";
+
+
+
 const apiUrl = siteConfig.host;
 export async function GET(req: NextRequest) {
   const requestPath = new URL(req.url).pathname;

@@ -63,18 +63,13 @@ export default function ChnagePasswordComponent() {
           />
 
           <div className="flex items-center gap-7">
-        
-
-              <Button
-                onClick={handleEdit}
-                type="button"
-                className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
-              >
-                Save chnages <PlusSquareIcon size={20} />
-              </Button>
-           
-
-           
+            <Button
+              onClick={handleEdit}
+              type="button"
+              className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
+            >
+              Save chnages <PlusSquareIcon size={20} />
+            </Button>
           </div>
         </div>
       </FormComposer>

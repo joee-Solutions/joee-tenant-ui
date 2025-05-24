@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import * as z from "zod";
@@ -26,6 +26,7 @@ const schema = z.object({
 });
 const VerifyOtpLoginClient = ({ token }: { token: string }) => {
   useEffect(() => {}, []);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const {
     handleSubmit,
@@ -39,7 +40,6 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
       toast.error("Otp is required");
       return;
     }
-    console.log(data);
     try {
       const rt = await processRequestNoAuth(
         "post",
@@ -51,18 +51,18 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
       );
       console.log(rt, "token");
       if (rt.status === true && rt?.data?.token) {
+        console.log(data, "data");
         Cookies.remove("mfa_token");
         Cookies.set("auth_token", rt.data.token, {
-          expires: 1 / 48,
+          expires: 1,
         });
         //   Cookies.set("refresh_token", rt.data.refresh_token, { expires: 1 });
         Cookies.set("user", JSON.stringify(rt.data.user), {
-          expires: 1 / 48,
+          expires: 1,
         });
         router.push(`/dashboard`);
       }
     } catch (error: any) {
-      console.log(error, "ekekek");
       if (
         error.status === 401 &&
         error.response.data.error === "Invalid Session"
@@ -135,6 +135,7 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
           <Button
             className="font-medium text-md my-3 bg-[#003465]"
             type="submit"
+            disabled={isSubmitting}
           >
             {isSubmitting ? <Spinner /> : "Verify"}
           </Button>
@@ -145,6 +146,7 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
         Didn&apos;t receive the email?
         <button
           onClick={handleResendOtp}
+          disabled={isSubmitting}
           className="text-brand-400 hover:underline"
         >
           Click to resend?

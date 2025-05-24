@@ -1,7 +1,6 @@
 import { siteConfig } from "@/framework/site-config";
 import axios from "axios";
 import { getRefreshToken, getToken } from "./get-token";
-import Router from "next/router";
 import Cookies from "js-cookie";
 import { API_ENDPOINTS } from "./api-endpoints";
 
@@ -59,7 +58,8 @@ httpAuth.interceptors.request.use(
           authorization = `Bearer ${token}`;
         }
       } else {
-        Router.push("/auth/logout");
+        window.location.href = "/auth/login";
+        return;
       }
     }
     config.headers = {
@@ -92,7 +92,7 @@ const processRequestNoAuth = async (
     if (method === "post") {
       rt = await httpNoAuth.post(`/api/${path}`, data);
     } else if (method === "get") {
-      rt = await httpNoAuth.get(path,{
+      rt = await httpNoAuth.get(path, {
         signal: controller.signal,
       });
     } else if (method === "put") {
@@ -138,7 +138,7 @@ const processRequestAuth = async (
     if (method === "post") {
       rt = await httpAuth.post(`/api/${path}`, data);
     } else if (method === "get") {
-      rt = await httpAuth.get(path, {
+      rt = await httpAuth.get(`/api/${path}`, {
         signal: controller.signal,
       });
     } else if (method === "put") {

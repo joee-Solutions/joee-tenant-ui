@@ -32,9 +32,14 @@ const getColumnHeaders = function (data: Record<string, any>) {
 interface DataTableProps {
   tableDataObj: Record<string, any>;
   children: React.ReactNode;
+  showAction?: boolean;
 }
 
-export default function DataTable({ tableDataObj, children }: DataTableProps) {
+export default function DataTable({
+  tableDataObj,
+  children,
+  showAction,
+}: DataTableProps) {
   const columnHeaders = useMemo(
     () => getColumnHeaders(tableDataObj),
     [tableDataObj]
@@ -54,7 +59,7 @@ export default function DataTable({ tableDataObj, children }: DataTableProps) {
               </TableHead>
             );
           })}
-          <TableHead>Action</TableHead>
+          {showAction && <TableHead>Action</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>{children}</TableBody>

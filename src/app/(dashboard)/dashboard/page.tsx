@@ -15,20 +15,52 @@ import {
   organizationStats,
   patientData,
 } from "@/utils/dashboard";
+import useSWR from "swr";
+import { authFectcher } from "@/hooks/swr";
+import { Spinner } from "@/components/icons/Spinner";
+import { SkeletonBox } from "@/components/shared/loader/skeleton";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+
 // import { Organization, Employee, Patient } from '@/lib/types';
 
 const DashboardPage: NextPage = () => {
+  const { data, isLoading, error } = useSWR(
+    API_ENDPOINTS.GET_DASHBOARD_DATA,
+    authFectcher
+  );
+
+  console.log(data, isLoading, error);
+
+  const growth = {
+    allOrganizations: null,
+    activeOrganizations: data?.active ? (data?.active * 100) / data?.total : 0,
+    inactiveOrganizations: data?.inactive
+      ? (data?.inactive * 100) / data?.total
+      : 0,
+    deactivatedOrganizations: data?.deactivated
+      ? (data?.deactivated * 100) / data?.total
+      : 0,
+  };
+  console.log("Growth Data:", growth);
   const stats = {
-    allOrganizations: { count: 490, growth: null, icon: <></> },
-    activeOrganizations: { count: 250, growth: 2.45, icon: <></>},
+    allOrganizations: {
+      count: data?.total || 0,
+      growth: growth.allOrganizations,
+      icon: <></>,
+    },
+    activeOrganizations: {
+      count: data?.active || 0,
+      growth: growth.activeOrganizations,
+      icon: <></>,
+    },
     inactiveOrganizations: {
-      count: 100,
-      growth: 2.45,
+      count: data?.inactive || 0,
+      growth: growth.inactiveOrganizations,
       icon: <></>,
     },
     deactivatedOrganizations: {
-      count: 140,
-      growth: -2.45,
+      count: data?.deactivated || 0,
+      growth: growth.deactivatedOrganizations,
       icon: <></>,
     },
     networkTab: { icon: <></> },
@@ -50,36 +82,45 @@ const DashboardPage: NextPage = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <StatCard
-            title="All Organizations"
-            value={stats.allOrganizations.count}
-            growth={stats.allOrganizations.growth}
-            color="blue"
-            icon={stats.allOrganizations.icon}
-          />
-          <StatCard
-            title="Active Organizations"
-            value={stats.activeOrganizations.count}
-            growth={stats.activeOrganizations.growth}
-            color="green"
-            icon={stats.activeOrganizations.icon}
-          />
-          <StatCard
-            title="Inactive Organizations"
-            value={stats.inactiveOrganizations.count}
-            growth={stats.inactiveOrganizations.growth}
-            color="yellow"
-            icon={stats.inactiveOrganizations.icon}
-          />
-          <StatCard
-            title="Deactived Organizations"
-            value={stats.deactivatedOrganizations.count}
-            growth={stats.deactivatedOrganizations.growth}
-            color="red"
-            icon={stats.deactivatedOrganizations.icon}
-          />
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <SkeletonBox className="h-[250px] w-full" />
+            <SkeletonBox className="h-[250px] w-full" />
+            <SkeletonBox className="h-[250px] w-full" />
+            <SkeletonBox className="h-[250px] w-full" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <StatCard
+              title="All Organizations"
+              value={stats.allOrganizations.count}
+              growth={stats.allOrganizations.growth}
+              color="blue"
+              icon={stats.allOrganizations.icon}
+            />
+            <StatCard
+              title="Active Organizations"
+              value={stats.activeOrganizations.count}
+              growth={stats.activeOrganizations.growth}
+              color="green"
+              icon={stats.activeOrganizations.icon}
+            />
+            <StatCard
+              title="Inactive Organizations"
+              value={stats.inactiveOrganizations.count}
+              growth={stats.inactiveOrganizations.growth}
+              color="yellow"
+              icon={stats.inactiveOrganizations.icon}
+            />
+            <StatCard
+              title="Deactived Organizations"
+              value={stats.deactivatedOrganizations.count}
+              growth={stats.deactivatedOrganizations.growth}
+              color="red"
+              icon={stats.deactivatedOrganizations.icon}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="flex flex-col space-y-4">

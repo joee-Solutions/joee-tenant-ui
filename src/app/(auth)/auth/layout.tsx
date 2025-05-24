@@ -1,4 +1,3 @@
-import AuthProvider from "@/contexts/AuthProvider";
 import React from "react";
 import { ToastContainer } from "react-toastify";
 import Image from "next/image";
@@ -19,7 +18,7 @@ export default function AuthLayout({
             width={400}
             height={400}
             className="fixed bottom-[0px] left-[300px] opacity-5 bg-blend-luminosity -z-10 "
-            style={{ opacity: '50%' }}
+            style={{ opacity: "50%" }}
           ></Image>
 
           <Image
@@ -44,7 +43,7 @@ export default function AuthLayout({
             className="fixed top-0 right-40"
           ></Image>
         </div>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
         <ToastContainer />
         <p className="footer fixed left-40 text-gray-400 bottom-40">
           Copywright © 2025 JOEE Solutions. All Rights Reserved

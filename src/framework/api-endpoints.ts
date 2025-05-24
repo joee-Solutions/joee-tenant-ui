@@ -9,4 +9,12 @@ export const API_ENDPOINTS = {
   VERIFY_OTP: "/auth/super/verify-otp",
   VERIFY_LOGIN: "/auth/super/verify-login-otp",
   RESEND_OTP: "/auth/super/resend-otp",
+  GET_DASHBOARD_DATA: "super/tenants/dashboard",
+  GET_DASHBOARD_APPOINTMENTS: "super/tenants/dashboard/appointments",
+  GET_DASHBOARD_USERS: "super/tenants/dashboard/users",
+  GET_DASHBOARD_PATIENTS: "super/tenants/dashboard/patients",
+  CREATE_TENANTs: "super/tenants",
+  GET_ALL_TENANTS: "super/tenants",
+  GET_TENANT: (tenantId: string) => `super/tenants/${tenantId}`,
+  EDIT_ORGANIZATION: (tenantId: string) => `super/tenants/${tenantId}`,
 };
