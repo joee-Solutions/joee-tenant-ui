@@ -1,5 +1,5 @@
 import { title } from "process";
-import orgPlaceholder from "./../../../../public/assets/orgPlaceholder.png";
+import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 import { StaticImageData } from "next/image";
 
 export const AllOrgTableData: {

@@ -17,4 +17,15 @@ export const API_ENDPOINTS = {
   GET_ALL_TENANTS: "super/tenants",
   GET_TENANT: (tenantId: string) => `super/tenants/${tenantId}`,
   EDIT_ORGANIZATION: (tenantId: string) => `super/tenants/${tenantId}`,
+  TENANTS_DEPARTMENTS: (tenantId: number) =>
+    `super/tenants/${tenantId}/departments`,
+  TENANTS_PATIENTS: (tenantId: number) => `super/tenants/${tenantId}/patients`,
+  TENANTS_APPOINTMENTS: (tenantId: number) =>
+    `super/tenants/${tenantId}/appointments`,
+  TENANTS_SCHEDULES: (tenantId: number) =>
+    `super/tenants/${tenantId}/schedules`,
+   TENANTS_EMPLOYEES: (tenantId: number,deptId:number) =>
+    `super/tenants/${tenantId}/${deptId}/employees`,
+   GET_TENANTS_EMPLOYEES: (tenantId: number) =>
+    `super/tenants/${tenantId}/employees`,
 };

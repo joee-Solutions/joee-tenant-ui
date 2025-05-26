@@ -23,7 +23,7 @@ const ViewPage = () => {
   const [activeTab, setActiveTab] = useState<TabVal>("Departments");
 
   return (
-    <div className="w-full  mx-auto">
+    <div className="w-full  mx-auto px-10">
       <h2 className="text-lg font-semibold mb-4">General Overview</h2>
 
       {/* Tabs Navigation */}

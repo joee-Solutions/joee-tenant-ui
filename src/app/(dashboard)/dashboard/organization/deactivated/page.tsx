@@ -22,7 +22,6 @@ import { cn, formatDateFn } from "@/lib/utils";
 import useSWR from "swr";
 import { chartList } from "../page";
 
-
 export default function page() {
   const [pageSize, setPageSize] = useState(10);
   const { data, isLoading, error } = useSWR(
@@ -59,7 +58,7 @@ export default function page() {
           Create Organization <Plus size={24} />
         </Button>
       </header>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[19px] mb-[48px]">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-[19px] mb-[48px]">
         {datas.map((org) => (
           <OrgCardStatus
             key={org.cardType}

@@ -15,6 +15,7 @@ import AppointmentList from "@/components/Org/Appointments/AppointmentList";
 import AddAppointment from "@/components/Org/Appointments/AddAppointment";
 import ScheduleList from "@/components/Org/Schedule/ScheduleList";
 import AddSchedule from "@/components/Org/Schedule/AddSchedule";
+import { usePathname } from "next/navigation";
 
 // example , Default Tab based on parent tab 
 const innerTabs = [
@@ -50,7 +51,10 @@ export default function DynamicTabCompContent({
 }: {
   tabName: TabVal;
 }) {
+    const pathname = usePathname();
   
+    
+    const slug = pathname.split("/")[3]
 
     // Filter tabs based on the parent tab name
     const filteredTabs = useMemo(() => innerTabs.filter((tab) => tab.parent === tabName), [tabName]);
@@ -85,28 +89,28 @@ export default function DynamicTabCompContent({
 
       <div className="mt-4">
   {/* Departments */}
-  {tabName === "Departments" && activeTab === "List" && <DepartmentList />}
-  {tabName === "Departments" && activeTab === "Add" && <AddDepartmentForm setIsAddOrg={setIsAddOrg} />}
+  {tabName === "Departments" && activeTab === "List" && <DepartmentList slug={slug}/>}
+  {tabName === "Departments" && activeTab === "Add" && <AddDepartmentForm setIsAddOrg={setIsAddOrg}  slug={slug}/>}
   {/* {tabName === "Departments" && activeTab === "Backup" && <div>Backup Departments</div>} */}
 
   {/* Employees */}
-  {tabName === "Employees" && activeTab === "List" && <EmployeesList />}
-  {tabName === "Employees" && activeTab === "Add" && <AddEmployee />}
+  {tabName === "Employees" && activeTab === "List" && <EmployeesList slug={slug} />}
+  {tabName === "Employees" && activeTab === "Add" && <AddEmployee  slug={slug}/>}
 
   {/* Patients */}
-  {tabName === "Patients" && activeTab === "List" && <PatienceList />}
-  {tabName === "Patients" && activeTab === "Add" && <AddPatience />}
+  {tabName === "Patients" && activeTab === "List" && <PatienceList slug={slug}/>}
+  {tabName === "Patients" && activeTab === "Add" && <AddPatience slug={slug} />}
 
   {/* Appointments */}
-  {tabName === "Appointments" && activeTab === "List" && <AppointmentList />}
-  {tabName === "Appointments" && activeTab === "Add" && <AddAppointment />}
+  {tabName === "Appointments" && activeTab === "List" && <AppointmentList slug={slug}/>}
+  {tabName === "Appointments" && activeTab === "Add" && <AddAppointment slug={slug}/>}
 
   {/* Schedule */}
-  {tabName === "Schedule" && activeTab === "List" && <ScheduleList />}
-  {tabName === "Schedule" && activeTab === "Add" && <AddSchedule />}
+  {tabName === "Schedule" && activeTab === "List" && <ScheduleList slug={slug}/>}
+  {tabName === "Schedule" && activeTab === "Add" && <AddSchedule slug={slug}/>}
 
   {/* Manage Organization */}
-  {tabName === "Manage Organization" && activeTab === "Details" && <OrgDetails />}
+  {tabName === "Manage Organization" && activeTab === "Details" && <OrgDetails slug={slug}/>}
 </div>
       
     </div>

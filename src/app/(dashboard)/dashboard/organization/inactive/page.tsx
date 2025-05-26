@@ -63,7 +63,7 @@ export default function page() {
           Create Organization <Plus size={24} />
         </Button>
       </header>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[19px] mb-[48px]">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-[19px] mb-[48px]">
         {datas.map((org) => (
           <OrgCardStatus
             key={org.cardType}
