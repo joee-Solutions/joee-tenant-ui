@@ -4,7 +4,6 @@ import { AllOrgTableData } from "@/components/shared/table/data";
 import OrgCardStatus, { cards } from "./OrgStatCard";
 import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 
-
 import DataTable from "@/components/shared/table/DataTable";
 import DataTableFilter, {
   ListView,
@@ -36,7 +35,7 @@ export const chartList = {
   active: <ActiveOrgChart className="w-full h-full object-fit" />,
   inactive: <InactiveOrgChart className="w-full h-full object-fit" />,
   deactivated: <DeactivatedOrgChart className="w-full h-full object-fit" />,
-  all:<AllOrgChart className="w-full h-full object-fit" />,
+  all: <AllOrgChart className="w-full h-full object-fit" />,
 };
 
 export default function Page() {
@@ -70,12 +69,16 @@ export default function Page() {
         <AllOrgChart className="w-full h-full object-fit" />
       ),
       barChartIcon: <ChartNoAxesColumn />,
-      OrgPercentChanges:
-        key !== "total" && data?.total ? (value * 100) / data.total : 0,
+      OrgPercentChanges: parseFloat(
+        (key !== "total" && data?.total
+          ? (value * 100) / data.total
+          : 0
+        ).toFixed(2)
+      ),
     };
   });
 
-  console.log(datas)
+  console.log(datas);
 
   return (
     <section className="px-[30px] mb-10">
@@ -143,33 +146,35 @@ export default function Page() {
                         <div className="flex items-center gap-[10px]">
                           <span className="w-[42px] h-42px rounded-full overflow-hidden">
                             <Image
-                              src={data?.profile?.organization_logo || orgPlaceholder}
+                              src={
+                                data?.profile?.organization_logo ||
+                                orgPlaceholder
+                              }
                               alt="organization image"
                               className="object-cover aspect-square w-full h-full"
                             />
                           </span>
                           <p className="font-medium text-xs text-black">
-                            {data.name}
+                            {data?.name}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell className="font-semibold text-xs text-[#737373]">
-                        {formatDateFn(data.createdAt)}
+                        {formatDateFn(data?.createdAt)}
                       </TableCell>
                       <TableCell className="font-semibold text-xs text-[#737373]">
-                        {data?.profile.address_metadata.state},{" "}
-                        {data?.profile.address_metadata.country},{" "}
+                        {data?.profile?.address_metadata?.state},{" "}
+                        {data?.profile?.address_metadata?.country},{" "}
                       </TableCell>
                       <TableCell
                         className={`font-semibold text-xs ${
-                          data.status.toLowerCase() === "active"
+                          data?.status?.toLowerCase() === "active"
                             ? "text-[#3FA907]"
                             : "text-[#EC0909]"
                         }`}
                       >
-                        {data.status}
+                        {data?.status}
                       </TableCell>
-
                     </TableRow>
                   );
                 })}

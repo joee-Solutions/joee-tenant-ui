@@ -34,8 +34,8 @@ const SingleOrgData = ({ slug }: { slug: string }) => {
                   {data?.name || "Organization Name"}
                 </p>
                 <p className="text-xs font-normal text-[#999999] mt-1">
-                  {data?.profile.address_metadata.state} {" , "}
-                  {data?.profile.address_metadata.country}
+                  {data?.profile?.address_metadata?.state} {" , "}
+                  {data?.profile?.address_metadata?.country}
                 </p>
               </div>
             </div>
@@ -65,7 +65,7 @@ const SingleOrgData = ({ slug }: { slug: string }) => {
           </aside>
         )}
         <div className="px-10 pt-[32px] pb-[56px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md">
-          {<EditOrg  data={data} slug={slug}/>}
+          { data && <EditOrg  data={data} slug={slug}/>}
         </div>
       </div>
     </div>

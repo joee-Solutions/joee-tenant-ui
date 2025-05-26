@@ -29,17 +29,16 @@ const DashboardPage: NextPage = () => {
     authFectcher
   );
 
-  console.log(data, isLoading, error);
-
   const growth = {
     allOrganizations: null,
-    activeOrganizations: data?.active ? (data?.active * 100) / data?.total : 0,
-    inactiveOrganizations: data?.inactive
-      ? (data?.inactive * 100) / data?.total
-      : 0,
-    deactivatedOrganizations: data?.deactivated
-      ? (data?.deactivated * 100) / data?.total
-      : 0,
+    activeOrganizations: parseFloat(
+      (data?.active ? (data?.active * 100) / data?.total : 0).toFixed(2)
+    ),
+    inactiveOrganizations: parseFloat(
+      (data?.inactive ? (data?.inactive * 100) / data?.total : 0).toFixed(2)
+    ),
+    deactivatedOrganizations: parseFloat(
+      (data?.deactivated ? (data?.deactivated * 100) / data?.total : 0).toFixed(2)),
   };
   console.log("Growth Data:", growth);
   const stats = {

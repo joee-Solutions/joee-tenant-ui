@@ -89,7 +89,9 @@ export default function OrgCardStatus({
         <div className="flex items-center justify-between gap-5">
           <p className="font-normal text-[32px]">{statNum}</p>
           <span
-            className={`w-9 h-9 rounded-full flex items-center justify-center bg-[${color}]`}
+            className={cn(
+              `w-9 h-9 rounded-full flex items-center justify-center bg-[${color}]`
+            )}
           >
             {orgIcon}
           </span>
@@ -102,15 +104,20 @@ export default function OrgCardStatus({
           {cardType !== "all" && (
             <span
               className={cn(
-                `absolute top-0 h-12 w-12 flex items-center justify-center left-5 rounded-full py-[7px] px-3 text-xs  text-white font-bold -tracking-[2%]`,
-                `bg-[${color}]`
+                `absolute top-0 h-12 w-12 flex items-center justify-center left-5 rounded-full py-[7px] px-3 text-xs  text-white font-bold -tracking-[2%]`
               )}
+              style={{ backgroundColor: color } as React.CSSProperties}
             >
               {OrgPercentChanges || 0}%
             </span>
           )}
           <span
-            className={`w-[43px] h-[43px] bg-white text-[${color}] rounded-full absolute right-[17px] bottom-[11px] flex items-center justify-center`}
+            className={cn(
+              `w-[43px] h-[43px] bg-white rounded-full absolute right-[17px] bottom-[11px] flex items-center justify-center `
+            )}
+            style={{
+              color: color,
+            }}
           >
             {barChartIcon}
           </span>

@@ -71,9 +71,9 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
       organizationEmail: data?.email || "",
       status: data?.status || "inactive",
       adminName:
-        (data?.profile.first_name || "") +
+        (data?.profile?.first_name || "") +
         " " +
-        (data?.profile.last_name || ""),
+        (data?.profile?.last_name || ""),
     };
     form.reset({
       ...datas,
