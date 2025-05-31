@@ -8,6 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Controller, useFieldArray, useForm, useFormContext } from "react-hook-form";
+import { FormData } from "../AddPatient";
+import { z } from "zod";
 
 // Define interfaces for our data structures
 interface MedicalCondition {
@@ -29,411 +32,325 @@ interface Medication {
   prescribersName: string;
   comments: string;
 }
+const medicalConditionOptions = [
+  "Asthma",
+  "Diabetes",
+  "Hypertension",
+  "Arthritis",
+  "Allergies",
+  "Heart Disease",
+  "Cancer",
+  "Depression",
+  "Anxiety",
+  "COPD",
+];
 
+const medicationOptions = [
+  "Lisinopril",
+  "Metformin",
+  "Albuterol",
+  "Atorvastatin",
+  "Levothyroxine",
+  "Amlodipine",
+  "Metoprolol",
+  "Omeprazole",
+  "Simvastatin",
+  "Losartan",
+];
+
+const frequencyOptions = [
+  "Once daily",
+  "Twice daily",
+  "Three times daily",
+  "Four times daily",
+  "Every 4 hours",
+  "Every 6 hours",
+  "Every 12 hours",
+  "Weekly",
+  "As needed",
+];
+
+const routeOptions = [
+  "Oral",
+  "Intravenous",
+  "Intramuscular",
+  "Subcutaneous",
+  "Topical",
+  "Inhalation",
+  "Nasal",
+  "Rectal",
+  "Ophthalmic",
+];
+
+export const medHistorySchema = z.array(
+  z.object({
+    id: z.number(),
+    condition: z.string().min(1, "Condition is required"),
+    onsetDate: z.string().min(1, "Onset date is required"),
+    endDate: z.string().optional(),
+    comments: z.string().optional(),
+    medMedication: z.string().min(1, "Medication is required"),
+    medStartDate: z.string().min(1, "Start date is required"),
+    medEndDate: z.string().optional(),
+    medDosage: z.string().min(1, "Dosage is required"),
+    medFrequency: z.string().min(1, "Frequency is required"),
+    medRoute: z.string().min(1, "Route is required"),
+    medPrescribersName: z.string().min(1, "Prescriber's name is required"),
+    medComments: z.string().optional(),
+  }),
+
+)
+export type MedicalHistoryFormData = z.infer<typeof medHistorySchema>;
 export default function MedicalHistoryForm() {
-  const medicalConditionOptions = [
-    "Asthma",
-    "Diabetes",
-    "Hypertension",
-    "Arthritis",
-    "Allergies",
-    "Heart Disease",
-    "Cancer",
-    "Depression",
-    "Anxiety",
-    "COPD",
-  ];
 
-  const medicationOptions = [
-    "Lisinopril",
-    "Metformin",
-    "Albuterol",
-    "Atorvastatin",
-    "Levothyroxine",
-    "Amlodipine",
-    "Metoprolol",
-    "Omeprazole",
-    "Simvastatin",
-    "Losartan",
-  ];
-
-  const frequencyOptions = [
-    "Once daily",
-    "Twice daily",
-    "Three times daily",
-    "Four times daily",
-    "Every 4 hours",
-    "Every 6 hours",
-    "Every 12 hours",
-    "Weekly",
-    "As needed",
-  ];
-
-  const routeOptions = [
-    "Oral",
-    "Intravenous",
-    "Intramuscular",
-    "Subcutaneous",
-    "Topical",
-    "Inhalation",
-    "Nasal",
-    "Rectal",
-    "Ophthalmic",
-  ];
-
-  const [medicalConditions, setMedicalConditions] = useState<MedicalCondition[]>([
-    { id: 1, condition: "", onsetDate: "", endDate: "", comments: "" },
-  ]);
-
-  const [medications, setMedications] = useState<Medication[]>([
-    {
-      id: 1,
-      medication: "",
-      startDate: "",
-      endDate: "",
-      dosage: "",
-      frequency: "",
-      route: "",
-      prescribersName: "",
-      comments: "",
-    },
-  ]);
-
-  const addMedicalCondition = () => {
-    const newId =
-      medicalConditions.length > 0
-        ? Math.max(...medicalConditions.map((item) => item.id)) + 1
-        : 1;
-
-    setMedicalConditions([
-      ...medicalConditions,
-      { id: newId, condition: "", onsetDate: "", endDate: "", comments: "" },
-    ]);
-  };
-
-  const removeMedicalCondition = (id: number) => {
-    if (medicalConditions.length > 1) {
-      setMedicalConditions(medicalConditions.filter((item) => item.id !== id));
-    }
-  };
-
-  const updateMedicalCondition = (id: number, field: keyof MedicalCondition, value: string) => {
-    setMedicalConditions(
-      medicalConditions.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
-  };
-
-  const addMedication = () => {
-    const newId =
-      medications.length > 0
-        ? Math.max(...medications.map((item) => item.id)) + 1
-        : 1;
-
-    setMedications([
-      ...medications,
-      {
-        id: newId,
-        medication: "",
-        startDate: "",
-        endDate: "",
-        dosage: "",
-        frequency: "",
-        route: "",
-        prescribersName: "",
-        comments: "",
-      },
-    ]);
-  };
-
-  const removeMedication = (id: number) => {
-    if (medications.length > 1) {
-      setMedications(medications.filter((item) => item.id !== id));
-    }
-  };
-
-  const updateMedication = (id: number, field: keyof Medication, value: string) => {
-    setMedications(
-      medications.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
-  };
-
-  const handleInputChange = (
-    id: number,
-    field: keyof MedicalCondition | keyof Medication,
-    setter: React.Dispatch<React.SetStateAction<MedicalCondition[]>> | React.Dispatch<React.SetStateAction<Medication[]>>,
-    items: MedicalCondition[] | Medication[]
-  ) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setter(
-      items.map((item) =>
-        item.id === id ? { ...item, [field]: e.target.value } : item
-      ) as any
-    );
-  };
+  const { control, register, formState: { errors } } = useFormContext<Pick<FormData, 'medHistory'>>()
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'medHistory',
+  });
 
   return (
     <div className=" mx-auto p-6">
       {/* Medical History Section */}
       <h1 className="text-2xl font-bold mb-6">Medical History</h1>
+      {
+        fields.map((field, index) => (
+          <div key={field.id} className="mb-8 border-b pb-6">
+            <div className="flex flex-col justify-between mb-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex gap-2">
+                  {fields.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Remove
+                    </button>
+                  )}
+                  {index === fields.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        append({
+                          id: Date.now(),
+                          condition: "",
+                          onsetDate: "",
+                          endDate: "",
+                          comments: "",
+                          medMedication: "",
+                          medStartDate: "",
+                          medEndDate: "",
+                          medDosage: "",
+                          medFrequency: "",
+                          medRoute: "",
+                          medPrescribersName: "",
+                          medComments: "",
+                        })
+                      }
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Add Another
+                    </button>
+                  )}
+                </div>
+              </div>
 
-      {medicalConditions.map((condition, index) => (
-        <div key={condition.id} className="mb-8 border-b pb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Medical Condition {index + 1}</h2>
-            <div className="flex gap-2">
-              {medicalConditions.length > 1 && (
-                <button
-                  onClick={() => removeMedicalCondition(condition.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                >
-                  Remove
-                </button>
-              )}
-              {index === medicalConditions.length - 1 && (
-                <button
-                  onClick={addMedicalCondition}
-                  className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-                >
-                  Add Another
-                </button>
-              )}
+              <div className="">
+                <h2 className="text-lg font-semibold">Medical History Entry {index + 1}</h2>
+                <div className="flex flex-col md:flex-row gap-4 mb-4">
+                  <div className="w-full md:w-1/2">
+                    <label className="block text-base text-black font-normal mb-2">Medical Condition</label>
+                    <Input
+                      type="text"
+                      {...register(`medHistory.${index}.condition`, { required: "Condition is required" })}
+                      className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.condition ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                    />
+                    {errors.medHistory?.[index]?.condition && (
+                      <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].condition.message}</p>
+                    )}
+                  </div>
+
+                  <div className="w-full md:w-1/2">
+                    <label className="block text-base text-black font-normal mb-2">Onset Date</label>
+                    <Input
+                      type="date"
+                      {...register(`medHistory.${index}.onsetDate`, { required: "Onset date is required" })}
+                      className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.onsetDate ? 'border-red-500' : 'border-[#737373]'} rounded`}
+
+                    />
+                    {errors.medHistory?.[index]?.onsetDate && (
+                      <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].onsetDate.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 mb-4">
+                  <div className="w-full md:w-1/2">
+                    <label className="block text-base text-black font-normal mb-2">End Date</label>
+                    <Input
+                      type="date"
+                      {...register(`medHistory.${index}.endDate`)}
+                      className="w-full h-14 p-3 border border-[#737373] rounded"
+                    />
+                  </div>
+                </div>
+
+                <div className="w-full">
+                  <label className="block text-base text-black font-normal mb-2">Comments</label>
+                  <Textarea
+                    {...register(`medHistory.${index}.comments`)}
+                    className="w-full h-32 p-3 border border-[#737373] rounded"
+                    rows={4}
+                  />
+                </div>
+
+              </div>
+            </div>
+            {/* Medication History */}
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold mb-4">Medication History</h2>
+              <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="w-full md:w-1/2">
+                  <label className="block text-base text-black font-normal mb-2">Medication</label>
+                  <Input
+                    type="text"
+                    {...register(`medHistory.${index}.medMedication`, { required: "Medication is required" })}
+                    className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medMedication ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                  />
+                  {errors.medHistory?.[index]?.medMedication && (
+                    <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medMedication.message}</p>
+                  )}
+                </div>
+
+                <div className="w-full md:w-1/2">
+                  <label className="block text-base text-black font-normal mb-2">Start Date</label>
+                  <Input
+                    type="date"
+                    {...register(`medHistory.${index}.medStartDate`, { required: "Start date is required" })}
+                    className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medStartDate ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                  />
+                  {errors.medHistory?.[index]?.medStartDate && (
+                    <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medStartDate.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col md:grid md:grid-cols-2 gap-4 mb-4">
+                <div className="w-full">
+                  <label className="block text-base text-black font-normal mb-2">End Date</label>
+                  <Input
+                    type="date"
+                    {...register(`medHistory.${index}.medEndDate`)}
+                    className="w-full h-14 p-3 border border-[#737373] rounded"
+                  />
+                </div>
+
+                <div className="w-full">
+                  <label className="block text-base text-black font
+
+                  normal mb-2">Dosage</label>
+                  <Input
+                    type="text"
+                    {...register(`medHistory.${index}.medDosage`, { required: "Dosage is required" })}
+                    className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medDosage ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                  />
+                  {errors.medHistory?.[index]?.medDosage && (
+                    <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medDosage.message}</p>
+                  )}
+
+                </div>
+
+                <div className="w-full">
+                  <Controller
+                    control={control}
+                    name={`medHistory.${index}.medFrequency`}
+                    render={({ field }) => (
+                      <div>
+                        <label className="block text-base text-black font-normal mb-2">Frequency</label>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medFrequency ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                          >
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                          <SelectContent className="z-10 bg-white">
+                            {frequencyOptions.map((opt) => (
+                              <SelectItem key={opt} value={opt} className="hover:bg-gray-200 py-2">
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.medHistory?.[index]?.medFrequency && (
+                          <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medFrequency.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
+
+
+                </div>
+                <div className="w-full">
+                  <Controller
+                    control={control}
+                    name={`medHistory.${index}.medRoute`}
+                    render={({ field }) => (
+                      <div>
+                        <label className="block text-base text-black font-normal mb-2">Route</label>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medRoute ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                          >
+                            <SelectValue placeholder="Select route" />
+                          </SelectTrigger>
+                          <SelectContent className="z-10 bg-white">
+                            {routeOptions.map((opt) => (
+                              <SelectItem key={opt} value={opt} className="hover:bg-gray-200 py-2">
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.medHistory?.[index]?.medRoute && (
+                          <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medRoute.message}</p>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
+                <div className="w-full col-span-2">
+                  <label className="block text-base text-black font-normal mb-2">Prescriber&apos;s Name</label>
+                  <Input
+                    type="text"
+                    {...register(`medHistory.${index}.medPrescribersName`, { required: "Prescriber's name is required" })}
+                    className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medPrescribersName ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                  />
+                  {errors.medHistory?.[index]?.medPrescribersName && (
+                    <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medPrescribersName.message}</p>
+                  )}
+                </div>
+                <div className="w-full">
+                  <label className="block text-base text-black font-normal mb-2">Comments</label>
+                  <Textarea
+                    {...register(`medHistory.${index}.medComments`)}
+                    className="w-full h-32 p-3 border border-[#737373] rounded"
+                    rows={4}
+                  />
+                  {errors.medHistory?.[index]?.medComments && (
+                    <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medComments.message}</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Medical Condition</label>
-              <Select
-                value={condition.condition}
-                onValueChange={(value) =>
-                  updateMedicalCondition(condition.id, "condition", value)
-                }
-              >
-                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                  <SelectValue placeholder="Select condition" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {medicalConditionOptions.map((option) => (
-                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Onset Date</label>
-              <Input
-                type="date"
-                value={condition.onsetDate}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateMedicalCondition(condition.id, "onsetDate", e.target.value)
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">End Date</label>
-              <Input
-                type="date"
-                value={condition.endDate}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateMedicalCondition(condition.id, "endDate", e.target.value)
-                }
-              />
-            </div>
-            </div>
-
-            <div className="w-full">
-              <label className="block text-base text-black font-normal mb-2">Comments</label>
-              <Textarea
-                value={condition.comments}
-            className="w-full h-32 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateMedicalCondition(condition.id, "comments", e.target.value)
-                }
-                rows={4}
-              />
-            </div>
-        </div>
-      ))}
-
-      {/* Medication History Section */}
-      <h1 className="text-2xl font-bold mb-6">Medication History</h1>
-
-      {medications.map((medication, index) => (
-        <div key={medication.id} className="mb-8 border-b pb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Medication {index + 1}</h2>
-            <div className="flex gap-2">
-              {medications.length > 1 && (
-                <button
-                  onClick={() => removeMedication(medication.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                >
-                  Remove
-                </button>
-              )}
-              {index === medications.length - 1 && (
-                <button
-                  onClick={addMedication}
-                  className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-                >
-                  Add Another
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Medication</label>
-              <Select
-                value={medication.medication}
-                onValueChange={(value) =>
-                  updateMedication(medication.id, "medication", value)
-                }
-              >
-                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                  <SelectValue placeholder="Select medication" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {medicationOptions.map((option) => (
-                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Start Date</label>
-              <Input
-                type="date"
-                value={medication.startDate}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateMedication(medication.id, "startDate", e.target.value)
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">End Date</label>
-              <Input
-                type="date"
-                value={medication.endDate}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateMedication(medication.id, "endDate", e.target.value)
-                }
-              />
-            </div>
-
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Dosage</label>
-              <Input
-                type="text"
-                value={medication.dosage}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateMedication(medication.id, "dosage", e.target.value)
-                }
-                placeholder="Enter dosage"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Frequency</label>
-              <Select
-                value={medication.frequency}
-                onValueChange={(value) =>
-                  updateMedication(medication.id, "frequency", value)
-                }
-              >
-                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {frequencyOptions.map((option) => (
-                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full md:w-1/2">
-              <label className="block text-base text-black font-normal mb-2">Route</label>
-              <Select
-                value={medication.route}
-                onValueChange={(value) =>
-                  updateMedication(medication.id, "route", value)
-                }
-              >
-                <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                  <SelectValue placeholder="Select route" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {routeOptions.map((option) => (
-                    <SelectItem key={index} value={option} className="hover:bg-gray-200">
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-base text-black font-normal mb-2">Prescriber's Name</label>
-            <Input
-              type="text"
-              value={medication.prescribersName}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-              onChange={(e) =>
-                updateMedication(medication.id, "prescribersName", e.target.value)
-              }
-              placeholder="Enter prescriber's name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base text-black font-normal mb-2">Comments</label>
-            <Textarea
-              value={medication.comments}
-            className="w-full h-32 p-3 border border-[#737373] rounded"
-              onChange={(e) =>
-                updateMedication(medication.id, "comments", e.target.value)
-              }
-              rows={4}
-            />
-          </div>
-        </div>
-      ))}
-
-      {/* Submit button */}
-      <div className="mt-8">
-        <button
-          className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-6 rounded"
-        >
-          Save
-        </button>
-      </div>
+        ))}
     </div>
-  );
+  )
+
+
 }

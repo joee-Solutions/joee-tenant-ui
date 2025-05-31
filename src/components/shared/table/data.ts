@@ -42,51 +42,6 @@ export const DepartmentList: {
     date_created: "20 Jan 2024",
     status: "Active",
   },
-  {
-    id: 2,
-    department: {
-      department_name: "Nephrology",
-    },
-    no_of_empployees: 24,
-    date_created: "20 Jan 2024",
-    status: "Inactive",
-  },
-  {
-    id: 3,
-    department: {
-      department_name: "Oncology",
-    },
-    no_of_empployees: 38,
-    date_created: "20 Jan 2024",
-    status: "Active",
-  },
-  {
-    id: 4,
-    department: {
-      department_name: "Neurology",
-    },
-    no_of_empployees: 32,
-    date_created: "20 Jan 2024",
-    status: "Active",
-  },
-  {
-    id: 5,
-    department: {
-      department_name: "Jorthopedics",
-    },
-    no_of_empployees: 36,
-    date_created: "20 Jan 2024",
-    status: "Inactive",
-  },
-  {
-    id: 6,
-    department: {
-      department_name: "Dentistary",
-    },
-    no_of_empployees: 46,
-    date_created: "20 Jan 2024",
-    status: "Active",
-  },
 ];
 
 export const EmployeesData: {

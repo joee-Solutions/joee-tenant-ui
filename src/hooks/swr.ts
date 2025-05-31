@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { processRequestAuth, processRequestNoAuth } from "@/framework/https";
+import { toast } from "react-toastify";
 import useSWR from "swr";
 
 export const authFectcher = (url: string) =>
@@ -13,6 +14,9 @@ export const useTenant = (slug) => {
     API_ENDPOINTS.GET_TENANT(slug),
     authFectcher
   );
+  if(error){
+    toast.error("Failed to fetch tenant data");
+  }
 
   return {
     data,

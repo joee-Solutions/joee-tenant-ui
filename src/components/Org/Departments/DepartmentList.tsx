@@ -20,7 +20,7 @@ import { formatDateFn } from "@/lib/utils";
 export default function Page({ slug }: { slug: string }) {
   const [pageSize, setPageSize] = useState(10);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
-  const { data, isLoading } = useSWR(
+  const { data, isLoading,error } = useSWR(
     API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
     authFectcher
   );
@@ -69,8 +69,8 @@ export default function Page({ slug }: { slug: string }) {
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="font-semibold text-xs text-[#737373]">
-                        {data?.no_of_empployees || 0}
+                      <TableCell className="font-semibold text-xs text-[#737373] w-[180px]">
+                        {data?.userCount || 0}
                       </TableCell>
                       <TableCell className="font-semibold text-xs text-[#737373]">
                         {formatDateFn(data?.createdAt)}

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 
 // Define the type for a surgery entry
 type SurgeryEntry = {
@@ -31,80 +32,49 @@ const surgeryTypes = [
   "Other",
 ];
 
+// schema.ts
+import { z } from "zod";
+import { FormData } from "../AddPatient";
+export const surgeryHistorySchema = z.array(
+  z.object({
+    surgeryType: z.string().min(1, "Surgery type is required"),
+    date: z.string().min(1, "Date is required"),
+    additionalInfo: z.string().optional(),
+  })
+).min(1, "At least one surgery entry is required");
+
+export type SurgeryHistoryData = z.infer<typeof surgeryHistorySchema>;
 export default function SurgeryHistoryForm() {
-  const [surgeryEntries, setSurgeryEntries] = useState<SurgeryEntry[]>([
-    {
-      id: 1,
-      surgeryType: "",
-      date: "",
-      additionalInfo: "",
-    },
-  ]);
 
-  const addSurgeryEntry = (): void => {
-    const newId =
-      surgeryEntries.length > 0
-        ? Math.max(...surgeryEntries.map((entry) => entry.id)) + 1
-        : 1;
-
-    setSurgeryEntries([
-      ...surgeryEntries,
-      {
-        id: newId,
-        surgeryType: "",
-        date: "",
-        additionalInfo: "",
-      },
-    ]);
-  };
-
-  const removeSurgeryEntry = (id: number): void => {
-    if (surgeryEntries.length > 1) {
-      setSurgeryEntries(surgeryEntries.filter((entry) => entry.id !== id));
-    }
-  };
-
-  const updateSurgeryEntry = (
-    id: number,
-    field: keyof SurgeryEntry,
-    value: string
-  ): void => {
-    setSurgeryEntries(
-      surgeryEntries.map((entry) =>
-        entry.id === id ? { ...entry, [field]: value } : entry
-      )
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent): void => {
-    e.preventDefault();
-    console.log("Surgery History Form submitted:", surgeryEntries);
-    // Handle form submission logic here
-  };
+  const { control, register, formState: { errors } } = useFormContext<Pick<FormData, 'surgeryHistory'>>();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "surgeryHistory",
+  })
 
   return (
     <div className=" mx-auto p-6 ">
       <h1 className="text-2xl font-bold mb-6">Surgery History</h1>
 
-      <form onSubmit={handleSubmit}>
-        {surgeryEntries.map((entry, index) => (
-          <div key={entry.id} className="mb-8 border-b pb-6">
+      {
+        fields.map((field, index) => (
+          <div key={field.id} className="mb-8 border-b pb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Surgery Entry {index + 1}</h2>
               <div className="flex gap-2">
-                {surgeryEntries.length > 1 && (
+                {fields.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => removeSurgeryEntry(entry.id)}
+                    onClick={() => remove(index)}
                     className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Remove
                   </button>
                 )}
-                {index === surgeryEntries.length - 1 && (
+                {index === fields.length - 1 && (
                   <button
                     type="button"
-                    onClick={addSurgeryEntry}
+                    onClick={() => append({ surgeryType: "", date: "", additionalInfo: "" })}
                     className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Add Another
@@ -115,81 +85,81 @@ export default function SurgeryHistoryForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Surgery Type */}
-              <div>
-                <label
-                  htmlFor={`surgeryType-${entry.id}`}
-                  className="block text-base text-black font-normal mb-2"
-                >
-                  Surgery Type
-                </label>
-                <Select
-                  value={entry.surgeryType}
-                  onValueChange={(value) =>
-                    updateSurgeryEntry(entry.id, "surgeryType", value)
-                  }
-                >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select surgery type" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {surgeryTypes.map((type) => (
-                      <SelectItem key={type} value={type} className="hover:bg-gray-200">
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
+              <Controller
+                name={`surgeryHistory.${index}.surgeryType`}
+                control={control}
+                render={({ field }) => (
+                  <div>
+                    <label
+                      htmlFor={`surgeryType}`}
+                      className="block text-base text-black font-normal mb-2"
+                    >
+                      Surgery Type
+                    </label>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                        <SelectValue placeholder="Select surgery type" />
+                      </SelectTrigger>
+                      <SelectContent className="z-10 bg-white">
+                        {surgeryTypes.map((type) => (
+                          <SelectItem key={type} value={type} className="hover:bg-gray-200">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
               {/* Date */}
               <div>
                 <label
-                  htmlFor={`date-${entry.id}`}
+                  htmlFor={'date'}
                   className="block text-base text-black font-normal mb-2"
                 >
                   Date
                 </label>
                 <Input
                   type="date"
-                  value={entry.date}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    updateSurgeryEntry(entry.id, "date", e.target.value)
-                  }
+                  {...register(`surgeryHistory.${index}.date`, { required: "Date is required" })}
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                  placeholder="Select date"
                 />
+                {errors.surgeryHistory?.[index]?.date && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.surgeryHistory[index].date.message}
+                  </p>
+                )}
+
+              </div>
+              {/* Additional Information */}
+              <div className="mt-6">
+                <label
+                  htmlFor={`additionalInfo-${field.additionalInfo}`}
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  Additional Information
+                </label>
+                <Textarea
+                  {...register(`surgeryHistory.${index}.additionalInfo`)}
+                  className="w-full h-32 p-3 border border-[#737373] rounded"
+                  rows={4}
+                  placeholder="Enter additional information"
+                />
+                {errors.surgeryHistory?.[index]?.additionalInfo && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.surgeryHistory[index].additionalInfo.message}
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Additional Information */}
-            <div className="mt-6">
-              <label
-                htmlFor={`additionalInfo-${entry.id}`}
-                className="block text-base text-black font-normal mb-2"
-              >
-                Additional Information
-              </label>
-              <Textarea
-                value={entry.additionalInfo}
-            className="w-full h-32 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateSurgeryEntry(entry.id, "additionalInfo", e.target.value)
-                }
-                rows={4}
-                placeholder="Enter additional information"
-              />
-            </div>
           </div>
-        ))}
-
-        <div className="mt-8">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Save
-          </button>
-        </div>
-      </form>
+        ))
+      }
     </div>
-  );
+  )
 }

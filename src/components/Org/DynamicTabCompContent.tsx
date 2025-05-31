@@ -9,8 +9,8 @@ import AddDepartmentForm from "@/components/Org/Departments/AddDepartmentForm";
 import OrgDetails from "@/components/Org/Manage Organization/OrgDetails";
 import EmployeesList from "@/components/Org/Employees/EmployeeList";
 import AddEmployee from "@/components/Org/Employees/AddEmployee";
-import PatienceList from "@/components/Org/Patients/PatientList";
-import AddPatience from "@/components/Org/Patients/AddPatient";
+import PatientList from "@/components/Org/Patients/PatientList";
+import AddPatient from "@/components/Org/Patients/AddPatient";
 import AppointmentList from "@/components/Org/Appointments/AppointmentList";
 import AddAppointment from "@/components/Org/Appointments/AddAppointment";
 import ScheduleList from "@/components/Org/Schedule/ScheduleList";
@@ -90,7 +90,7 @@ export default function DynamicTabCompContent({
       <div className="mt-4">
   {/* Departments */}
   {tabName === "Departments" && activeTab === "List" && <DepartmentList slug={slug}/>}
-  {tabName === "Departments" && activeTab === "Add" && <AddDepartmentForm setIsAddOrg={setIsAddOrg}  slug={slug}/>}
+  {tabName === "Departments" && activeTab === "Add" && <AddDepartmentForm  slug={slug}/>}
   {/* {tabName === "Departments" && activeTab === "Backup" && <div>Backup Departments</div>} */}
 
   {/* Employees */}
@@ -98,8 +98,8 @@ export default function DynamicTabCompContent({
   {tabName === "Employees" && activeTab === "Add" && <AddEmployee  slug={slug}/>}
 
   {/* Patients */}
-  {tabName === "Patients" && activeTab === "List" && <PatienceList slug={slug}/>}
-  {tabName === "Patients" && activeTab === "Add" && <AddPatience slug={slug} />}
+  {tabName === "Patients" && activeTab === "List" && <PatientList slug={slug}/>}
+  {tabName === "Patients" && activeTab === "Add" && <AddPatient slug={slug} />}
 
   {/* Appointments */}
   {tabName === "Appointments" && activeTab === "List" && <AppointmentList slug={slug}/>}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -8,14 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Define the type for an immunization entry
-type ImmunizationEntry = {
-  id: number;
-  immunizationType: string;
-  date: string;
-  additionalInfo: string;
-};
+import { z } from "zod";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { FormData } from "../AddPatient";
 
 const immunizationTypes = [
   "Influenza (Flu)",
@@ -29,80 +23,46 @@ const immunizationTypes = [
   "Meningococcal",
 ];
 
+export const immunizationHistorySchema = z.array(
+  z.object({
+    immunizationType: z.string().min(1, "Immunization type is required"),
+    date: z.string().min(1, "Date is required"),
+    additionalInfo: z.string().optional(),
+  })
+).min(1, "At least one immunization entry is required");
+export type ImmunizationHistoryData = z.infer<typeof immunizationHistorySchema>;
+
 export default function ImmunizationForm() {
-  const [immunizationEntries, setImmunizationEntries] = useState<ImmunizationEntry[]>([
-    {
-      id: 1,
-      immunizationType: "",
-      date: "",
-      additionalInfo: "",
-    },
-  ]);
-
-  const addImmunizationEntry = (): void => {
-    const newId =
-      immunizationEntries.length > 0
-        ? Math.max(...immunizationEntries.map((entry) => entry.id)) + 1
-        : 1;
-
-    setImmunizationEntries([
-      ...immunizationEntries,
-      {
-        id: newId,
-        immunizationType: "",
-        date: "",
-        additionalInfo: "",
-      },
-    ]);
-  };
-
-  const removeImmunizationEntry = (id: number): void => {
-    if (immunizationEntries.length > 1) {
-      setImmunizationEntries(immunizationEntries.filter((entry) => entry.id !== id));
-    }
-  };
-
-  const updateImmunizationEntry = (
-    id: number,
-    field: keyof ImmunizationEntry,
-    value: string
-  ): void => {
-    setImmunizationEntries(
-      immunizationEntries.map((entry) =>
-        entry.id === id ? { ...entry, [field]: value } : entry
-      )
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent): void => {
-    e.preventDefault();
-    console.log("Immunization Form submitted:", immunizationEntries);
-    // Handle form submission logic here
-  };
-
+  const { register, formState: { errors }, control } = useFormContext<Pick<FormData, 'immunizationHistory'>>()
+  const {
+    fields, remove, append
+  } = useFieldArray({
+    control,
+    name: "immunizationHistory",
+  })
   return (
     <div className=" mx-auto p-6 ">
       <h1 className="text-2xl font-bold mb-6">Immunization History</h1>
 
-      <form onSubmit={handleSubmit}>
-        {immunizationEntries.map((entry, index) => (
-          <div key={entry.id} className="mb-8 border-b pb-6">
+      {
+        fields.map((field, index) => (
+          <div key={field.id} className="mb-8 border-b pb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Immunization Entry {index + 1}</h2>
               <div className="flex gap-2">
-                {immunizationEntries.length > 1 && (
+                {fields.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => removeImmunizationEntry(entry.id)}
+                    onClick={() => remove(index)}
                     className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Remove
                   </button>
                 )}
-                {index === immunizationEntries.length - 1 && (
+                {index === fields.length - 1 && (
                   <button
                     type="button"
-                    onClick={addImmunizationEntry}
+                    onClick={() => append({ immunizationType: "", date: "", additionalInfo: "" })}
                     className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Add Another
@@ -115,79 +75,89 @@ export default function ImmunizationForm() {
               {/* Immunization Type */}
               <div>
                 <label
-                  htmlFor={`immunizationType-${entry.id}`}
+                  htmlFor={`immunizationType-${field.id}`}
                   className="block text-base text-black font-normal mb-2"
                 >
                   Immunization Type
                 </label>
-                <Select
-                  value={entry.immunizationType}
-                  onValueChange={(value) =>
-                    updateImmunizationEntry(entry.id, "immunizationType", value)
-                  }
-                >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select immunization type" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {immunizationTypes.map((type) => (
-                      <SelectItem key={type} value={type} className="hover:bg-gray-200">
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name={`immunizationHistory.${index}.immunizationType`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                        <SelectValue placeholder="Select immunization type" />
+                      </SelectTrigger>
+                      <SelectContent className="z-10 bg-white">
+                        {immunizationTypes.map((type) => (
+                          <SelectItem key={type} value={type} className="hover:bg-gray-200">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {
+                  errors.immunizationHistory?.[index]?.immunizationType && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.immunizationHistory[index].immunizationType.message}
+                    </p>
+                  )
+                }
               </div>
 
               {/* Date */}
               <div>
                 <label
-                  htmlFor={`date-${entry.id}`}
+                  htmlFor={`date-${field.id}`}
                   className="block text-base text-black font-normal mb-2"
                 >
                   Date
                 </label>
                 <Input
                   type="date"
-                  value={entry.date}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    updateImmunizationEntry(entry.id, "date", e.target.value)
-                  }
+                  {...register(`immunizationHistory.${index}.date`, {
+                    required: "Date is required",
+                  })}
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                 />
+                {
+                  errors.immunizationHistory?.[index]?.date && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.immunizationHistory[index].date.message}
+                    </p>
+                  )
+                }
+              </div>
+
+              {/* Additional Information */}
+              <div className="mt-6">
+                <label
+                  htmlFor={`additionalInfo-${field.id}`}
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  Additional Information
+                </label>
+                <Textarea
+                  {...register(`immunizationHistory.${index}.additionalInfo`)}
+                  className="w-full h-32 p-3 border border-[#737373] rounded"
+                  rows={4}
+                  placeholder="Enter additional information"
+                />
+                {errors.immunizationHistory?.[index]?.additionalInfo && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.immunizationHistory[index].additionalInfo.message}
+                  </p>
+                )}
+
               </div>
             </div>
-
-            {/* Additional Information */}
-            <div className="mt-6">
-              <label
-                htmlFor={`additionalInfo-${entry.id}`}
-                className="block text-base text-black font-normal mb-2"
-              >
-                Additional Information
-              </label>
-              <Textarea
-                value={entry.additionalInfo}
-            className="w-full h-32 p-3 border border-[#737373] rounded"
-                onChange={(e) =>
-                  updateImmunizationEntry(entry.id, "additionalInfo", e.target.value)
-                }
-                rows={4}
-                placeholder="Enter additional information"
-              />
-            </div>
           </div>
-        ))}
+        ))
 
-        <div className="mt-8">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Save
-          </button>
-        </div>
-      </form>
+      }
+
     </div>
   );
 }

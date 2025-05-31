@@ -13,7 +13,7 @@ import React, { useMemo } from "react";
 const getColumnHeaders = function (data: Record<string, any>) {
   const headers = Object.keys(data).map((key) => {
     if (key === "id") {
-      return "#";
+      return "S/N";
     } else if (key.includes("_")) {
       const c = key.split("_");
       const firstC = c[0][0].toUpperCase() + c[0].slice(1);

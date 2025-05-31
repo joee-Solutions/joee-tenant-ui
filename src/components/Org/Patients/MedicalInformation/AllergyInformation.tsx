@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+"use client";
+
+import React from "react";
+import { useFormContext, useFieldArray, Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -8,17 +11,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
-// Define the type for an allergy object
-type Allergy = {
-  id: number;
-  allergy: string;
-  startDate: string;
-  endDate: string;
-  severity: string;
-  reactions: string;
-  comments: string;
-};
+
+
+// schema.ts
+import { z } from "zod";
+import { FormData } from "../AddPatient";
+
+export const allergySchema = z
+  .array(
+    z.object({
+      allergy: z.string().min(1, "Allergy is required"),
+      startDate: z.string().min(1, "Start date is required"),
+      endDate: z.string().min(1, "End date is required"),
+      severity: z.string().min(1, "Severity is required"),
+      reactions: z.string().optional(),
+      comments: z.string().optional(),
+    })
+  )
+  .min(1, "At least one allergy is required");
+
+export type AllergyFormData = z.infer<typeof allergySchema>;
 
 export default function AllergyInformationForm() {
   const allergyOptions = [
@@ -37,211 +51,186 @@ export default function AllergyInformationForm() {
 
   const severityLevels = ["Mild", "Moderate", "Severe", "Life-threatening"];
 
-  const [allergies, setAllergies] = useState<Allergy[]>([
-    {
-      id: 1,
-      allergy: "",
-      startDate: "",
-      endDate: "",
-      severity: "",
-      reactions: "",
-      comments: "",
-    },
-  ]);
+  const {
+    control,
+    register,
+    formState: { errors },
+  } = useFormContext<Pick<FormData, 'allergies'>>();
 
-  const addAllergy = (): void => {
-    const newId =
-      allergies.length > 0
-        ? Math.max(...allergies.map((item) => item.id)) + 1
-        : 1;
-
-    setAllergies([
-      ...allergies,
-      {
-        id: newId,
-        allergy: "",
-        startDate: "",
-        endDate: "",
-        severity: "",
-        reactions: "",
-        comments: "",
-      },
-    ]);
-  };
-
-  const removeAllergy = (id: number): void => {
-    if (allergies.length > 1) {
-      setAllergies(allergies.filter((item) => item.id !== id));
-    }
-  };
-
-  const updateAllergy = (id: number, field: keyof Allergy, value: string): void => {
-    setAllergies(
-      allergies.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent): void => {
-    e.preventDefault();
-    console.log("Allergy Information Form submitted:", allergies);
-  };
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "allergies",
+  });
 
   return (
-    <div className="mx-auto p-6 ">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Allergy Information</h1>
 
-      <form onSubmit={handleSubmit}>
-        {allergies.map((allergy, index) => (
-          <div key={allergy.id} className="mb-8 border-b pb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Allergy {index + 1}</h2>
-              <div className="flex gap-2">
-                {allergies.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeAllergy(allergy.id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                  >
-                    Remove
-                  </button>
-                )}
-                {index === allergies.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={addAllergy}
-                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-                  >
-                    Add Another
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Allergy */}
-              <div>
-                <label htmlFor={`allergy-${allergy.id}`} className="block text-base text-black font-normal mb-2">
-                  Allergy
-                </label>
-                <Select
-                  value={allergy.allergy}
-                  onValueChange={(value) =>
-                    updateAllergy(allergy.id, "allergy", value)
+      {fields.map((field, index) => (
+        <div key={field.id} className="mb-8 border-b pb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Allergy {index + 1}</h2>
+            <div className="flex gap-2">
+              {fields.length > 1 && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => remove(index)}
+                >
+                  Remove
+                </Button>
+              )}
+              {index === fields.length - 1 && (
+                <Button
+                  type="button"
+                  onClick={() =>
+                    append({
+                      allergy: "",
+                      startDate: "",
+                      endDate: "",
+                      severity: "",
+                      reactions: "",
+                      comments: "",
+                    })
                   }
                 >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select an allergy" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {allergyOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="hover:bg-gray-200">
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Start Date */}
-              <div>
-                <label htmlFor={`startDate-${allergy.id}`} className="block text-base text-black font-normal mb-2">
-                  Start Date
-                </label>
-                <Input
-                  type="date"
-                  value={allergy.startDate}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    updateAllergy(allergy.id, "startDate", e.target.value)
-                  }
-                />
-              </div>
-
-              {/* End Date */}
-              <div>
-                <label htmlFor={`endDate-${allergy.id}`} className="block text-base text-black font-normal mb-2">
-                  End Date
-                </label>
-                <Input
-                  type="date"
-                  value={allergy.endDate}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    updateAllergy(allergy.id, "endDate", e.target.value)
-                  }
-                />
-              </div>
-
-              {/* Severity */}
-              <div>
-                <label htmlFor={`severity-${allergy.id}`} className="block text-base text-black font-normal mb-2">
-                  Severity
-                </label>
-                <Select
-                  value={allergy.severity}
-                  onValueChange={(value) =>
-                    updateAllergy(allergy.id, "severity", value)
-                  }
-                >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select severity" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {severityLevels.map((level) => (
-                      <SelectItem key={level} value={level} className="hover:bg-gray-200">
-                        {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Reactions */}
-              <div className="">
-                <label htmlFor={`reactions-${allergy.id}`} className="block text-base text-black font-normal mb-2">
-                  Reactions
-                </label>
-                <Textarea
-                  value={allergy.reactions}
-            className="w-full h-32 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    updateAllergy(allergy.id, "reactions", e.target.value)
-                  }
-                  rows={4}
-                  placeholder="Enter reactions here"
-                />
-              </div>
-
-              {/* Comments */}
-              <div className="">
-                <label htmlFor={`comments-${allergy.id}`} className="block text-base text-black font-normal mb-2">
-                  Comments
-                </label>
-                <Textarea
-                  value={allergy.comments}
-            className="w-full h-32 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    updateAllergy(allergy.id, "comments", e.target.value)
-                  }
-                  rows={4}
-                  placeholder="Enter comments here"
-                />
-              </div>
+                  Add Another
+                </Button>
+              )}
             </div>
           </div>
-        ))}
 
-        <div className="mt-8">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Save
-          </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Allergy */}
+            <div>
+              <label className="block mb-2">Allergy</label>
+              <Controller
+                control={control}
+                name={`allergies.${index}.allergy`}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full h-14 p-3 border border-gray-400 rounded z-[1000]">
+                      <SelectValue placeholder="Select an allergy" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1000] bg-white">
+                      {allergyOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt} className="hover:bg-gray-200 py-2">
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {
+                errors.allergies?.[index]?.allergy && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.allergies[index].allergy.message}
+                  </p>
+                )
+              }
+            </div>
+
+            {/* Start Date */}
+            <div>
+              <label className="block mb-2">Start Date</label>
+              <Input
+                type="date"
+                className="w-full h-14 p-3 border border-gray-400 rounded"
+                {...register(`allergies.${index}.startDate`)}
+              />
+              {
+                errors.allergies?.[index]?.startDate && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.allergies[index].startDate.message}
+                  </p>
+                )
+              }
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label className="block mb-2">End Date</label>
+              <Input
+                type="date"
+                className="w-full h-14 p-3 border border-gray-400 rounded"
+                {...register(`allergies.${index}.endDate`)}
+              />
+              {
+                errors.allergies?.[index]?.endDate && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.allergies[index].endDate.message}
+                  </p>
+                )
+              }
+            </div>
+
+            {/* Severity */}
+            <div>
+              <label className="block mb-2">Severity</label>
+              <Controller
+                control={control}
+                name={`allergies.${index}.severity`}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full h-14 p-3 border border-gray-400 rounded">
+                      <SelectValue placeholder="Select severity" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-[1000]">
+                      {severityLevels.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {
+                errors.allergies?.[index]?.severity && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.allergies[index].severity.message}
+                  </p>
+                )
+              }
+            </div>
+
+            {/* Reactions */}
+            <div>
+              <label className="block mb-2">Reactions</label>
+              <Textarea
+                className="w-full h-32 p-3 border border-gray-400 rounded"
+                placeholder="Enter reactions here"
+                {...register(`allergies.${index}.reactions`)}
+              />
+              {
+                errors.allergies?.[index]?.reactions && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.allergies[index].reactions.message}
+                  </p>
+                )
+              }
+            </div>
+
+            {/* Comments */}
+            <div>
+              <label className="block mb-2">Comments</label>
+              <Textarea
+                className="w-full h-32 p-3 border border-gray-400 rounded"
+                placeholder="Enter comments here"
+                {...register(`allergies.${index}.comments`)}
+              />
+              {
+                errors.allergies?.[index]?.comments && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.allergies[index].comments.message}
+                  </p>
+                )
+              }
+            </div>
+          </div>
         </div>
-      </form>
+      ))}
     </div>
   );
 }
