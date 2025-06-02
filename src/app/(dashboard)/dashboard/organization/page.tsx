@@ -52,6 +52,7 @@ export default function Page() {
     API_ENDPOINTS.GET_ALL_TENANTS,
     authFectcher
   );
+  console.log(tenants, "tenants data");
 
   const datas = (
     Object.keys(data || {}) as Array<
@@ -134,7 +135,7 @@ export default function Page() {
             <DataTableFilter />
             <DataTable tableDataObj={AllOrgTableData[0]}>
               {tenants &&
-                tenants.map((data) => {
+                tenants.tenants.map((data) => {
                   return (
                     <TableRow key={data.id} className="px-3 relative">
                       <TableCell>{data.id}</TableCell>

@@ -28,4 +28,7 @@ export const API_ENDPOINTS = {
     `super/tenants/${tenantId}/${deptId}/employees`,
    GET_TENANTS_EMPLOYEES: (tenantId: number) =>
     `super/tenants/${tenantId}/employees`,
+
+  //  super admin
+  GET_SUPER_ADMIN: "/management/super/admin/all",
 };

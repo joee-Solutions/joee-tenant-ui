@@ -11,11 +11,21 @@ import { Ellipsis } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search";
+import useSWR from "swr";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { authFectcher } from "@/hooks/swr";
 
 export default function AdminList() {
   const [pageSize, setPageSize] = useState(10);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
 
+  const { data, isLoading } = useSWR(
+    API_ENDPOINTS.GET_SUPER_ADMIN,
+    authFectcher
+  );
+
+  console.log(data,'super users')
+  
   return (
     <section className="px-[30px] mb-10">
       <>

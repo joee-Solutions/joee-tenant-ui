@@ -11,19 +11,19 @@ const MainHeader = () => {
         <input
           type="search"
           placeholder="search..."
-          className="px-5 h-[60px] rounded-[30px] pl-5 pr-12 bg-[#E4E8F2] outline-none focus:outline-1 focus:outline-slate-400 w-full"
+          className="px-5 h-[50px] rounded-[30px] pl-5 pr-12 bg-[#E4E8F2] outline-none focus:outline-1 focus:outline-slate-400 w-full"
         />
         <SearchIcon className="absolute right-10" />
       </div>
       <div className="flex items-center gap-3">
-        <span className="flex items-center justify-center bg-white w-[60px] h-[60px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A]">
-          <BellIcon className="cursor-pointer" />
+        <span className="flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A]">
+          <BellIcon className="cursor-pointer h-6 w-6"  />
         </span>
-        <span className="flex items-center justify-center bg-white w-[60px] h-[60px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A]">
-          <IoSettingsSharp className="w-[32.82px] h-[34.84px] text-[#EC0909] cursor-pointer" />
+        <span className="flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A]">
+          <IoSettingsSharp className="w-[24px] h-[24px] text-[#EC0909] cursor-pointer" />
         </span>
         <div className="flex items-center gap-[10.32px] cursor-pointer">
-          <span className="block w-[64px] h-[64px] rounded-full overflow-hidden">
+          <span className="block w-[40px] h-[40px] rounded-full overflow-hidden">
             <Image
               src={profileImage}
               alt="profile image"

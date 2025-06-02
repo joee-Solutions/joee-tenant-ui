@@ -45,9 +45,9 @@ const DashboardHeader: FC<DashboardHeaderProps> = ({ username, role }) => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <button className=" relative hidden md:flex items-center justify-center bg-white hover:bg-[#d1d1d1] w-[60px] h-[60px] rounded-lg shadow-lg">
+          <button className=" relative hidden md:flex items-center justify-center bg-white hover:bg-[#d1d1d1] w-[40px] h-[40px] rounded-lg shadow-lg">
             <svg
-              className="h-[40px] w-[32px] text-[#4E66A8] font-bold"
+              className="h-[24px] w-[20px] text-[#4E66A8] font-bold"
               viewBox="0 0 32 40"
               fill="currentColor"
               xmlns="http://www.w3.org/2000/svg"
@@ -58,9 +58,9 @@ const DashboardHeader: FC<DashboardHeaderProps> = ({ username, role }) => {
               />
             </svg>
           </button>
-          <button className=" relative hidden md:flex items-center justify-center bg-white hover:bg-[#d1d1d1]  w-[60px] h-[60px] rounded-lg shadow-lg">
+          <button className=" relative hidden md:flex items-center justify-center bg-white hover:bg-[#d1d1d1]  w-[40px] h-[40px] rounded-lg shadow-lg">
             <svg
-              className="h-[36px] w-[33px] text-red-500  font-bold"
+              className="h-[24px] w-[24px] text-red-500  font-bold"
               viewBox="0 0 33 36"
               fill="currentColor"
               xmlns="http://www.w3.org/2000/svg"
