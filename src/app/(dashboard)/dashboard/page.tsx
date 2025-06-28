@@ -15,19 +15,34 @@ import {
   organizationStats,
   patientData,
 } from "@/utils/dashboard";
-import useSWR from "swr";
-import { authFectcher } from "@/hooks/swr";
 import { Spinner } from "@/components/icons/Spinner";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
-import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { useDashboardData } from "@/hooks/swr";
 
 // import { Organization, Employee, Patient } from '@/lib/types';
 
 const DashboardPage: NextPage = () => {
-  const { data, isLoading, error } = useSWR(
-    API_ENDPOINTS.GET_DASHBOARD_DATA,
-    authFectcher
-  );
+  const { data, isLoading, error } = useDashboardData();
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="min-h-screen w-full mb-10">
+        <main className="container mx-auto py-6 px-[30px]">
+          <div className="flex flex-col items-center justify-center gap-4 py-12">
+            <h2 className="text-2xl font-semibold text-red-600">Failed to Load Dashboard</h2>
+            <p className="text-gray-600">Please try refreshing the page or contact support.</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const growth = {
     allOrganizations: null,
@@ -40,6 +55,7 @@ const DashboardPage: NextPage = () => {
     deactivatedOrganizations: parseFloat(
       (data?.deactivated ? (data?.deactivated * 100) / data?.total : 0).toFixed(2)),
   };
+  
   console.log("Growth Data:", growth);
   const stats = {
     allOrganizations: {
@@ -64,6 +80,7 @@ const DashboardPage: NextPage = () => {
     },
     networkTab: { icon: <></> },
   };
+  
   return (
     <div className="min-h-screen w-full  mb-10">
       <main className="container mx-auto  py-6 px-[30px]">

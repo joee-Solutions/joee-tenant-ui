@@ -26,6 +26,7 @@ export default function AdminList() {
 
   console.log(data,'super users')
   
+  
   return (
     <section className="px-[30px] mb-10">
       <>

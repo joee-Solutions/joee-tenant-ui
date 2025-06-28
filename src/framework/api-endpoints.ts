@@ -31,4 +31,14 @@ export const API_ENDPOINTS = {
 
   //  super admin
   GET_SUPER_ADMIN: "/management/super/admin/all",
+  
+  // Notifications
+  GET_NOTIFICATIONS: "/notifications",
+  GET_USER_NOTIFICATIONS: (userId: number) => `/notifications/user/${userId}`,
+  GET_TENANT_NOTIFICATIONS: (tenantId: number) => `/notifications/tenant/${tenantId}`,
+  MARK_NOTIFICATION_READ: (id: number) => `/notifications/${id}/read`,
+  MARK_ALL_NOTIFICATIONS_READ: (userId: number) => `/notifications/user/${userId}/read-all`,
+  DELETE_NOTIFICATION: (id: number) => `/notifications/${id}`,
+  GET_UNREAD_COUNT: (userId: number) => `/notifications/user/${userId}/unread-count`,
+  GET_TENANT_UNREAD_COUNT: (tenantId: number) => `/notifications/tenant/${tenantId}/unread-count`,
 };

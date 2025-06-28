@@ -1,7 +1,7 @@
 "use client";
 
 import { AllOrgTableData } from "@/components/shared/table/data";
-import OrgCardStatus, { cards } from "./OrgStatCard";
+import OrgCardStatus from "./OrgStatCard";
 import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 
 import DataTable from "@/components/shared/table/DataTable";
@@ -11,14 +11,12 @@ import DataTableFilter, {
 import Pagination from "@/components/shared/table/pagination";
 import { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { ChartNoAxesColumn, Ellipsis, Hospital, Plus } from "lucide-react";
+import { ChartNoAxesColumn, Hospital, Plus } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import NewOrg from "./NewOrg";
 import OrgManagement from "./OrgManagement";
 import Link from "next/link";
-import { authFectcher } from "@/hooks/swr";
-import useSWR from "swr";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { cn, formatDateFn } from "@/lib/utils";
 import {
@@ -27,8 +25,7 @@ import {
   DeactivatedOrgChart,
   InactiveOrgChart,
 } from "@/components/icons/icon";
-import { API_ENDPOINTS } from "@/framework/api-endpoints";
-import { formatDate } from "date-fns";
+import { useDashboardData, useTenantsData } from "@/hooks/swr";
 
 export const chartList = {
   total: <AllOrgChart className="w-full h-full object-fit" />,
@@ -38,41 +35,53 @@ export const chartList = {
   all: <AllOrgChart className="w-full h-full object-fit" />,
 };
 
+// Type for tenant data
+interface TenantData {
+  id: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  profile?: {
+    organization_logo?: string;
+    address_metadata?: {
+      state?: string;
+      country?: string;
+    };
+  };
+}
+
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
-  const { data, isLoading, error } = useSWR<{
-    total: number;
-    active: number;
-    inactive: number;
-    deactivated: number;
-  }>(API_ENDPOINTS.GET_DASHBOARD_DATA, authFectcher);
+  
+  // Fetch dashboard stats
+  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData();
+console.log(dashboardData,'dashboardData')
+  // Fetch tenants list
+  const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError } = useTenantsData();
 
-  const { data: tenants, isLoading: tenantLoad } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS,
-    authFectcher
-  );
-  console.log(tenants, "tenants data");
+  console.log(tenantsData, "tenants data");
 
   const datas = (
-    Object.keys(data || {}) as Array<
+    Object.keys(dashboardData?.data || {}) as Array<
       "total" | "active" | "inactive" | "deactivated"
     >
   ).map((key) => {
-    const value = data?.[key] || 0;
+    const value = dashboardData?.data?.[key] || 0;
+    const cardType = key === "total" ? "all" : key;
 
     return {
-      cardType: key === "total" ? "all" : key,
+      cardType: cardType as "active" | "inactive" | "deactivated" | "all",
       title: key.charAt(0).toUpperCase() + key.slice(1) + " Organizations",
       statNum: value,
       orgIcon: <Hospital className={cn("text-white size-5")} />,
-      chart: chartList[key] || (
+      chart: chartList[key as keyof typeof chartList] || (
         <AllOrgChart className="w-full h-full object-fit" />
       ),
       barChartIcon: <ChartNoAxesColumn />,
       OrgPercentChanges: parseFloat(
-        (key !== "total" && data?.total
-          ? (value * 100) / data.total
+        (key !== "total" && dashboardData.data?.total
+          ? (value * 100) / dashboardData.data.total
           : 0
         ).toFixed(2)
       ),
@@ -80,6 +89,24 @@ export default function Page() {
   });
 
   console.log(datas);
+
+  // Handle error states
+  if (dashboardError || tenantsError) {
+    return (
+      <section className="px-[30px] mb-10">
+        <div className="flex flex-col items-center justify-center gap-4 py-12">
+          <h2 className="text-2xl font-semibold text-red-600">Failed to Load Organizations</h2>
+          <p className="text-gray-600">Please try refreshing the page or contact support.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="px-[30px] mb-10">
@@ -100,7 +127,7 @@ export default function Page() {
             </Button>
           </header>
 
-          {isLoading ? (
+          {dashboardLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <SkeletonBox className="h-[250px] w-full" />
               <SkeletonBox className="h-[250px] w-full" />
@@ -134,8 +161,24 @@ export default function Page() {
             </header>
             <DataTableFilter />
             <DataTable tableDataObj={AllOrgTableData[0]}>
-              {tenants &&
-                tenants.tenants.map((data) => {
+              {tenantsLoading ? (
+                // Loading skeleton for table rows
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index} className="px-3 relative">
+                    <TableCell><SkeletonBox className="h-4 w-8" /></TableCell>
+                    <TableCell className="py-[21px]">
+                      <div className="flex items-center gap-[10px]">
+                        <SkeletonBox className="w-[42px] h-[42px] rounded-full" />
+                        <SkeletonBox className="h-4 w-24" />
+                      </div>
+                    </TableCell>
+                    <TableCell><SkeletonBox className="h-4 w-20" /></TableCell>
+                    <TableCell><SkeletonBox className="h-4 w-16" /></TableCell>
+                    <TableCell><SkeletonBox className="h-4 w-12" /></TableCell>
+                  </TableRow>
+                ))
+              ) : tenantsData && tenantsData.tenants ? (
+                tenantsData.tenants.map((data: TenantData) => {
                   return (
                     <TableRow key={data.id} className="px-3 relative">
                       <TableCell>{data.id}</TableCell>
@@ -164,8 +207,8 @@ export default function Page() {
                         {formatDateFn(data?.createdAt)}
                       </TableCell>
                       <TableCell className="font-semibold text-xs text-[#737373]">
-                        {data?.profile?.address_metadata?.state},{" "}
-                        {data?.profile?.address_metadata?.country},{" "}
+                        {data?.profile?.address_metadata?.state}{" "}
+                        {data?.profile?.address_metadata?.country}{" "}
                       </TableCell>
                       <TableCell
                         className={`font-semibold text-xs ${
@@ -178,10 +221,17 @@ export default function Page() {
                       </TableCell>
                     </TableRow>
                   );
-                })}
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                    No organizations found
+                  </TableCell>
+                </TableRow>
+              )}
             </DataTable>
             <Pagination
-              dataLength={AllOrgTableData.length}
+              dataLength={tenantsData?.tenants?.length || 0}
               numOfPages={1}
               pageSize={pageSize}
             />

@@ -1,0 +1,21 @@
+{
+  "name": "Joee Tenant UI",
+  "short_name": "JoeeTenant",
+  "description": "Multi-tenant management dashboard for organizations, employees, and patients.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/public/assets/logo/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/public/assets/logo/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 

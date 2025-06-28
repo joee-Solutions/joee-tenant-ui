@@ -18,6 +18,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#2563eb" />
+        <link rel="apple-touch-icon" href="/assets/logo/logo.png" />
+      </head>
       <body className=" font-poppins">
         <TenantStoreProvider>{children}</TenantStoreProvider>
       </body>

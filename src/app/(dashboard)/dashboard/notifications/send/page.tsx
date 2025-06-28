@@ -1,10 +1,10 @@
-import AddNofication from "@/components/notifications/AddNotificatonForm";
+import AddNotification from "@/components/notifications/AddNotificatonForm";
 import React from "react";
 
 const SendNotification = () => {
   return (
     <div>
-      <AddNofication />
+      <AddNotification />
     </div>
   );
 };

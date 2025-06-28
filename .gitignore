@@ -131,3 +131,6 @@ dist
 
 .env.development
 .qodo
+
+
+workbox-*.js

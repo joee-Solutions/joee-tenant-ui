@@ -30,6 +30,7 @@ export default function Page() {
     authFectcher
   );
 
+  console.log(data,'data')
   const datas = (
     Object.keys(data?.meta || {}) as Array<
       "all" | "active" | "inactive" | "deactivated"
@@ -91,8 +92,8 @@ export default function Page() {
             </TableRow>
           )}
           {data?.data &&
-            data.data.length > 0 &&
-            data.data.map((data) => {
+            data.data.tenants.length > 0 &&
+            data.data?.tenants.map((data) => {
               return (
                 <TableRow key={data.id} className="px-3 relative">
                   <TableCell>{data.id}</TableCell>
@@ -120,8 +121,8 @@ export default function Page() {
                     {formatDateFn(data.createdAt)}
                   </TableCell>
                   <TableCell className="font-semibold text-xs text-[#737373]">
-                    {data?.profile.address_metadata.state},{" "}
-                    {data?.profile.address_metadata.country},{" "}
+                    {/* {data?.profile.address_metadata.state},{" "} */}
+                    {data?.address}{" "}
                   </TableCell>
                   <TableCell
                     className={`font-semibold text-xs ${

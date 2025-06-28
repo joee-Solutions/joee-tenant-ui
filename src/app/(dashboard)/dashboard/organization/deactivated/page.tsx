@@ -22,7 +22,7 @@ import { cn, formatDateFn } from "@/lib/utils";
 import useSWR from "swr";
 import { chartList } from "../page";
 
-export default function page() {
+export default function Page() {
   const [pageSize, setPageSize] = useState(10);
   const { data, isLoading, error } = useSWR(
     `${API_ENDPOINTS.GET_ALL_TENANTS}/deactivated`,
@@ -89,8 +89,8 @@ export default function page() {
             </TableRow>
           )}
           {data?.data &&
-            data.data.length > 0 &&
-            data.data.map((data) => {
+            data.data?.tenants.length > 0 &&
+            data.data?.tenants.map((data) => {
               return (
                 <TableRow key={data.id} className="px-3 relative">
                   <TableCell>{data.id}</TableCell>
@@ -118,8 +118,8 @@ export default function page() {
                     {formatDateFn(data.createdAt)}
                   </TableCell>
                   <TableCell className="font-semibold text-xs text-[#737373]">
-                    {data?.profile?.address_metadata.state},{" "}
-                    {data?.profile?.address_metadata.country},{" "}
+                    {/* {data?.profile?.address_metadata.country},{" "} */}
+                    {data?.address}{" "}
                   </TableCell>
                   <TableCell
                     className={`font-semibold text-xs ${
