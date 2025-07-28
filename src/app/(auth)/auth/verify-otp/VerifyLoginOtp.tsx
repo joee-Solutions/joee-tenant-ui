@@ -49,8 +49,7 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
           token,
         }
       );
-      console.log(rt, "token");
-      if (rt.status === true && rt?.data?.token) {
+      if (rt.success === true && rt?.data?.token) {
         console.log(data, "data");
         Cookies.remove("mfa_token");
         Cookies.set("auth_token", rt.data.token, {

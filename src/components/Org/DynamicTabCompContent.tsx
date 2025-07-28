@@ -5,12 +5,12 @@ import { FaPlus } from "react-icons/fa";
 import { Button } from "../ui/button";
 import { TabVal } from "@/app/(dashboard)/dashboard/organization/[org]/view/page";
 import DepartmentList from "@/components/Org/Departments/DepartmentList";
-import AddDepartmentForm from "@/components/Org/Departments/AddDepartmentForm";
+import AddDepartment from "@/components/Org/Departments/AddDepartmentForm";
 import OrgDetails from "@/components/Org/Manage Organization/OrgDetails";
-import EmployeesList from "@/components/Org/Employees/EmployeeList";
+import EmployeeList from "@/components/Org/Employees/EmployeeList";
 import AddEmployee from "@/components/Org/Employees/AddEmployee";
 import PatientList from "@/components/Org/Patients/PatientList";
-import AddPatient from "@/components/Org/Patients/AddPatient";
+import PatientFormContainer from "@/components/Org/Patients/AddPatient";
 import AppointmentList from "@/components/Org/Appointments/AppointmentList";
 import AddAppointment from "@/components/Org/Appointments/AddAppointment";
 import ScheduleList from "@/components/Org/Schedule/ScheduleList";
@@ -63,8 +63,9 @@ export default function DynamicTabCompContent({
 
   useEffect(() => {
     setActiveTab(filteredTabs[0]?.name || "");
-    console.log('tabName', filteredTabs);
-  }, [filteredTabs]);
+    // Only run when the parent tab changes (tabName)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabName]);
 
 
   return (
@@ -89,28 +90,28 @@ export default function DynamicTabCompContent({
 
       <div className="mt-4">
   {/* Departments */}
-  {tabName === "Departments" && activeTab === "List" && <DepartmentList slug={slug}/>}
-  {tabName === "Departments" && activeTab === "Add" && <AddDepartmentForm  slug={slug}/>}
+  {tabName === "Departments" && activeTab === "List" && <DepartmentList slug={slug} />}
+  {tabName === "Departments" && activeTab === "Add" && <AddDepartment slug={slug} />}
   {/* {tabName === "Departments" && activeTab === "Backup" && <div>Backup Departments</div>} */}
 
   {/* Employees */}
-  {tabName === "Employees" && activeTab === "List" && <EmployeesList slug={slug} />}
-  {tabName === "Employees" && activeTab === "Add" && <AddEmployee  slug={slug}/>}
+  {tabName === "Employees" && activeTab === "List" && <EmployeeList slug={slug} />}
+  {tabName === "Employees" && activeTab === "Add" && <AddEmployee slug={slug} />}
 
   {/* Patients */}
-  {tabName === "Patients" && activeTab === "List" && <PatientList slug={slug}/>}
-  {tabName === "Patients" && activeTab === "Add" && <AddPatient slug={slug} />}
+  {tabName === "Patients" && activeTab === "List" && <PatientList slug={slug} />}
+  {tabName === "Patients" && activeTab === "Add" && <PatientFormContainer slug={slug} />}
 
   {/* Appointments */}
-  {tabName === "Appointments" && activeTab === "List" && <AppointmentList slug={slug}/>}
-  {tabName === "Appointments" && activeTab === "Add" && <AddAppointment slug={slug}/>}
+  {tabName === "Appointments" && activeTab === "List" && <AppointmentList slug={slug} />}
+  {tabName === "Appointments" && activeTab === "Add" && <AddAppointment slug={slug} />}
 
   {/* Schedule */}
-  {tabName === "Schedule" && activeTab === "List" && <ScheduleList slug={slug}/>}
-  {tabName === "Schedule" && activeTab === "Add" && <AddSchedule slug={slug}/>}
+  {tabName === "Schedule" && activeTab === "List" && <ScheduleList slug={slug} />}
+  {tabName === "Schedule" && activeTab === "Add" && <AddSchedule slug={slug} />}
 
   {/* Manage Organization */}
-  {tabName === "Manage Organization" && activeTab === "Details" && <OrgDetails slug={slug}/>}
+  {tabName === "Manage Organization" && activeTab === "Details" && <OrgDetails slug={slug} />}
 </div>
       
     </div>

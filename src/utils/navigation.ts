@@ -87,6 +87,61 @@ export const sideNavigation = [
       },
     ],
   },
+  {
+    name: "Access Control",
+    icon: icons.Shield,
+    href: "/dashboard/roles",
+    showRuler: true,
+    isTitle: true,
+
+    children: [
+      {
+        title: "Roles",
+        icon: icons.Shield,
+        href: "/dashboard/roles",
+      },
+      {
+        title: "Permissions",
+        icon: icons.Key,
+        href: "/dashboard/permissions",
+      },
+    ],
+  },
+  {
+    name: "Reports & Analytics",
+    icon: icons.FileChartColumn,
+    href: "/dashboard/reports",
+    showRuler: true,
+    isTitle: true,
+
+    children: [
+      {
+        title: "Reports Dashboard",
+        icon: icons.FileChartColumn,
+        href: "/dashboard/reports",
+      },
+      {
+        title: "Users Report",
+        icon: icons.Users,
+        href: "/dashboard/reports?tab=users",
+      },
+      {
+        title: "Patients Report",
+        icon: icons.UserCheck,
+        href: "/dashboard/reports?tab=patients",
+      },
+      {
+        title: "Appointments Report",
+        icon: icons.Calendar,
+        href: "/dashboard/reports?tab=appointments",
+      },
+      {
+        title: "Prescriptions Report",
+        icon: icons.Pill,
+        href: "/dashboard/reports?tab=prescriptions",
+      },
+    ],
+  },
   { 
     name: "Settings & Support",
     icon: OrgIcon,
@@ -96,8 +151,13 @@ export const sideNavigation = [
 
     children: [
       {
-        title: "User training Guide",
+        title: "Training Guides",
         icon: icons.FileArchive,
+        href: "/dashboard/training-guides",
+      },
+      {
+        title: "User Training Guide",
+        icon: icons.FileText,
         href: "/dashboard/user-training-guide",
       },
       {

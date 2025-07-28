@@ -15,14 +15,40 @@ import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 
+// Define Employee type
+interface Employee {
+  id: number;
+  firstname: string;
+  lastname: string;
+  department?: { name?: string } | string;
+  designation?: string;
+  isActive?: boolean;
+  roles?: any[];
+  email?: string;
+  gender?: string;
+  image_url?: string;
+  status?: string;
+}
+
 export default function Page({ slug }: { slug: string }) {
   const [pageSize, setPageSize] = useState(10);
-  const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
-
-  const { data, isLoading } = useSWR(
+  const [currentPage, setCurrentPage] = useState(1);
+  // Remove isAddOrg and setIsAddOrg
+  const { data, isLoading, error } = useSWR(
     API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
     authFectcher
   );
+  console.log(data,'emp data')
+
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading employees...</div>;
+  }
+  if (error) {
+    return <div className="p-8 text-center text-red-500">Failed to load employees.</div>;
+  }
+  if (!data.data || data.data.length === 0) {
+    return <div className="p-8 text-center text-gray-500">No employees found.</div>;
+  }
 
   console.log(data, "dkdkd");
   return (
@@ -46,56 +72,52 @@ export default function Page({ slug }: { slug: string }) {
             />
           </header>
           <DataTable tableDataObj={EmployeesData[0]}>
-            {data?.users &&
-              data.users.map((data, index) => {
-                return (
-                  <TableRow
-                    key={data.id}
-                    className="px-3 odd:bg-white even:bg-gray-50  hover:bg-gray-100"
-                  >
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell className="py-[21px]">
-                      <div className="flex items-center gap-[10px]">
-                        <span className="w-[42px] h-42px rounded-full overflow-hidden">
-                          <Image
-                            src={data?.image_url || orgPlaceholder}
-                            alt="employee image"
-                            className="object-cover aspect-square w-full h-full"
-                          />
-                        </span>
-                        <p className="font-medium text-xs text-black">
-                          {data?.firstname} {data?.lastname}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data?.department?.name || "N/A"}
-                    </TableCell>
-                    <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data?.designation || "N/A"}
-                    </TableCell>
-                    <TableCell
-                      className={`font-semibold text-xs ${
-                        data?.status?.toLowerCase() === "active"
-                          ? "text-[#3FA907]"
-                          : "text-[#EC0909]"
-                      }`}
-                    >
-                      {data?.status}
-                    </TableCell>
-                    {/* <TableCell>
-                      <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
-                        <Ellipsis className="text-black size-5" />
-                      </button>
-                    </TableCell> */}
-                  </TableRow>
-                );
-              })}
+            {data?.data && data.data.map((employee: Employee, index: number) => (
+              <TableRow
+                key={employee.id}
+                className="px-3 odd:bg-white even:bg-gray-50  hover:bg-gray-100"
+              >
+                <TableCell>{index + 1}</TableCell>
+                <TableCell className="py-[21px]">
+                  <div className="flex items-center gap-[10px]">
+                    <span className="w-[42px] h-42px rounded-full overflow-hidden">
+                      <Image
+                        src={employee?.image_url || orgPlaceholder}
+                        alt="employee image"
+                        className="object-cover aspect-square w-full h-full"
+                      />
+                    </span>
+                    <p className="font-medium text-xs text-black">
+                      {employee?.firstname} {employee?.lastname}
+                    </p>
+                  </div>
+                </TableCell>
+                <TableCell className="font-semibold text-xs text-[#737373]">
+                  {typeof employee.department === 'string'
+                    ? employee.department
+                    : employee.department?.name || "N/A"}
+                </TableCell>
+                <TableCell className="font-semibold text-xs text-[#737373]">
+                  {employee?.designation || "N/A"}
+                </TableCell>
+                <TableCell
+                  className={`font-semibold text-xs ${
+                    employee?.status?.toLowerCase() === "active"
+                      ? "text-[#3FA907]"
+                      : "text-[#EC0909]"
+                  }`}
+                >
+                  {employee?.status}
+                </TableCell>
+              </TableRow>
+            ))}
           </DataTable>
           <Pagination
             dataLength={data?.users?.length || 0}
             numOfPages={1}
             pageSize={pageSize}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
           />
         </section>
       </>

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function ScheduleForm() {
+export default function ScheduleForm({ slug }: { slug: string }) {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("10:00 AM");
   const [endTime, setEndTime] = useState("10:00 AM");

@@ -1,7 +1,7 @@
 "use client";
 
 import { AllOrgTableData } from "@/components/shared/table/data";
-import OrgCardStatus, { ActiveOrgCards } from "../OrgStatCard";
+import OrgCardStatus from "../OrgStatCard";
 import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 
 import DataTable from "@/components/shared/table/DataTable";
@@ -9,9 +9,9 @@ import DataTableFilter, {
   ListView,
 } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { ChartNoAxesColumn, Ellipsis, Hospital, Plus } from "lucide-react";
+import { ChartNoAxesColumn, Hospital, Plus } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
@@ -22,6 +22,7 @@ import { cn, formatDateFn } from "@/lib/utils";
 import { chartList } from "../page";
 import Link from "next/link";
 import { Spinner } from "@/components/icons/Spinner";
+import { Tenant } from "@/lib/types";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
@@ -30,13 +31,16 @@ export default function Page() {
     authFectcher
   );
 
-  console.log(data,'data')
+  // Handle the new standardized response format
+  const tenants = Array.isArray(data?.data) ? data.data : [];
+  const metadata = data?.meta || {};
+
   const datas = (
-    Object.keys(data?.meta || {}) as Array<
+    Object.keys(metadata) as Array<
       "all" | "active" | "inactive" | "deactivated"
     >
   ).map((key) => {
-    const value = data?.meta?.[key] || 0;
+    const value = metadata[key] || 0;
 
     return {
       cardType: key,
@@ -48,9 +52,29 @@ export default function Page() {
       ),
       barChartIcon: <ChartNoAxesColumn />,
       OrgPercentChanges:
-        key !== "all" && data?.meta?.all ? (value * 100) / data?.meta?.all : 0,
+        key !== "all" && metadata.all ? (value * 100) / metadata.all : 0,
     };
   });
+
+  if (isLoading) {
+    return (
+      <section className="px-[30px] mb-10">
+        <div className="flex items-center justify-center py-8">
+          <Spinner />
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="px-[30px] mb-10">
+        <div className="flex items-center justify-center py-8">
+          <div className="text-red-500">Failed to load organizations</div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="px-[30px] mb-10">
@@ -86,60 +110,58 @@ export default function Page() {
         </header>
         <DataTableFilter />
         <DataTable tableDataObj={AllOrgTableData[0]}>
-          {!isLoading && data.length === 0 && (
-            <TableRow key={data.id} className="px-3 relative">
-              <TableCell className="py-[21px] ">Empty</TableCell>
+          {tenants.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                No active organizations found
+              </TableCell>
             </TableRow>
+          ) : (
+            tenants.map((tenant: Tenant) => (
+              <TableRow key={tenant.id} className="px-3 relative">
+                <TableCell>{tenant.id}</TableCell>
+                <TableCell className="py-[21px] ">
+                  <Link
+                    href={`/dashboard/organization/${tenant.id}`}
+                    className="absolute cursor-pointer inset-0"
+                  />
+                  <div className="flex items-center gap-[10px]">
+                    <span className="w-[42px] h-[42px] rounded-full overflow-hidden">
+                      <Image
+                        src={tenant.logo || orgPlaceholder}
+                        alt="organization image"
+                        width={42}
+                        height={42}
+                        className="object-cover aspect-square w-full h-full"
+                      />
+                    </span>
+                    <p className="font-medium text-xs text-black">
+                      {tenant.name}
+                    </p>
+                  </div>
+                </TableCell>
+                <TableCell className="font-semibold text-xs text-[#737373]">
+                  {formatDateFn(tenant.created_at)}
+                </TableCell>
+                <TableCell className="font-semibold text-xs text-[#737373]">
+                  {tenant.address || "No address"}
+                </TableCell>
+                <TableCell
+                  className={`font-semibold text-xs ${
+                    tenant.status.toLowerCase() === "active"
+                      ? "text-[#3FA907]"
+                      : "text-[#EC0909]"
+                  }`}
+                >
+                  {tenant.status}
+                </TableCell>
+              </TableRow>
+            ))
           )}
-          {data?.data &&
-            data.data.tenants.length > 0 &&
-            data.data?.tenants.map((data) => {
-              return (
-                <TableRow key={data.id} className="px-3 relative">
-                  <TableCell>{data.id}</TableCell>
-                  <TableCell className="py-[21px] ">
-                    <Link
-                      href={`/dashboard/organization/${data.id}`}
-                      className="absolute cursor-pointer inset-0"
-                    />
-                    <div className="flex items-center gap-[10px]">
-                      <span className="w-[42px] h-42px rounded-full overflow-hidden">
-                        <Image
-                          src={
-                            data?.profile?.organization_logo || orgPlaceholder
-                          }
-                          alt="organization image"
-                          className="object-cover aspect-square w-full h-full"
-                        />
-                      </span>
-                      <p className="font-medium text-xs text-black">
-                        {data.name}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-semibold text-xs text-[#737373]">
-                    {formatDateFn(data.createdAt)}
-                  </TableCell>
-                  <TableCell className="font-semibold text-xs text-[#737373]">
-                    {/* {data?.profile.address_metadata.state},{" "} */}
-                    {data?.address}{" "}
-                  </TableCell>
-                  <TableCell
-                    className={`font-semibold text-xs ${
-                      data.status.toLowerCase() === "active"
-                        ? "text-[#3FA907]"
-                        : "text-[#EC0909]"
-                    }`}
-                  >
-                    {data.status}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
         </DataTable>
         <Pagination
-          dataLength={AllOrgTableData.length}
-          numOfPages={1}
+          dataLength={tenants.length}
+          numOfPages={Math.ceil(tenants.length / pageSize)}
           pageSize={pageSize}
         />
       </section>

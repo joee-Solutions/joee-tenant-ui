@@ -1,10 +1,16 @@
+'use client'
 import { IoSettingsSharp } from "react-icons/io5";
 import { SearchIcon } from "lucide-react";
 import { BellIcon } from "../icons/icon";
 import Image from "next/image";
 import profileImage from "./../../../public/assets/profile.png";
+import { useAdminProfile } from "@/hooks/swr";
 
 const MainHeader = () => {
+  const { data: admin, isLoading } = useAdminProfile();
+  const adminData = Array.isArray(admin) ? admin[0] : admin;
+  const fullName = adminData ? `${adminData.first_name || ""} ${adminData.last_name || ""}`.trim() : "";
+  const role = adminData?.roles?.[0].split("_").join(" ") || "Admin";
   return (
     <header className="flex items-center justify-between gap-5 h-[150px] px-[24px] py-12 shadow-[0px_4px_25px_0px_#0000001A]">
       <div className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] basis-[50%]">
@@ -32,9 +38,9 @@ const MainHeader = () => {
           </span>
           <div>
             <p className="text-sm font-semibold text-[#003465] mb-1">
-              Daniel James
+              {isLoading ? "Loading..." : fullName || "-"}
             </p>
-            <p className="text-xs font-medium text-[#595959]">Admin</p>
+            <p className="text-xs font-medium text-[#595959]">{role}</p>
           </div>
         </div>
       </div>

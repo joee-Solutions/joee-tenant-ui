@@ -32,3 +32,30 @@ export function getChangedFields(original: any, updated: any) {
 
   return result;
 }
+
+export function generateRandomPassword(length = 12): string {
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const symbols = "!@#$%^&*()_+{}[]:;<>,.?~";
+  const all = upper + lower + numbers + symbols;
+
+  let password = [
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    symbols[Math.floor(Math.random() * symbols.length)],
+  ];
+
+  for (let i = password.length; i < length; i++) {
+    password.push(all[Math.floor(Math.random() * all.length)]);
+  }
+
+  // Shuffle the password array
+  for (let i = password.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [password[i], password[j]] = [password[j], password[i]];
+  }
+
+  return password.join("");
+}

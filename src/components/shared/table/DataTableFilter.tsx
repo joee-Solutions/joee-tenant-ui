@@ -7,13 +7,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ListFilter } from "lucide-react";
-import { useState } from "react";
 
-export default function DataTableFilter() {
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("");
-  const [status, setStatus] = useState("");
+interface DataTableFilterProps {
+  search: string;
+  setSearch: (val: string) => void;
+  sortBy: string;
+  setSortBy: (val: string) => void;
+  status: string;
+  setStatus: (val: string) => void;
+}
 
+export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, status, setStatus }: DataTableFilterProps) {
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-[34px] mt-6">
       <div>
@@ -21,7 +25,7 @@ export default function DataTableFilter() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search ”Organizations”"
+          placeholder="Search Organizations"
           className="py-[10px] pr-[10px] pl-5 bg-[#EDF0F6] w-full font-normal text-xs text-[#999999] h-full outline-none"
         />
       </div>
@@ -30,9 +34,7 @@ export default function DataTableFilter() {
       <div>
         <Select
           value={sortBy}
-          onValueChange={(sortVal: string) => {
-            setSortBy(sortVal);
-          }}
+          onValueChange={setSortBy}
         >
           <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
             <SelectValue placeholder={sortBy ? sortBy : "Sort by"} />
@@ -55,9 +57,7 @@ export default function DataTableFilter() {
       <div>
         <Select
           value={status}
-          onValueChange={(statusVal: string) => {
-            setStatus(statusVal);
-          }}
+          onValueChange={setStatus}
         >
           <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
             <SelectValue placeholder={status ? status : "Status"} />

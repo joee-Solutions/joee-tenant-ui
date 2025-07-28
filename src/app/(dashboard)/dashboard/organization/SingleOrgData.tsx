@@ -14,7 +14,8 @@ import { SkeletonBox } from "@/components/shared/loader/skeleton";
 
 const SingleOrgData = ({ slug }: { slug: string }) => {
   const path = API_ENDPOINTS.GET_TENANT(slug);
-  const { data, isLoading, error } = useSWR(path, authFectcher);
+  const { data:profiledata, isLoading, error } = useSWR(path, authFectcher);
+  const data = profiledata?.data;
   return (
     <div className="">
       <div className="grid grid-cols-1 sm:grid-cols-[398px_1fr] gap-5">

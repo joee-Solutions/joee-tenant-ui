@@ -8,7 +8,7 @@ import { ListView } from "@/components/shared/table/DataTableFilter";
 import DataTable from "@/components/shared/table/DataTable";
 import Pagination from "@/components/shared/table/pagination";
 import { useAdminUsersData } from "@/hooks/swr";
-import { formatDateFn } from "@/lib/utils";
+import { AdminUser } from "@/lib/types";
 import { Edit, Trash2, User } from "lucide-react";
 
 // Mock table data structure - replace with actual data from API
@@ -26,6 +26,7 @@ const adminTableData = [
 
 export default function AdminListPage() {
   const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch admin users
   const { data: adminsData, isLoading, error } = useAdminUsersData();
@@ -91,7 +92,7 @@ export default function AdminListPage() {
                 </TableRow>
               ))
             ) : adminsData && adminsData.length > 0 ? (
-              adminsData.map((admin) => (
+              (adminsData as AdminUser[]).map((admin) => (
                 <TableRow key={admin.id} className="px-3 hover:bg-gray-50">
                   <TableCell className="font-medium">{admin.id}</TableCell>
                   <TableCell className="py-[21px]">
@@ -116,7 +117,7 @@ export default function AdminListPage() {
                     {admin.email}
                   </TableCell>
                   <TableCell className="font-medium text-sm text-gray-700">
-                    {admin.roles?.[0]?.name || 'Admin'}
+                    {admin.roles?.[0] || 'Admin'}
                   </TableCell>
                   <TableCell className="font-medium text-sm text-gray-700">
                     {admin.phone_number || 'N/A'}
@@ -165,8 +166,10 @@ export default function AdminListPage() {
           
           <Pagination
             dataLength={adminsData?.length || 0}
-            numOfPages={1}
+            numOfPages={Math.max(1, Math.ceil((adminsData?.length || 0) / pageSize))}
             pageSize={pageSize}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
           />
         </div>
       </section>

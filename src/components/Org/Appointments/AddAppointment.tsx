@@ -29,7 +29,7 @@ const AppointmentSchema = z.object({
 
 type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
-export default function AddAppointment() {
+export default function AddAppointment({ slug }: { slug: string }) {
   const router = useRouter();
   
   const form = useForm<AppointmentSchemaType>({

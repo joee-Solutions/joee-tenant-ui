@@ -9,7 +9,7 @@ import DataTableFilter, {
   ListView,
 } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { ChartNoAxesColumn, Hospital, Plus } from "lucide-react";
 import Image from "next/image";
@@ -26,6 +26,7 @@ import {
   InactiveOrgChart,
 } from "@/components/icons/icon";
 import { useDashboardData, useTenantsData } from "@/hooks/swr";
+import { Tenant } from "@/lib/types";
 
 export const chartList = {
   total: <AllOrgChart className="w-full h-full object-fit" />,
@@ -35,40 +36,56 @@ export const chartList = {
   all: <AllOrgChart className="w-full h-full object-fit" />,
 };
 
-// Type for tenant data
-interface TenantData {
-  id: string;
-  name: string;
-  status: string;
-  createdAt: string;
-  profile?: {
-    organization_logo?: string;
-    address_metadata?: {
-      state?: string;
-      country?: string;
-    };
-  };
-}
-
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [status, setStatus] = useState("");
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
   
   // Fetch dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData();
-console.log(dashboardData,'dashboardData')
-  // Fetch tenants list
-  const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError } = useTenantsData();
+  // Map sortBy to backend fields
+  const sortFieldMap: Record<string, string> = {
+    Name: "name",
+    Date: "createdAt",
+    Location: "domain",
+    Status: "status",
+  };
+  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : undefined;
+  const mappedStatus = status ? status.toUpperCase() : undefined;
+  // Fetch tenants list with filters
+  const { data: tenantsData, meta, isLoading: tenantsLoading, error: tenantsError } = useTenantsData({
+    search,
+    sort: mappedSort,
+    status: mappedStatus,
+    page,
+    limit: pageSize,
+  });
 
   console.log(tenantsData, "tenants data");
 
+  const prevFilters = useRef({ search, sortBy, status, pageSize });
+  useEffect(() => {
+    if (
+      prevFilters.current.search !== search ||
+      prevFilters.current.sortBy !== sortBy ||
+      prevFilters.current.status !== status ||
+      prevFilters.current.pageSize !== pageSize
+    ) {
+      setPage(1);
+    }
+    prevFilters.current = { search, sortBy, status, pageSize };
+  }, [search, sortBy, status, pageSize]);
+
   const datas = (
-    Object.keys(dashboardData?.data || {}) as Array<
-      "total" | "active" | "inactive" | "deactivated"
+    Object.keys(dashboardData || {}) as Array<
+      "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants"
     >
   ).map((key) => {
-    const value = dashboardData?.data?.[key] || 0;
-    const cardType = key === "total" ? "all" : key;
+    const value = dashboardData?.[key] || 0;
+    const cardType = key === "totalTenants" ? "all" : key;
 
     return {
       cardType: cardType as "active" | "inactive" | "deactivated" | "all",
@@ -80,8 +97,8 @@ console.log(dashboardData,'dashboardData')
       ),
       barChartIcon: <ChartNoAxesColumn />,
       OrgPercentChanges: parseFloat(
-        (key !== "total" && dashboardData.data?.total
-          ? (value * 100) / dashboardData.data.total
+          (key !== "totalTenants" && dashboardData?.totalTenants
+          ? (value * 100) / dashboardData.totalTenants
           : 0
         ).toFixed(2)
       ),
@@ -159,7 +176,14 @@ console.log(dashboardData,'dashboardData')
               </h2>
               <ListView pageSize={pageSize} setPageSize={setPageSize} />
             </header>
-            <DataTableFilter />
+            <DataTableFilter
+              search={search}
+              setSearch={setSearch}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              status={status}
+              setStatus={setStatus}
+            />
             <DataTable tableDataObj={AllOrgTableData[0]}>
               {tenantsLoading ? (
                 // Loading skeleton for table rows
@@ -177,63 +201,62 @@ console.log(dashboardData,'dashboardData')
                     <TableCell><SkeletonBox className="h-4 w-12" /></TableCell>
                   </TableRow>
                 ))
-              ) : tenantsData && tenantsData.tenants ? (
-                tenantsData.tenants.map((data: TenantData) => {
-                  return (
-                    <TableRow key={data.id} className="px-3 relative">
-                      <TableCell>{data.id}</TableCell>
-                      <TableCell className="py-[21px] ">
-                        <Link
-                          href={`/dashboard/organization/${data.id}`}
-                          className="absolute cursor-pointer inset-0"
-                        />
-                        <div className="flex items-center gap-[10px]">
-                          <span className="w-[42px] h-42px rounded-full overflow-hidden">
-                            <Image
-                              src={
-                                data?.profile?.organization_logo ||
-                                orgPlaceholder
-                              }
-                              alt="organization image"
-                              className="object-cover aspect-square w-full h-full"
-                            />
-                          </span>
-                          <p className="font-medium text-xs text-black">
-                            {data?.name}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-semibold text-xs text-[#737373]">
-                        {formatDateFn(data?.createdAt)}
-                      </TableCell>
-                      <TableCell className="font-semibold text-xs text-[#737373]">
-                        {data?.profile?.address_metadata?.state}{" "}
-                        {data?.profile?.address_metadata?.country}{" "}
-                      </TableCell>
-                      <TableCell
-                        className={`font-semibold text-xs ${
-                          data?.status?.toLowerCase() === "active"
-                            ? "text-[#3FA907]"
-                            : "text-[#EC0909]"
-                        }`}
-                      >
-                        {data?.status}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+              ) : Array.isArray(tenantsData) && tenantsData.length > 0 ? (
+                tenantsData.map((data: Tenant) => (
+                  <TableRow key={data.id} className="px-3 relative">
+                    <TableCell>{data.id}</TableCell>
+                    <TableCell className="py-[21px] ">
+                      <Link
+                        href={`/dashboard/organization/${data.id}`}
+                        className="absolute cursor-pointer inset-0"
+                      />
+                      <div className="flex items-center gap-[10px]">
+                        <span className="w-[42px] h-42px rounded-full overflow-hidden">
+                          <Image
+                            src={
+                                    data?.logo ||
+                              orgPlaceholder
+                            }
+                            alt="organization image"
+                            className="object-cover aspect-square w-full h-full"
+                          />
+                        </span>
+                        <p className="font-medium text-xs text-black">
+                          {data?.name}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold text-xs text-[#737373]">
+                        {formatDateFn(data?.created_at)}
+                    </TableCell>
+                    <TableCell className="font-semibold text-xs text-[#737373]">
+                      {data?.address}{" "}
+                    </TableCell>
+                    <TableCell
+                      className={`font-semibold text-xs ${
+                        data?.status?.toLowerCase() === "ACTIVE"
+                          ? "text-[#3FA907]"
+                          : "text-[#EC0909]"
+                      }`}
+                    >
+                      {data?.status?.toUpperCase()}
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                     No organizations found
                   </TableCell>
                 </TableRow>
               )}
             </DataTable>
             <Pagination
-              dataLength={tenantsData?.tenants?.length || 0}
-              numOfPages={1}
+              dataLength={meta?.total || tenantsData?.length || 0}
+              numOfPages={meta?.total ? Math.ceil(meta.total / pageSize) : 1}
               pageSize={pageSize}
+              currentPage={page}
+              setCurrentPage={setPage}
             />
           </section>
         </>

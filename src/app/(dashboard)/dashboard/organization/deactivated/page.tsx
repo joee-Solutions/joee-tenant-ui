@@ -1,7 +1,7 @@
 "use client";
 
 import { AllOrgTableData } from "@/components/shared/table/data";
-import OrgCardStatus, { deactivatedOrgCards } from "../OrgStatCard";
+import OrgCardStatus from "../OrgStatCard";
 
 import DataTable from "@/components/shared/table/DataTable";
 import DataTableFilter, {
@@ -10,7 +10,7 @@ import DataTableFilter, {
 import Pagination from "@/components/shared/table/pagination";
 import { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { ChartNoAxesColumn, Ellipsis, Hospital, Plus } from "lucide-react";
+import { ChartNoAxesColumn, Hospital, Plus } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -21,10 +21,14 @@ import { authFectcher } from "@/hooks/swr";
 import { cn, formatDateFn } from "@/lib/utils";
 import useSWR from "swr";
 import { chartList } from "../page";
+import { Tenant } from "@/lib/types";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
-  const { data, isLoading, error } = useSWR(
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [status, setStatus] = useState("");
+  const { data, isLoading } = useSWR(
     `${API_ENDPOINTS.GET_ALL_TENANTS}/deactivated`,
     authFectcher
   );
@@ -81,16 +85,23 @@ export default function Page() {
           </h2>
           <ListView pageSize={pageSize} setPageSize={setPageSize} />
         </header>
-        <DataTableFilter />
+        <DataTableFilter
+          search={search}
+          setSearch={setSearch}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          status={status}
+          setStatus={setStatus}
+        />
         <DataTable tableDataObj={AllOrgTableData[0]}>
-          {!isLoading && data.length === 0 && (
-            <TableRow key={data.id} className="px-3 relative">
+          {!isLoading && data?.data?.length === 0 && (
+            <TableRow className="px-3 relative">
               <TableCell className="py-[21px] ">Empty</TableCell>
             </TableRow>
           )}
           {data?.data &&
-            data.data?.tenants.length > 0 &&
-            data.data?.tenants.map((data) => {
+            data.data?.length > 0 &&
+            data.data?.map((data: Tenant) => {
               return (
                 <TableRow key={data.id} className="px-3 relative">
                   <TableCell>{data.id}</TableCell>
@@ -102,9 +113,7 @@ export default function Page() {
                     <div className="flex items-center gap-[10px]">
                       <span className="w-[42px] h-42px rounded-full overflow-hidden">
                         <Image
-                          src={
-                            data?.profile?.organization_logo || orgPlaceholder
-                          }
+                          src={data.logo || orgPlaceholder}
                           alt="organization image"
                           className="object-cover aspect-square w-full h-full"
                         />
@@ -115,11 +124,10 @@ export default function Page() {
                     </div>
                   </TableCell>
                   <TableCell className="font-semibold text-xs text-[#737373]">
-                    {formatDateFn(data.createdAt)}
+                    {formatDateFn(data.created_at)}
                   </TableCell>
                   <TableCell className="font-semibold text-xs text-[#737373]">
-                    {/* {data?.profile?.address_metadata.country},{" "} */}
-                    {data?.address}{" "}
+                    {data?.address} {" "}
                   </TableCell>
                   <TableCell
                     className={`font-semibold text-xs ${
@@ -135,9 +143,11 @@ export default function Page() {
             })}
         </DataTable>
         <Pagination
-          dataLength={AllOrgTableData.length}
-          numOfPages={1}
+          dataLength={data?.meta?.total || 0}
+          numOfPages={data?.meta?.total ? Math.ceil(data.meta.total / pageSize) : 1}
           pageSize={pageSize}
+          currentPage={1}
+          setCurrentPage={() => {}}
         />
       </section>
     </section>

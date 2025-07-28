@@ -8,7 +8,7 @@ import DataTableFilter, {
   ListView,
 } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
   ChartNoAxesColumn,
@@ -25,11 +25,37 @@ import { cn, formatDateFn } from "@/lib/utils";
 import useSWR from "swr";
 import { chartList } from "../page";
 import Link from "next/link";
+import { Tenant } from "@/lib/types";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [status, setStatus] = useState("");
+
+  const prev = useRef({ search, sortBy, status, pageSize });
+  useEffect(() => {
+    if (
+      prev.current.search !== search ||
+      prev.current.sortBy !== sortBy ||
+      prev.current.status !== status ||
+      prev.current.pageSize !== pageSize
+    ) {
+      setPage(1);
+    }
+    prev.current = { search, sortBy, status, pageSize };
+  }, [search, sortBy, status, pageSize]);
+
+  const params = new URLSearchParams();
+  if (search) params.append("search", search);
+  if (sortBy) params.append("sort", sortBy);
+  if (status) params.append("status", status);
+  params.append("page", String(page));
+  params.append("limit", String(pageSize));
+
   const { data, isLoading, error } = useSWR(
-    `${API_ENDPOINTS.GET_ALL_TENANTS}/inactive`,
+    `${API_ENDPOINTS.GET_ALL_TENANTS}/inactive?${params.toString()}`,
     authFectcher
   );
 
@@ -86,7 +112,14 @@ export default function Page() {
           </h2>
           <ListView pageSize={pageSize} setPageSize={setPageSize} />
         </header>
-        <DataTableFilter />
+        <DataTableFilter
+          search={search}
+          setSearch={setSearch}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          status={status}
+          setStatus={setStatus}
+        />
         <DataTable tableDataObj={AllOrgTableData[0]}>
           {!isLoading && data.length === 0 && (
             <TableRow key={data.id} className="px-3 relative">
@@ -94,8 +127,8 @@ export default function Page() {
             </TableRow>
           )}
           {data?.data &&
-            data.data?.tenants.length > 0 &&
-            data.data?.tenants.map((data) => {
+            data.data?.length > 0 &&
+            data.data?.map((data: Tenant) => {
               return (
                 <TableRow key={data.id} className="px-3 relative">
                   <TableCell>{data.id}</TableCell>
@@ -140,9 +173,11 @@ export default function Page() {
             })}
         </DataTable>
         <Pagination
-          dataLength={AllOrgTableData.length}
-          numOfPages={1}
+          dataLength={data?.meta?.total || 0}
+          numOfPages={data?.meta?.total ? Math.ceil(data.meta.total / pageSize) : 1}
           pageSize={pageSize}
+          currentPage={page}
+          setCurrentPage={setPage}
         />
       </section>
     </section>

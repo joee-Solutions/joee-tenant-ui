@@ -3,7 +3,7 @@
 import DataTable from "@/components/shared/table/DataTable";
 import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Ellipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,21 +41,37 @@ interface Notification {
   priority: string;
   status: string;
   createdAt: string;
-  user?: any;
-  tenant?: any;
+  user?: {
+    first_name: string;
+    last_name: string;
+  };
+  tenant?: {
+    name: string;
+  };
 }
 
 export default function NotificationList() {
   const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState<TabType>("all");
-  
+
   // Fetch notifications data with tab filtering
-  const { data: notificationsData, isLoading, error, mutate } = useNotificationsByTab(activeTab);
-  console.log(notificationsData)
+  const { data: notificationsData, meta, isLoading, error, mutate } = useNotificationsByTab(activeTab);
 
   const handleTabClick = (tab: TabType) => {
     setActiveTab(tab);
   };
+
+  // Extract notifications from the response structure
+  const notifications = notificationsData || [];
+  const totalCount = meta?.total || 0;
+  
+  // Reset currentPage to 1 if there are no notifications
+  useEffect(() => {
+    if (totalCount === 0 && currentPage > 1) {
+      setCurrentPage(1);
+    }
+  }, [totalCount, currentPage]);
 
   // Handle error state
   if (error) {
@@ -64,8 +80,8 @@ export default function NotificationList() {
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <h2 className="text-2xl font-semibold text-red-600">Failed to Load Notifications</h2>
           <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-          <button 
-            onClick={() => mutate()} 
+          <button
+            onClick={() => mutate()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Refresh Page
@@ -74,10 +90,6 @@ export default function NotificationList() {
       </section>
     );
   }
-
-  // Extract notifications from the response structure
-  const notifications = notificationsData?.notifications || [];
-  const totalCount = notificationsData?.total || 0;
 
   return (
     <section className="mb-10">
@@ -138,7 +150,7 @@ export default function NotificationList() {
                 </TableRow>
               ))
             ) : notifications && notifications.length > 0 ? (
-              notifications.map((data: Notification, index: number) => {
+              (notifications as Notification[]).map((data: Notification, index: number) => {
                 return (
                   <TableRow
                     key={data.id || index}
@@ -187,8 +199,8 @@ export default function NotificationList() {
             ) : (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                  {activeTab === "all" 
-                    ? "No notifications found" 
+                  {activeTab === "all"
+                    ? "No notifications found"
                     : `No ${activeTab} notifications found`
                   }
                 </TableCell>
@@ -197,8 +209,10 @@ export default function NotificationList() {
           </DataTable>
           <Pagination
             dataLength={totalCount}
-            numOfPages={Math.ceil(totalCount / pageSize)}
+            numOfPages={Math.max(1, Math.ceil(totalCount / pageSize))}
             pageSize={pageSize}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
           />
         </div>
       </section>

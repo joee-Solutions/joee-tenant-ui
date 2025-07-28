@@ -134,3 +134,4 @@ dist
 
 
 workbox-*.js
+.DS_Store

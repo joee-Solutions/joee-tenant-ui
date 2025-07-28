@@ -17,6 +17,7 @@ import useSWR from "swr";
 
 export default function Page({ slug }: { slug: string }) {
   const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
   const { data, isLoading } = useSWR(
     API_ENDPOINTS.TENANTS_PATIENTS(parseInt(slug)),
@@ -103,6 +104,8 @@ export default function Page({ slug }: { slug: string }) {
             dataLength={PatientData.length}
             numOfPages={1000}
             pageSize={pageSize}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
           />
         </section>
       </>

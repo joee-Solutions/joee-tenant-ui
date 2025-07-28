@@ -18,6 +18,13 @@ interface EmployeeSectionProps {
 }
 
 const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
+  if (!employees || employees.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 h-[300px] w-full flex items-center justify-center text-gray-500">
+        No employees to display
+      </div>
+    );
+  }
   const mainEmployee = employees[0];
   const otherEmployees = employees.slice(1);
 
@@ -42,13 +49,12 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
 
       <div className="flex flex-col items-center -mt-12 text-center">
         <div className="relative w-[180px] h-[180px] rounded-full border-8 border-[#003465] overflow-hidden">
-          <Image src={mainEmployee.image} alt={mainEmployee.name} layout="fill" objectFit="cover" />
+          <Image src={mainEmployee?.image || "/assets/images/employeeprofile.png"} alt={mainEmployee?.name || "Employee"} layout="fill" objectFit="cover" />
         </div>
-        <h4 className="mt-4 text-xl font-medium text-black">{mainEmployee.name}</h4>
-        <p className="text-gray-500">{mainEmployee.role}</p>
-        <p className="text-gray-500">{mainEmployee.organization}</p>
+        <h4 className="mt-4 text-xl font-medium text-black">{mainEmployee?.name}</h4>
+        <p className="text-gray-500">{mainEmployee?.organization}</p>
         <p className="mt-3 text-md max-w-lg text-[#999999] px-6">
-          {mainEmployee.description}
+          {mainEmployee?.description}
         </p>
         <button className="my-4 bg-[#003465] text-white px-12 text-lg py-2 rounded-lg shadow hover:bg-[#122a41]">
           View
@@ -64,12 +70,11 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
                 employee.role.includes("Doctor") ? "border-red-500" : "border-yellow-500"
               }`}
             >
-              <Image src={employee.image} alt={employee.name} layout="fill" objectFit="cover" />
+              <Image src={employee?.image || "/assets/images/employeeprofile.png"} alt={employee?.name || "Employee"} layout="fill" objectFit="cover" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-gray-900">{employee.name}</h4>
-              <p className="text-xs text-gray-500">{employee.role}</p>
-              <p className="text-xs text-gray-500">{employee.organization}</p>
+              <h4 className="text-sm font-semibold text-gray-900">{employee?.name}</h4>
+              <p className="text-xs text-gray-500">{employee?.organization}</p>
             </div>
           </div>
         ))}

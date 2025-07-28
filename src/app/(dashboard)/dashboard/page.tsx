@@ -7,23 +7,87 @@ import EmployeeSection from "@/components/dashboard/EmployeeSection";
 import PatientsDonut from "@/components/dashboard/PatientsDonut";
 import OrganizationList from "@/components/dashboard/OrganizationList";
 import OrganizationStatus from "@/components/dashboard/OrganizationStatus";
-import {
-  appointmentsData,
-  colors,
-  employees,
-  organizations,
-  organizationStats,
-  patientData,
-} from "@/utils/dashboard";
-import { Spinner } from "@/components/icons/Spinner";
+import { colors } from "@/utils/dashboard";
+import { useDashboardAppointments, useDashboardPatients } from "@/hooks/swr";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { useDashboardData } from "@/hooks/swr";
+import { useDashboardEmployees } from "@/hooks/swr";
+import type { User } from "@/lib/types";
+import { useTenantsData } from "@/hooks/swr";
+import useSWR from "swr";
+import { authFectcher } from "@/hooks/swr";
 
 // import { Organization, Employee, Patient } from '@/lib/types';
 
+// Types for chart data
+type AppointmentsByDay = {
+  day: string;
+  male: number;
+  female: number;
+};
+
+type AgeGroup = {
+  range: string;
+  percentage: number;
+  color: string;
+};
+
+// Type guard for tenant
+function hasTenant(obj: unknown): obj is { tenant: { name?: string } } {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'tenant' in obj &&
+    typeof (obj as { tenant?: unknown }).tenant === 'object' &&
+    (obj as { tenant?: unknown }).tenant !== null
+  );
+}
+
 const DashboardPage: NextPage = () => {
   const { data, isLoading, error } = useDashboardData();
+  const { data: appointmentsData, isLoading: loadingAppointments, error: errorAppointments } = useDashboardAppointments();
+  const { data: patientsData, isLoading: loadingPatients, error: errorPatients } = useDashboardPatients();
+  const { data: employeesData, isLoading: loadingEmployees, error: errorEmployees } = useDashboardEmployees();
+  const { data: tenantsData, isLoading: loadingTenants, error: errorTenants } = useTenantsData({ limit: 4 });
+  const organizations = Array.isArray(tenantsData)
+    ? tenantsData.filter((t): t is import("@/lib/types").Tenant => typeof t === 'object' && t !== null && 'id' in t && 'name' in t)
+        .slice(0, 4)
+        .map((tenant) => ({
+          id: tenant.id,
+          name: tenant.name,
+          location: tenant.address || tenant.domain || "-",
+          status:
+            tenant.status === "ACTIVE"
+              ? "Active"
+              : tenant.status === "INACTIVE"
+              ? "Inactive"
+              : tenant.status === "DEACTIVATED"
+              ? "Deactivated"
+              : "Inactive",
+          image: tenant.logo || "/assets/images/profilepic.png",
+        }))
+    : [];
 
+  const { data: orgStatusData, isLoading: loadingOrgStatus, error: errorOrgStatus } = useSWR(
+    "/organization/status",
+    authFectcher
+  );
+  const organizationStats = orgStatusData && typeof orgStatusData === 'object' && orgStatusData.data ? {
+    activeCount: orgStatusData.data.activeTenants || 0,
+    inactiveCount: orgStatusData.data.inactiveTenants || 0,
+    deactivatedCount: orgStatusData.data.deactivatedTenants || 0,
+    totalCount: orgStatusData.data.totalTenants || 0,
+    completionPercentage: orgStatusData.data.totalTenants
+      ? Math.round(((orgStatusData.data.activeTenants || 0) * 100) / orgStatusData.data.totalTenants)
+      : 0,
+  } : {
+    activeCount: 0,
+    inactiveCount: 0,
+    deactivatedCount: 0,
+    totalCount: 0,
+    completionPercentage: 0,
+  };
+console.log(employeesData,'employeesData')
   // Handle error state
   if (error) {
     return (
@@ -47,40 +111,71 @@ const DashboardPage: NextPage = () => {
   const growth = {
     allOrganizations: null,
     activeOrganizations: parseFloat(
-      (data?.active ? (data?.active * 100) / data?.total : 0).toFixed(2)
+      (data?.activeTenants ? (data?.activeTenants * 100) / data?.totalTenants : 0).toFixed(2)
     ),
     inactiveOrganizations: parseFloat(
-      (data?.inactive ? (data?.inactive * 100) / data?.total : 0).toFixed(2)
+      (data?.inactiveTenants ? (data?.inactiveTenants * 100) / data?.totalTenants : 0).toFixed(2)
     ),
     deactivatedOrganizations: parseFloat(
-      (data?.deactivated ? (data?.deactivated * 100) / data?.total : 0).toFixed(2)),
+      (data?.deactivatedTenants ? (data?.deactivatedTenants * 100) / data?.totalTenants : 0).toFixed(2)),
   };
   
   console.log("Growth Data:", growth);
   const stats = {
     allOrganizations: {
-      count: data?.total || 0,
+      count: data?.totalTenants || 0,
       growth: growth.allOrganizations,
       icon: <></>,
     },
     activeOrganizations: {
-      count: data?.active || 0,
+      count: data?.activeTenants || 0,
       growth: growth.activeOrganizations,
       icon: <></>,
     },
     inactiveOrganizations: {
-      count: data?.inactive || 0,
+      count: data?.inactiveTenants || 0,
       growth: growth.inactiveOrganizations,
       icon: <></>,
     },
     deactivatedOrganizations: {
-      count: data?.deactivated || 0,
+      count: data?.deactivatedTenants || 0,
       growth: growth.deactivatedOrganizations,
       icon: <></>,
     },
     networkTab: { icon: <></> },
   };
   
+  // Map backend data to AppointmentsChart expected props
+  let appointmentsChartData = null;
+  if (
+    appointmentsData &&
+    typeof appointmentsData === 'object' &&
+    !Array.isArray(appointmentsData)
+  ) {
+    appointmentsChartData = {
+      clinic: 'clinic' in appointmentsData && typeof appointmentsData.clinic === 'string' ? appointmentsData.clinic : '',
+      weeklyGrowth: 'weeklyGrowth' in appointmentsData && typeof appointmentsData.weeklyGrowth === 'number' ? appointmentsData.weeklyGrowth : 0,
+      appointmentsByDay: Array.isArray((appointmentsData as { appointmentsByDay?: unknown[] })?.appointmentsByDay)
+        ? (appointmentsData as { appointmentsByDay: AppointmentsByDay[] }).appointmentsByDay
+        : [],
+    };
+  }
+
+  // Map backend data to PatientsDonut expected props
+  let patientsDonutData = null;
+  if (
+    patientsData &&
+    typeof patientsData === 'object' &&
+    !Array.isArray(patientsData)
+  ) {
+    patientsDonutData = {
+      totalPatients: typeof patientsData.totalPatients === 'number' ? patientsData.totalPatients : 0,
+      ageDistribution: Array.isArray((patientsData as { ageDistribution?: unknown[] })?.ageDistribution)
+        ? (patientsData as { ageDistribution: AgeGroup[] }).ageDistribution
+        : [],
+    };
+  }
+
   return (
     <div className="min-h-screen w-full  mb-10">
       <main className="container mx-auto  py-6 px-[30px]">
@@ -140,15 +235,73 @@ const DashboardPage: NextPage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="flex flex-col space-y-4">
-            <AppointmentsChart data={appointmentsData} />
-            <PatientsDonut data={patientData} />
+            {loadingAppointments ? (
+              <SkeletonBox className="h-[300px] w-full" />
+            ) : errorAppointments ? (
+              <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load appointments data</div>
+            ) : appointmentsChartData && appointmentsChartData.appointmentsByDay && appointmentsChartData.appointmentsByDay.length > 0 ? (
+              <AppointmentsChart data={appointmentsChartData} />
+            ) : (
+              <div className="bg-white p-6 rounded-lg shadow-md text-gray-500 h-[300px] w-full flex items-center justify-center">No appointments data available</div>
+            )}
+
+            {loadingPatients ? (
+              <SkeletonBox className="h-[300px] w-full" />
+            ) : errorPatients ? (
+              <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load patients data</div>
+            ) : patientsDonutData && patientsDonutData.ageDistribution && patientsDonutData.ageDistribution.length > 0 ? (
+              <PatientsDonut data={patientsDonutData} />
+            ) : (
+              <div className="bg-white p-6 rounded-lg shadow-md text-gray-500 h-[300px] w-full flex items-center justify-center">No patients data available</div>
+            )}
           </div>
-          <EmployeeSection employees={employees} />
+          {loadingEmployees ? (
+            <SkeletonBox className="h-[300px] w-full" />
+          ) : errorEmployees ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load employees data</div>
+          ) : Array.isArray(employeesData) && employeesData.length > 0 && typeof employeesData[0] === 'object' ? (
+            <EmployeeSection
+              employees={
+                (employeesData as unknown[])
+                  .filter((u): u is User =>
+                    typeof u === 'object' &&
+                    u !== null &&
+                    'id' in u &&
+                    'firstname' in u &&
+                    'lastname' in u 
+                  )
+                  .map((user) => ({
+                    id: user.id,
+                    name: `${user.firstname} ${user.lastname}`.trim(),
+                    role: user.roles && user.roles.length > 0 ? user.roles[0].name : "Employee",
+                    organization: hasTenant(user) && user.tenant && 'name' in user.tenant ? user.tenant.name || "-" : "-",
+                    description: user.about || "",
+                    image: user.image_url || "/assets/images/employeeprofile.png",
+                  }))
+              }
+            />
+          ) : (
+            <div className="bg-white p-6 rounded-lg shadow-md text-gray-500 h-[300px] w-full flex items-center justify-center">No employees data available</div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <OrganizationList organizations={organizations} />
-          <OrganizationStatus data={organizationStats} colors={colors} />
+          {loadingTenants ? (
+            <SkeletonBox className="h-[300px] w-full" />
+          ) : errorTenants ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load organizations</div>
+          ) : organizations.length > 0 ? (
+            <OrganizationList organizations={organizations} />
+          ) : (
+            <div className="bg-white p-6 rounded-lg shadow-md text-gray-500 h-[300px] w-full flex items-center justify-center">No organizations available</div>
+          )}
+          {loadingOrgStatus ? (
+            <SkeletonBox className="h-[300px] w-full" />
+          ) : errorOrgStatus ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load organization stats</div>
+          ) : (
+            <OrganizationStatus data={organizationStats} colors={colors} />
+          )}
         </div>
       </main>
     </div>

@@ -80,17 +80,23 @@ export default function AddEmployee({ slug }: { slug: string }) {
 
   // Sample data for dropdowns
   const regions = ["New York", "Lagos", "Texas", "Florida", "Abuja"];
-  const departments =
-    !isLoading && data.departments.length > 0
-      ? data?.departments.map((dept) => dept.name)
-      : [];
+  const departments = Array.isArray(data?.data) && data.data.length > 0
+    ? data.data.map((dept) => dept.name)
+    : [];
 
   const choosenDepartment = form.watch("department");
-  const deptId = data?.departments.find(
-    (dept) => dept.name === choosenDepartment
-  )?.id;
+  const deptId = Array.isArray(data?.data)
+    ? data.data.find((dept) => dept.name === choosenDepartment)?.id
+    : undefined;
   console.log(deptId, "department id");
   const genders = ["Male", "Female", "Other", "Prefer not to say"];
+
+  if (error) {
+    return <div className="p-8 text-center text-red-500">Failed to load departments.</div>;
+  }
+  if (!departments.length) {
+    return <div className="p-8 text-center text-gray-500">No departments found. Please add a department first.</div>;
+  }
 
   const onSubmit = async (data: EmployeeSchemaType) => {
     try {

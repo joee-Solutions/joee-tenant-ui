@@ -28,9 +28,19 @@ export const API_ENDPOINTS = {
     `super/tenants/${tenantId}/${deptId}/employees`,
    GET_TENANTS_EMPLOYEES: (tenantId: number) =>
     `super/tenants/${tenantId}/employees`,
+  GET_ALL_USERS: "super/tenants",
 
   //  super admin
   GET_SUPER_ADMIN: "/management/super/admin/all",
+  ADD_SUPER_ADMIN: "/auth/super/register",
+  
+  // Training Guides
+  GET_TRAINING_GUIDES: "/management/super/training-guides",
+  GET_TRAINING_GUIDE: (id: number) => `/management/super/training-guides/${id}`,
+  CREATE_TRAINING_GUIDE: "/management/super/training-guides",
+  UPDATE_TRAINING_GUIDE: (id: number) => `/management/super/training-guides/${id}`,
+  DELETE_TRAINING_GUIDE: (id: number) => `/management/super/training-guides/${id}`,
+  GET_TRAINING_GUIDE_CATEGORIES: "/management/super/training-guides/categories",
   
   // Notifications
   GET_NOTIFICATIONS: "/notifications",
@@ -41,4 +51,20 @@ export const API_ENDPOINTS = {
   DELETE_NOTIFICATION: (id: number) => `/notifications/${id}`,
   GET_UNREAD_COUNT: (userId: number) => `/notifications/user/${userId}/unread-count`,
   GET_TENANT_UNREAD_COUNT: (tenantId: number) => `/notifications/tenant/${tenantId}/unread-count`,
+  GET_ADMIN_PROFILE: "/management/super/admin/profile",
+  CHANGE_PASSWORD: "/auth/super/change-password",
+  
+  // Roles Management
+  GET_ALL_ROLES: "/management/super/roles/all",
+  CREATE_ROLE: "/management/super/roles/create",
+  UPDATE_ROLE: (roleId: number) => `/management/super/roles/${roleId}/update`,
+  
+  // Permissions Management
+  GET_ALL_PERMISSIONS: "/management/super/permissions/all",
+  CREATE_PERMISSION: "/management/super/permissions/create",
+  
+  // User Role Management
+  GET_TENANT_USERS: (orgId: string) => `super/tenants/${orgId}`,
+  ASSIGN_ROLES_TO_USER: (userId: number) => `super/tenants/users/${userId}/roles/assign`,
+  REMOVE_ROLE_FROM_USER: (userId: number, roleId: number) => `super/tenants/users/${userId}/roles/${roleId}`,
 };

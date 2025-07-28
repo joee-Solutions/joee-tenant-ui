@@ -26,44 +26,60 @@ import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
 import ProfileImageUploader from "../ui/ImageUploader";
 import { useRouter } from "next/navigation";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { tr } from "date-fns/locale";
 
 const AdminFormSchema = z.object({
-  firstName: z.string().min(1, "This field is required"),
-  lastName: z.string().min(1, "This field is required"),
+  first_name: z.string().min(1, "This field is required"),
+  last_name: z.string().min(1, "This field is required"),
   email: z
     .string()
     .email("Invalid email address")
     .min(1, "This field is required"),
 
   role: z.string().min(1, "This field is required"),
-  phoneNumber: z.string().min(1, "This field is required"),
+  phone_number: z.string().min(1, "This field is required"),
   company: z.string().min(1, "This field is required"),
   profileImage: z.string().optional(),
+  password: z.string().min(1, "This field is required"),
+  address: z.string().optional(),
 });
 
 type AdminFormSchemaType = z.infer<typeof AdminFormSchema>;
 
-const orgStatus = ["Admin", "Super Admin", "User"];
+const orgStatus = ["Admin", "Super_Admin", "User"];
 
 export default function AdminForm() {
   const form = useForm<AdminFormSchemaType>({
     resolver: zodResolver(AdminFormSchema),
     mode: "onChange",
     defaultValues: {
-      firstName: "JP",
-      lastName: "Morgan",
-      email: "jpMorgan@gmail.com",
-      phoneNumber: "0818888888",
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone_number: "0818888888",
       role: "",
       company: "Joee Solution",
+      password: "",
+      address: "",
     },
   });
+  const [isOpen, setIsOpen] = React.useState(false);
 
-  const onSubmit = (payload: AdminFormSchemaType) => {
-    console.log(payload);
+  const onSubmit = async (payload: AdminFormSchemaType) => {
+    console.log('Submitting payload:', payload);
+    try {
+      await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, payload);
+      form.reset();
+      console.log("Admin created successfully");
+
+    } catch (error) {
+      console.error("Error creating admin:", error);
+    }
   };
 
-  const handleEdit = () => {};
+  const handleEdit = () => { };
   const router = useRouter();
   return (
     <>
@@ -76,7 +92,7 @@ export default function AdminForm() {
           <div className="grid grid-cols-2 gap-5 items-start justify-center">
             <FieldBox
               bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              name="firstName"
+              name="first_name"
               control={form.control}
               labelText="First Name"
               type="text"
@@ -85,7 +101,7 @@ export default function AdminForm() {
             <FieldBox
               bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
               type="text"
-              name="lastName"
+              name="last_name"
               control={form.control}
               labelText="Last Name"
               placeholder="Enter Last name"
@@ -99,11 +115,19 @@ export default function AdminForm() {
             labelText="Email"
             placeholder="Enter email"
           />
+          <FieldBox
+            bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+            type="text"
+            name="address"
+            control={form.control}
+            labelText="Address"
+            placeholder="Enter Address"
+          />
 
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
             type="text"
-            name="phoneNumber"
+            name="phone_number"
             control={form.control}
             labelText="Phone number"
             placeholder="Enter Phone number"
@@ -125,13 +149,21 @@ export default function AdminForm() {
             type="text"
             placeholder="Enter here"
           />
-
+          <FieldBox
+            bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+            name="password"
+            control={form.control}
+            labelText="Password"
+            type="password"
+            placeholder="Enter here"
+          />
+          <Button className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full" type="submit">
+            Submit
+          </Button>
           <div className="flex items-center gap-7">
-            <AlertDialog>
+            <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
               <AlertDialogTrigger asChild>
-                <Button className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full">
-                  Submit
-                </Button>
+
               </AlertDialogTrigger>
               <AlertDialogContent className="bg-white flex flex-col items-center text-center">
                 <AlertDialogHeader className="flex flex-col items-center">

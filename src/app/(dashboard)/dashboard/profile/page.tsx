@@ -8,11 +8,18 @@ import ProfileForm from "@/components/admin/ProfileForm";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import ChangePasswordComponent from "@/components/admin/ChangePasswordComponent";
+import { useAdminProfile } from "@/hooks/swr";
+import { AdminUser } from "@/lib/types";
 
 const tabs = ["Admin Profile", "Change Password"];
 
 const ProfilePage = () => {
   const [tab, setTab] = useState("Admin Profile");
+  const { data: admin, isLoading, error } = useAdminProfile();
+
+  // Ensure only a single AdminUser is passed
+  const adminData: AdminUser | undefined = Array.isArray(admin) ? admin[0] : admin;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[398px_1fr] gap-5">
       <aside className="pb-10 px-[54px] pt-[34px] pt shadow-[0px_0px_4px_1px_#0000004D] rounded-md sm:min-h-[568px] max-h-[700px]">
@@ -76,8 +83,12 @@ const ProfilePage = () => {
       <div className="px-10 pt-[32px] pb-[56px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md h-fit">
         {tab === "Change Password" ? (
           <ChangePasswordComponent />
+        ) : isLoading ? (
+          <div>Loading...</div>
+        ) : error ? (
+          <div className="text-red-500">Failed to load profile</div>
         ) : (
-          <ProfileForm />
+          <ProfileForm admin={adminData} />
         )}
       </div>
     </div>

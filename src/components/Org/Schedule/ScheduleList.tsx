@@ -14,8 +14,9 @@ import { Ellipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search";
 
-export default function Page() {
+export default function Page({ slug }: { slug: string }) {
   const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
 
   return (
@@ -87,6 +88,8 @@ export default function Page() {
               dataLength={ScheduleList.length}
               numOfPages={1000}
               pageSize={pageSize}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
             />
           </section>
         </>

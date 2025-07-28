@@ -1,28 +1,13 @@
 import React from "react";
 import FieldSelect from "@/components/shared/form/FieldSelect";
 import FormComposer from "@/components/shared/form/FormComposer";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Check,
-  CheckCircle2,
-  CircleArrowLeft,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Check, Edit, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
+import { AdminUser } from "@/lib/types";
 
 const EditOrganizationSchema = z.object({
   firstName: z.string().min(1, "This field is required"),
@@ -42,17 +27,17 @@ type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
 const orgStatus = ["Admin", "Super Admin", "User"];
 
-export default function ProfileForm() {
+export default function ProfileForm({ admin }: { admin?: AdminUser }) {
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
     mode: "onChange",
     defaultValues: {
-      firstName: "JP",
-      lastName: "Morgan",
-      address: "123, allen street, lagos",
-      email: "jpMorgan@gmail.com",
-      phoneNumber: "0818888888",
-      role: "",
+      firstName: admin?.first_name || "",
+      lastName: admin?.last_name || "",
+      address: admin?.address || "",
+      email: admin?.email || "",
+      phoneNumber: admin?.phone_number || "",
+      role: admin?.roles?.[0] || "",
       company: "Joee Solution",
     },
   });
