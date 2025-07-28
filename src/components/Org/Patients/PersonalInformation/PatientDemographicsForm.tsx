@@ -11,27 +11,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { z } from "zod";
 import { Controller, useFormContext } from "react-hook-form";
 import { FormData } from "../AddPatient";
 
 export const PatientDemoSchema = z.object({
-  suffix: z.string().min(1, "Suffix is required"),
+  suffix: z.string().optional(),
   firstName: z.string().min(1, "First name is required"),
-  middleName: z.string().min(1, "Middle name is required"),
+  middleName: z.string().optional(),
   lastName: z.string().min(1, "Last name is required"),
-  preferedNmae: z.string().min(1, "Preferred name is required"),
-  medicalRecord: z.string().min(1, "Medical record number is required"),
-  sex: z.string().min(1, "Sex is required"),
+  preferedNmae: z.string().optional(),
+  medicalRecord: z.string().optional(),
+  sex: z.string().optional(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
-  maritalStatus: z.string().min(1, "Marital status is required"),
-  race: z.string().min(1, "Race is required"),
-  ethnicity: z.string().min(1, "Ethnicity is required"),
-  preferredLanguage: z.string().min(1, "Preferred language is required"),
-  interpreterRequired: z.string().min(1, "Interpreter required is required"),
-  religion: z.string().min(1, "Religion is required"),
-  genderIdentity: z.string().min(1, "Gender identity is required"),
-  sexualOrientation: z.string().min(1, "Sexual orientation is required"),
+  maritalStatus: z.string().optional(),
+  race: z.string().optional(),
+  ethnicity: z.string().optional(),
+  preferredLanguage: z.string().optional(),
+  interpreterRequired: z.string().optional(),
+  religion: z.string().optional(),
+  genderIdentity: z.string().optional(),
+  sexualOrientation: z.string().optional(),
   patientImage: z.string().optional(),
 });
 
@@ -236,11 +237,16 @@ export default function PatientInfoForm() {
             >
               Date of Birth
             </label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-              {...register("demographic.dateOfBirth")}
+            <Controller
+              name="demographic.dateOfBirth"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                  placeholder="Select date of birth"
+                />
+              )}
             />
             {errors?.demographic?.dateOfBirth && (
               <p className="text-red-500 text-sm">{errors?.demographic?.dateOfBirth.message}</p>

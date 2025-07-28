@@ -13,16 +13,11 @@ import { FormData } from "../AddPatient";
 
 // Validation schema
 export const childrenSchema = z.object({
-  fullName: z.string().min(1, "Full name is required"),
-  sex: z.enum(["male", "female", "other"], {
-    required_error: "Sex is required",
-  }),
-  relationship: z.string().min(1, "Relationship is required"),
-  phone: z
-    .string()
-    .min(1, "Phone is required")
-    .regex(/^\+?[0-9]{7,15}$/, "Invalid phone number"),
-  email: z.string().email("Invalid email address"),
+  fullName: z.string().optional(),
+  sex: z.enum(["male", "female", "other"]).optional(),
+  relationship: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email("Invalid email address").optional(),
 });
 
 

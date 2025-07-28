@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Controller, useFieldArray, useForm, useFormContext } from "react-hook-form";
+import { DatePicker } from "@/components/ui/date-picker";
 import { FormData } from "../AddPatient";
 import { z } from "zod";
 
@@ -85,17 +86,17 @@ const routeOptions = [
 export const medHistorySchema = z.array(
   z.object({
     id: z.number(),
-    condition: z.string().min(1, "Condition is required"),
-    onsetDate: z.string().min(1, "Onset date is required"),
+    condition: z.string().optional(),
+    onsetDate: z.string().optional(),
     endDate: z.string().optional(),
     comments: z.string().optional(),
-    medMedication: z.string().min(1, "Medication is required"),
-    medStartDate: z.string().min(1, "Start date is required"),
+    medMedication: z.string().optional(),
+    medStartDate: z.string().optional(),
     medEndDate: z.string().optional(),
-    medDosage: z.string().min(1, "Dosage is required"),
-    medFrequency: z.string().min(1, "Frequency is required"),
-    medRoute: z.string().min(1, "Route is required"),
-    medPrescribersName: z.string().min(1, "Prescriber's name is required"),
+    medDosage: z.string().optional(),
+    medFrequency: z.string().optional(),
+    medRoute: z.string().optional(),
+    medPrescribersName: z.string().optional(),
     medComments: z.string().optional(),
   }),
 
@@ -173,11 +174,16 @@ export default function MedicalHistoryForm() {
 
                   <div className="w-full md:w-1/2">
                     <label className="block text-base text-black font-normal mb-2">Onset Date</label>
-                    <Input
-                      type="date"
-                      {...register(`medHistory.${index}.onsetDate`, { required: "Onset date is required" })}
-                      className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.onsetDate ? 'border-red-500' : 'border-[#737373]'} rounded`}
-
+                    <Controller
+                      name={`medHistory.${index}.onsetDate`}
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          date={field.value ? new Date(field.value) : undefined}
+                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                          placeholder="Select onset date"
+                        />
+                      )}
                     />
                     {errors.medHistory?.[index]?.onsetDate && (
                       <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].onsetDate.message}</p>
@@ -188,10 +194,16 @@ export default function MedicalHistoryForm() {
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                   <div className="w-full md:w-1/2">
                     <label className="block text-base text-black font-normal mb-2">End Date</label>
-                    <Input
-                      type="date"
-                      {...register(`medHistory.${index}.endDate`)}
-                      className="w-full h-14 p-3 border border-[#737373] rounded"
+                    <Controller
+                      name={`medHistory.${index}.endDate`}
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          date={field.value ? new Date(field.value) : undefined}
+                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                          placeholder="Select end date"
+                        />
+                      )}
                     />
                   </div>
                 </div>
@@ -225,10 +237,16 @@ export default function MedicalHistoryForm() {
 
                 <div className="w-full md:w-1/2">
                   <label className="block text-base text-black font-normal mb-2">Start Date</label>
-                  <Input
-                    type="date"
-                    {...register(`medHistory.${index}.medStartDate`, { required: "Start date is required" })}
-                    className={`w-full h-14 p-3 border ${errors.medHistory?.[index]?.medStartDate ? 'border-red-500' : 'border-[#737373]'} rounded`}
+                  <Controller
+                    name={`medHistory.${index}.medStartDate`}
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select start date"
+                      />
+                    )}
                   />
                   {errors.medHistory?.[index]?.medStartDate && (
                     <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].medStartDate.message}</p>
@@ -239,10 +257,16 @@ export default function MedicalHistoryForm() {
               <div className="flex flex-col md:grid md:grid-cols-2 gap-4 mb-4">
                 <div className="w-full">
                   <label className="block text-base text-black font-normal mb-2">End Date</label>
-                  <Input
-                    type="date"
-                    {...register(`medHistory.${index}.medEndDate`)}
-                    className="w-full h-14 p-3 border border-[#737373] rounded"
+                  <Controller
+                    name={`medHistory.${index}.medEndDate`}
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select end date"
+                      />
+                    )}
                   />
                 </div>
 

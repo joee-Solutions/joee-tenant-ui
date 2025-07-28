@@ -1,5 +1,5 @@
 import React from "react";
-import { useFormContext, useFieldArray } from "react-hook-form";
+import { useFormContext, useFieldArray, Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -9,19 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // schema.ts
 import { z } from "zod";
 import { FormData } from "../AddPatient";
 
 export const dischargeEntrySchema = z.object({
-  patientStatus: z.string().min(1, "Status is required"),
-  dischargedDate: z.string().min(1, "Date is required"),
-  reasonForDischarge: z.string().min(1, "Reason is required"),
+  patientStatus: z.string().optional(),
+  dischargedDate: z.string().optional(),
+  reasonForDischarge: z.string().optional(),
 });
 
 export const patientStatusSchema = z.object({
-  dischargeEntries: z.array(dischargeEntrySchema).min(1, "At least one entry required"),
+  dischargeEntries: z.array(dischargeEntrySchema).optional(),
 });
 
 export type patientStatusData = z.infer<typeof patientStatusSchema>;
@@ -115,10 +116,16 @@ export default function PatientDischargeForm() {
               <label className="block text-base text-black font-normal mb-2">
                 Discharged Date
               </label>
-              <Input
-                type="date"
-                className="w-full h-14 p-3 border border-[#737373] rounded"
-                {...register(`patientStatus.dischargeEntries.${index}.dischargedDate`)}
+              <Controller
+                name={`patientStatus.dischargeEntries.${index}.dischargedDate`}
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    placeholder="Select discharge date"
+                  />
+                )}
               />
               {
                 errors.patientStatus?.dischargeEntries?.[index]?.dischargedDate && (

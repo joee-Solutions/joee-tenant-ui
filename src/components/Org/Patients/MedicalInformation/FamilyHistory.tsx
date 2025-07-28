@@ -15,12 +15,12 @@ type FamilyHistoryEntry = {
 
 export const famHistorySchema = z.array(
   z.object({
-    relative: z.string().min(1, "Relative is required"),
-    conditions: z.string().min(1, "Conditions are required"),
-    ageOfDiagnosis: z.string().min(1, "Age of diagnosis is required"),
-    currentAge: z.string().min(1, "Current age is required"),
+    relative: z.string().optional(),
+    conditions: z.string().optional(),
+    ageOfDiagnosis: z.string().optional(),
+    currentAge: z.string().optional(),
   })
-).min(1, "At least one family history entry is required");
+).optional();
 export type FamilyHistoryData = z.infer<typeof famHistorySchema>;
 
 export default function FamilyHistoryForm() {

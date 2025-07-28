@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Define the type for a surgery entry
 type SurgeryEntry = {
@@ -37,11 +38,11 @@ import { z } from "zod";
 import { FormData } from "../AddPatient";
 export const surgeryHistorySchema = z.array(
   z.object({
-    surgeryType: z.string().min(1, "Surgery type is required"),
-    date: z.string().min(1, "Date is required"),
+    surgeryType: z.string().optional(),
+    date: z.string().optional(),
     additionalInfo: z.string().optional(),
   })
-).min(1, "At least one surgery entry is required");
+).optional();
 
 export type SurgeryHistoryData = z.infer<typeof surgeryHistorySchema>;
 export default function SurgeryHistoryForm() {
@@ -122,11 +123,16 @@ export default function SurgeryHistoryForm() {
                 >
                   Date
                 </label>
-                <Input
-                  type="date"
-                  {...register(`surgeryHistory.${index}.date`, { required: "Date is required" })}
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  placeholder="Select date"
+                <Controller
+                  name={`surgeryHistory.${index}.date`}
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value ? new Date(field.value) : undefined}
+                      onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                      placeholder="Select surgery date"
+                    />
+                  )}
                 />
                 {errors.surgeryHistory?.[index]?.date && (
                   <p className="text-red-500 text-sm mt-1">

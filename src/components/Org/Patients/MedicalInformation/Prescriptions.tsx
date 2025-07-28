@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
-import { Calendar } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Define the type for form data
 type FormData = {
@@ -79,16 +79,11 @@ export default function MedicationForm() {
           <label htmlFor="startDate" className="block text-base text-black font-normal mb-2">
             Start Date
           </label>
-          <div className="relative">
-            <Input
-              id="startDate"
-              type="date"
-              placeholder="DD/MM/YYYY"
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-              value={formData.startDate}
-              onChange={(e) => handleInputChange("startDate", e.target.value)}
-            />
-          </div>
+          <DatePicker
+            date={formData.startDate ? new Date(formData.startDate) : undefined}
+            onDateChange={(date) => handleInputChange("startDate", date ? date.toISOString().split('T')[0] : '')}
+            placeholder="Select start date"
+          />
         </div>
 
         <div>

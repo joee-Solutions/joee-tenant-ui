@@ -10,7 +10,7 @@ import OrgDetails from "@/components/Org/Manage Organization/OrgDetails";
 import EmployeeList from "@/components/Org/Employees/EmployeeList";
 import AddEmployee from "@/components/Org/Employees/AddEmployee";
 import PatientList from "@/components/Org/Patients/PatientList";
-import PatientFormContainer from "@/components/Org/Patients/AddPatient";
+import PatientStepper from "@/components/Org/Patients/PatientStepper";
 import AppointmentList from "@/components/Org/Appointments/AppointmentList";
 import AddAppointment from "@/components/Org/Appointments/AddAppointment";
 import ScheduleList from "@/components/Org/Schedule/ScheduleList";
@@ -59,7 +59,6 @@ export default function DynamicTabCompContent({
     // Filter tabs based on the parent tab name
     const filteredTabs = useMemo(() => innerTabs.filter((tab) => tab.parent === tabName), [tabName]);
     const [activeTab, setActiveTab] = useState(filteredTabs[0]?.name || "");
-    const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
 
   useEffect(() => {
     setActiveTab(filteredTabs[0]?.name || "");
@@ -100,7 +99,7 @@ export default function DynamicTabCompContent({
 
   {/* Patients */}
   {tabName === "Patients" && activeTab === "List" && <PatientList slug={slug} />}
-  {tabName === "Patients" && activeTab === "Add" && <PatientFormContainer slug={slug} />}
+  {tabName === "Patients" && activeTab === "Add" && <PatientStepper slug={slug} />}
 
   {/* Appointments */}
   {tabName === "Appointments" && activeTab === "List" && <AppointmentList slug={slug} />}

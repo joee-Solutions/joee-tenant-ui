@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Define the type for a visit entry
 type VisitEntry = {
@@ -184,17 +184,13 @@ export default function MedicalVisitForm() {
                 <label className="block text-base text-black font-normal mb-2">
                   Date of Service
                 </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                    value={entry.dateOfService}
-                    onChange={(e) =>
-                      handleInputChange(entry.id, "dateOfService", e.target.value)
-                    }
-                    placeholder="DD/MM/YYYY"
-                  />
-                </div>
+                <DatePicker
+                  date={entry.dateOfService ? new Date(entry.dateOfService) : undefined}
+                  onDateChange={(date) =>
+                    handleInputChange(entry.id, "dateOfService", date ? date.toISOString().split('T')[0] : '')
+                  }
+                  placeholder="Select date of service"
+                />
               </div>
 
               {/* Duration */}
@@ -248,17 +244,13 @@ export default function MedicalVisitForm() {
                   <label className="block text-base text-black font-normal mb-2">
                     Onset date
                   </label>
-                  <div className="relative">
-                    <Input
-                      type="date"
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-                      value={entry.hpiOnsetDate}
-                      onChange={(e) =>
-                        handleInputChange(entry.id, "hpiOnsetDate", e.target.value)
-                      }
-                      placeholder="DD/MM/YYYY"
-                    />
-                  </div>
+                  <DatePicker
+                    date={entry.hpiOnsetDate ? new Date(entry.hpiOnsetDate) : undefined}
+                    onDateChange={(date) =>
+                      handleInputChange(entry.id, "hpiOnsetDate", date ? date.toISOString().split('T')[0] : '')
+                    }
+                    placeholder="Select onset date"
+                  />
                 </div>
 
                 {/* HPI Duration */}
@@ -393,17 +385,13 @@ export default function MedicalVisitForm() {
                   <label className="block text-base text-black font-normal mb-2">
                     Onset date
                   </label>
-                  <div className="relative">
-                    <Input
-                      type="date"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
-                      value={entry.diagnosisOnsetDate}
-                      onChange={(e) =>
-                        handleInputChange(entry.id, "diagnosisOnsetDate", e.target.value)
-                      }
-                      placeholder="DD/MM/YYYY"
-                    />
-                  </div>
+                  <DatePicker
+                    date={entry.diagnosisOnsetDate ? new Date(entry.diagnosisOnsetDate) : undefined}
+                    onDateChange={(date) =>
+                      handleInputChange(entry.id, "diagnosisOnsetDate", date ? date.toISOString().split('T')[0] : '')
+                    }
+                    placeholder="Select diagnosis onset date"
+                  />
                 </div>
               </div>
             </div>

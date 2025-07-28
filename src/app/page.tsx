@@ -15,6 +15,8 @@ const HomePage = () => {
   useEffect(() => {
     if (!Cookies.get("auth_token")) {
       router.push("/auth/login");
+    }else{
+      router.push("/dashboard");
     }
   }, []);
   return (

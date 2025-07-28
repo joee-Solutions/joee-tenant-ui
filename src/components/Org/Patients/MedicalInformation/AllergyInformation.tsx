@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 
 
 
@@ -22,15 +23,15 @@ import { FormData } from "../AddPatient";
 export const allergySchema = z
   .array(
     z.object({
-      allergy: z.string().min(1, "Allergy is required"),
-      startDate: z.string().min(1, "Start date is required"),
-      endDate: z.string().min(1, "End date is required"),
-      severity: z.string().min(1, "Severity is required"),
+      allergy: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      severity: z.string().optional(),
       reactions: z.string().optional(),
       comments: z.string().optional(),
     })
   )
-  .min(1, "At least one allergy is required");
+  .optional();
 
 export type AllergyFormData = z.infer<typeof allergySchema>;
 
@@ -134,10 +135,16 @@ export default function AllergyInformationForm() {
             {/* Start Date */}
             <div>
               <label className="block mb-2">Start Date</label>
-              <Input
-                type="date"
-                className="w-full h-14 p-3 border border-gray-400 rounded"
-                {...register(`allergies.${index}.startDate`)}
+              <Controller
+                name={`allergies.${index}.startDate`}
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    placeholder="Select start date"
+                  />
+                )}
               />
               {
                 errors.allergies?.[index]?.startDate && (
@@ -151,10 +158,16 @@ export default function AllergyInformationForm() {
             {/* End Date */}
             <div>
               <label className="block mb-2">End Date</label>
-              <Input
-                type="date"
-                className="w-full h-14 p-3 border border-gray-400 rounded"
-                {...register(`allergies.${index}.endDate`)}
+              <Controller
+                name={`allergies.${index}.endDate`}
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    placeholder="Select end date"
+                  />
+                )}
               />
               {
                 errors.allergies?.[index]?.endDate && (

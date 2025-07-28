@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { z } from "zod";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { DatePicker } from "@/components/ui/date-picker";
 import { FormData } from "../AddPatient";
 
 const immunizationTypes = [
@@ -25,11 +26,11 @@ const immunizationTypes = [
 
 export const immunizationHistorySchema = z.array(
   z.object({
-    immunizationType: z.string().min(1, "Immunization type is required"),
-    date: z.string().min(1, "Date is required"),
+    immunizationType: z.string().optional(),
+    date: z.string().optional(),
     additionalInfo: z.string().optional(),
   })
-).min(1, "At least one immunization entry is required");
+).optional();
 export type ImmunizationHistoryData = z.infer<typeof immunizationHistorySchema>;
 
 export default function ImmunizationForm() {
@@ -115,12 +116,16 @@ export default function ImmunizationForm() {
                 >
                   Date
                 </label>
-                <Input
-                  type="date"
-                  {...register(`immunizationHistory.${index}.date`, {
-                    required: "Date is required",
-                  })}
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Controller
+                  name={`immunizationHistory.${index}.date`}
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value ? new Date(field.value) : undefined}
+                      onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                      placeholder="Select immunization date"
+                    />
+                  )}
                 />
                 {
                   errors.immunizationHistory?.[index]?.date && (

@@ -1,7 +1,5 @@
-import { Controller, useForm, useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -11,29 +9,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { FormData } from "../AddPatient";
 
 // Validation schema
 export const addionalDemoSchema = z.object({
-  country: z.string().min(1, "Country is required"),
-  state: z.string().min(1, "State is required"),
-  city: z.string().min(1, "City is required"),
-  postal: z.string().min(1, "Postal/Zip code is required"),
-  email: z.string().email("Invalid email address"),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  postal: z.string().optional(),
+  email: z.string().email("Invalid email address").optional(),
   workEmail: z.string().email("Invalid work email address").optional(),
-  homePhone: z.string().min(1, "Home phone is required"),
-  mobilePhone: z.string().min(1, "Mobile phone is required"),
-  address: z.string().min(1, "Address is required"),
+  homePhone: z.string().optional(),
+  mobilePhone: z.string().optional(),
+  address: z.string().optional(),
   addressFrom: z.string().optional(),
   addressTo: z.string().optional(),
   currentAddress: z.string().optional(),
-  contactMethod: z.string().min(1, "Preferred method of contact is required"),
-  livingSituation: z.string().min(1, "Living situation is required"),
-  referralSource: z.string().min(1, "Referral source is required"),
-  occupationStatus: z.string().min(1, "Occupation status is required"),
-  industry: z.string().min(1, "Industry is required"),
-  householdSize: z.number().min(1, "Household size is required"),
+  contactMethod: z.string().optional(),
+  livingSituation: z.string().optional(),
+  referralSource: z.string().optional(),
+  occupationStatus: z.string().optional(),
+  industry: z.string().optional(),
+  householdSize: z.number().optional(),
   notes: z.string().optional(),
 });
 
@@ -186,6 +184,7 @@ export default function ContactDemographicForm() {
 
   const {
     register,
+    control,
     formState: { errors },
   } = useFormContext<Pick<FormData, 'addDemographic'>>();
 
@@ -456,19 +455,17 @@ export default function ContactDemographicForm() {
           >
             You lived in the above address (From)
           </label>
-          <div className="relative">
-            <Input
-              type="date"
-              id="addressFrom"
-              placeholder="DD/MM/YYYY"
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-              {...register('addDemographic.addressFrom')}
-            />
-            <Calendar
-              className="absolute left-3 top-3 text-gray-400"
-              size={20}
-            />
-          </div>
+          <Controller
+            name="addDemographic.addressFrom"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                date={field.value ? new Date(field.value) : undefined}
+                onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                placeholder="Select start date"
+              />
+            )}
+          />
           {errors.addDemographic?.addressFrom && (
             <p className="text-red-500 text-sm">
               {errors.addDemographic.addressFrom.message}
@@ -484,19 +481,17 @@ export default function ContactDemographicForm() {
           >
             To
           </label>
-          <div className="relative">
-            <Input
-              type="date"
-              id="addressTo"
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-              placeholder="DD/MM/YYYY"
-              {...register('addDemographic.addressTo')}
-            />
-            <Calendar
-              className="absolute left-3 top-3 text-gray-400"
-              size={20}
-            />
-          </div>
+          <Controller
+            name="addDemographic.addressTo"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                date={field.value ? new Date(field.value) : undefined}
+                onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                placeholder="Select end date"
+              />
+            )}
+          />
           {errors.addDemographic?.addressTo && (
             <p className="text-red-500 text-sm">
               {errors.addDemographic.addressTo.message}

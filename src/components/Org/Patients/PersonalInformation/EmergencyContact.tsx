@@ -14,16 +14,11 @@ import { FormData } from "../AddPatient";
 
 // Validation schema
 export const emergencySchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  phone: z
-    .string()
-    .min(1, "Phone is required")
-    .regex(/^\+?[0-9]{7,15}$/, "Invalid phone number"),
-  email: z.string().email("Invalid email address"),
-  relationship: z.string().min(1, "Relationship is required"),
-  permission: z.enum(["Yes", "No"], {
-    required_error: "Permission is required",
-  }),
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email("Invalid email address").optional(),
+  relationship: z.string().optional(),
+  permission: z.enum(["Yes", "No"]).optional(),
 });
 
 export default function EmergencyContactForm() {
