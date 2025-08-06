@@ -24,7 +24,7 @@ const SingleNotification = ({ slug }: { slug: string }) => {
             Send New Notification
           </Link>
         </header>
-        <div className="p-[29px_14px_30px_24px]">
+        <div className="px-6 py-8">
           <div className="bg-[#E6EBF0] flex py-7 px-8 pb-32 justify-between items-start">
             <div>{formatDateFn()}</div>
             <div className="flex flex-col gap-4 flex-1 ml-8">

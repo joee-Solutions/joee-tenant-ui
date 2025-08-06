@@ -105,7 +105,7 @@ export default function Page() {
           />
         ))}
       </div>
-      <section className="p-[29px_14px_30px_24px] shadow-[0px_0px_4px_1px_#0000004D]">
+      <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
         <header className="flex items-center justify-between gap-5">
           <h2 className="font-semibold text-xl text-black">
             Inactive Organization List

@@ -118,7 +118,7 @@ export default function AddEmployee({ slug }: { slug: string }) {
     } catch (error) {}
   };
   return (
-    <div className="py-8 p-[29px_14px_30px_24px] my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
+    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">ADD EMPLOYEE</h1>
 

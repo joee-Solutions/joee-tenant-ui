@@ -41,7 +41,7 @@ export default function Page({ slug }: { slug: string }) {
       >
         Add Department
       </Button> */}
-      <section className="p-[29px_14px_30px_24px] my-8 shadow-[0px_0px_4px_1px_#0000004D]">
+      <section className="px-6 py-8 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
         <header className="flex items-center justify-between border-b-2 gap-5 py-2">
           <h2 className="font-semibold text-xl text-black">
             Department List

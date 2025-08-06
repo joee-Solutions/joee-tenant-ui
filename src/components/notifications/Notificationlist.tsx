@@ -106,7 +106,7 @@ export default function NotificationList() {
             Send New Notification
           </Link>
         </header>
-        <div className="p-[29px_14px_30px_24px]">
+        <div className="px-6 py-8">
           <header className="flex items-center justify-between gap-5 py-6">
             <div className="flex gap-4 mb-6 max-w-3xl w-full">
               {Object.keys(tabs).map((tab) => (

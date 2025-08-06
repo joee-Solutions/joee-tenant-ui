@@ -62,7 +62,7 @@ export default function AdminListPage() {
           </h2>
         </header>
         
-        <div className="p-[29px_14px_30px_24px]">
+        <div className="px-6 py-8">
           <header className="flex items-center justify-between gap-5 py-6">
             <ListView pageSize={pageSize} setPageSize={setPageSize} />
           </header>

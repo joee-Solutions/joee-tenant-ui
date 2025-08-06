@@ -47,7 +47,7 @@ export default function AdminList() {
   if (isLoading) {
     return (
       <section className="px-[30px] mb-10">
-        <div className="p-[29px_14px_30px_24px] shadow-[0px_0px_4px_1px_#0000004D]">
+        <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">Loading admin users...</div>
           </div>
@@ -59,7 +59,7 @@ export default function AdminList() {
   if (error) {
     return (
       <section className="px-[30px] mb-10">
-        <div className="p-[29px_14px_30px_24px] shadow-[0px_0px_4px_1px_#0000004D]">
+        <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
           <div className="flex items-center justify-center py-8">
             <div className="text-red-500">Failed to load admin users</div>
           </div>
@@ -71,7 +71,7 @@ export default function AdminList() {
   return (
     <section className="px-[30px] mb-10">
       <>
-        <section className="p-[29px_14px_30px_24px] shadow-[0px_0px_4px_1px_#0000004D]">
+        <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
           <header className="flex items-center justify-between gap-5 py-2 border-b">
             <h2 className="font-medium text-xl text-black">Admin List</h2>
           </header>
