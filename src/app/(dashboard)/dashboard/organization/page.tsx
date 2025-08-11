@@ -79,17 +79,26 @@ export default function Page() {
     prevFilters.current = { search, sortBy, status, pageSize };
   }, [search, sortBy, status, pageSize]);
 
+  const keyToCardTypeMap: Record<
+  "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants",
+  "all" | "active" | "inactive" | "deactivated"
+> = {
+  totalTenants: "all",
+  activeTenants: "active",
+  inactiveTenants: "inactive",
+  deactivatedTenants: "deactivated",
+};
   const datas = (
     Object.keys(dashboardData || {}) as Array<
       "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants"
     >
   ).map((key) => {
     const value = dashboardData?.[key] || 0;
-    const cardType = key === "totalTenants" ? "all" : key;
+    const cardType = keyToCardTypeMap[key];
 
     return {
       cardType: cardType as "active" | "inactive" | "deactivated" | "all",
-      title: key.charAt(0).toUpperCase() + key.slice(1) + " Organizations",
+      title: cardType.charAt(0).toUpperCase() + cardType.slice(1) + " Organizations",
       statNum: value,
       orgIcon: <Hospital className={cn("text-white size-5")} />,
       chart: chartList[key as keyof typeof chartList] || (

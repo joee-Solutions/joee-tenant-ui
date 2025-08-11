@@ -87,7 +87,7 @@ export default function OrgCardStatus({
       <div className="pt-[30px] px-4">
         <h3 className="font-normal text-base mb-[11px]">{title}</h3>
         <div className="flex items-center justify-between gap-5">
-          <p className="font-normal text-[32px]">{statNum}</p>
+          <p className="font-normal text-[32px]">{Math.round(statNum)}</p>
           <span
             className={cn(
               `w-9 h-9 rounded-full flex items-center justify-center bg-[${color}]`
@@ -108,7 +108,7 @@ export default function OrgCardStatus({
               )}
               style={{ backgroundColor: color } as React.CSSProperties}
             >
-              {OrgPercentChanges || 0}%
+              {OrgPercentChanges?.toFixed(2) || 0}%
             </span>
           )}
           <span

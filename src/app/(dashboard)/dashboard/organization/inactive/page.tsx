@@ -26,6 +26,7 @@ import useSWR from "swr";
 import { chartList } from "../page";
 import Link from "next/link";
 import { Tenant } from "@/lib/types";
+import { useDashboardData } from "@/hooks/swr";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
@@ -59,24 +60,39 @@ export default function Page() {
     authFectcher
   );
 
+  // Use aggregated dashboard counts for the cards instead of pagination meta
+  const { data: dashboardData } = useDashboardData();
+  const keyToCardTypeMap: Record<
+    "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants",
+    "all" | "active" | "inactive" | "deactivated"
+  > = {
+    totalTenants: "all",
+    activeTenants: "active",
+    inactiveTenants: "inactive",
+    deactivatedTenants: "deactivated",
+  };
+
   const datas = (
-    Object.keys(data?.meta || {}) as Array<
-      "all" | "active" | "inactive" | "deactivated"
-    >
+    (Object.keys(dashboardData || {}) as Array<
+      "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants"
+    >)
   ).map((key) => {
-    const value = data?.meta?.[key] || 0;
+    const value = dashboardData?.[key] || 0;
+    const cardType = keyToCardTypeMap[key];
 
     return {
-      cardType: key,
-      title: key.charAt(0).toUpperCase() + key.slice(1) + " Organizations",
+      cardType,
+      title: cardType.charAt(0).toUpperCase() + cardType.slice(1) + " Organizations",
       statNum: value,
       orgIcon: <Hospital className={cn("text-white size-5")} />,
-      chart: chartList[key] || (
+      chart: chartList[(cardType as keyof typeof chartList)] || (
         <AllOrgChart className="w-full h-full object-fit" />
       ),
       barChartIcon: <ChartNoAxesColumn />,
       OrgPercentChanges:
-        key !== "all" && data?.meta?.all ? (value * 100) / data?.meta?.all : 0,
+        key !== "totalTenants" && dashboardData?.totalTenants
+          ? (value * 100) / (dashboardData.totalTenants || 1)
+          : 0,
     };
   });
 

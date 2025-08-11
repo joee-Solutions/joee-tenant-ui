@@ -23,9 +23,14 @@ import { chartList } from "../page";
 import Link from "next/link";
 import { Spinner } from "@/components/icons/Spinner";
 import { Tenant } from "@/lib/types";
+import { useDashboardData } from "@/hooks/swr";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [status, setStatus] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const { data, isLoading, error } = useSWR(
     `${API_ENDPOINTS.GET_ALL_TENANTS}/active`,
     authFectcher
@@ -33,26 +38,40 @@ export default function Page() {
 
   // Handle the new standardized response format
   const tenants = Array.isArray(data?.data) ? data.data : [];
-  const metadata = data?.meta || {};
+
+  // Use aggregated dashboard counts for stat cards instead of endpoint meta
+  const { data: dashboardData } = useDashboardData();
+  const keyToCardTypeMap: Record<
+    "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants",
+    "all" | "active" | "inactive" | "deactivated"
+  > = {
+    totalTenants: "all",
+    activeTenants: "active",
+    inactiveTenants: "inactive",
+    deactivatedTenants: "deactivated",
+  };
 
   const datas = (
-    Object.keys(metadata) as Array<
-      "all" | "active" | "inactive" | "deactivated"
-    >
+    (Object.keys(dashboardData || {}) as Array<
+      "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants"
+    >)
   ).map((key) => {
-    const value = metadata[key] || 0;
+    const value = dashboardData?.[key] || 0;
+    const cardType = keyToCardTypeMap[key];
 
     return {
-      cardType: key,
-      title: key.charAt(0).toUpperCase() + key.slice(1) + " Organizations",
+      cardType: cardType,
+      title: cardType.charAt(0).toUpperCase() + cardType.slice(1) + " Organizations",
       statNum: value,
       orgIcon: <Hospital className={cn("text-white size-5")} />,
-      chart: chartList[key] || (
+      chart: chartList[(cardType as keyof typeof chartList)] || (
         <AllOrgChart className="w-full h-full object-fit" />
       ),
       barChartIcon: <ChartNoAxesColumn />,
       OrgPercentChanges:
-        key !== "all" && metadata.all ? (value * 100) / metadata.all : 0,
+        key !== "totalTenants" && dashboardData?.totalTenants
+          ? (value * 100) / (dashboardData.totalTenants || 1)
+          : 0,
     };
   });
 
@@ -108,7 +127,14 @@ export default function Page() {
           </h2>
           <ListView pageSize={pageSize} setPageSize={setPageSize} />
         </header>
-        <DataTableFilter />
+        <DataTableFilter
+          search={search}
+          setSearch={setSearch}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          status={status}
+          setStatus={setStatus}
+        />
         <DataTable tableDataObj={AllOrgTableData[0]}>
           {tenants.length === 0 ? (
             <TableRow>
@@ -163,6 +189,8 @@ export default function Page() {
           dataLength={tenants.length}
           numOfPages={Math.ceil(tenants.length / pageSize)}
           pageSize={pageSize}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
         />
       </section>
     </section>
