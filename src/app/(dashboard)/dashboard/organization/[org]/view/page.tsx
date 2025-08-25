@@ -1,55 +1,36 @@
 "use client";
-import DynamicTabCompContent from "@/components/Org/DynamicTabCompContent";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
 
-const tabs = [
-  "Departments",
-  "Employees",
-  "Patients",
-  "Appointments",
-  "Schedule",
-  "Manage Organization",
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const links = [
+  { href: "departments", label: "Departments" },
+  { href: "employees", label: "Employees" },
+  { href: "patients", label: "Patients" },
+  { href: "appointments", label: "Appointments" },
+  { href: "schedule", label: "Schedule" },
+  { href: "manage", label: "Manage Organization" },
 ];
 
-export type TabVal =
-  | "Departments"
-  | "Employees"
-  | "Patients"
-  | "Appointments"
-  | "Schedule"
-  | "Manage Organization";
-const ViewPage = () => {
-  const [activeTab, setActiveTab] = useState<TabVal>("Departments");
-
+export default function ViewPage() {
+  const pathname = usePathname();
+  const base = pathname.replace(/\/view$/, "");
   return (
-    <div className="w-full  mx-auto px-10">
-      <h2 className="text-lg font-semibold mb-4">General Overview</h2>
-
-      {/* Tabs Navigation */}
-      <div className="flex  mb-10 border-b gap-10">
-        {tabs.map((tab, index) => (
-          <button
-            key={tab}
-            className={cn(
-              `px-4 py-2 border-b-4`,
-              activeTab === tab
-                ? "border-[#003465] font-semibold"
-                : "border-transparent hover:border-[#003465] text-gray-500 hover:text-[#003465]",
-              index === 0 ? "pl-0" : "pl-4"
-            )}
-            onClick={() => setActiveTab(tab as TabVal)}
+    <div className="w-full mx-auto px-10">
+      <nav className="flex gap-6 border-b pb-3 mb-8">
+        {links.map((l) => (
+          <Link
+            key={l.href}
+            href={`${base}/${l.href}`}
+            className="px-4 py-2 text-gray-600 hover:text-[#003465] hover:underline"
           >
-            {tab}
-          </button>
+            {l.label}
+          </Link>
         ))}
-      </div>
-
-        <DynamicTabCompContent tabName={activeTab} />
- 
+      </nav>
+      <p className="text-sm text-gray-500">Choose a section to continue.</p>
     </div>
   );
-};
+}
 
-export default ViewPage;
 

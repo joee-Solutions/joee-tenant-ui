@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
+import { Spinner } from "@/components/icons/Spinner";
+import Link from "next/link";
 
 const DepartmentSchema = z.object({
   name: z.string().min(1, "Department name is required"),
@@ -25,7 +27,6 @@ type DepartmentSchemaType = z.infer<typeof DepartmentSchema>;
 export default function AddDepartment({ slug }: { slug: string }) {
   const router = useRouter();
   const [fileSelected, setFileSelected] = useState<string>("");
-
   const form = useForm<DepartmentSchemaType>({
     resolver: zodResolver(DepartmentSchema),
     mode: "onChange",
@@ -36,6 +37,11 @@ export default function AddDepartment({ slug }: { slug: string }) {
       status: false,
     },
   });
+  useEffect(() => {
+    if(!slug){
+      router.push(`/dashboard/organization/${slug}/departments`)
+    }
+  }, [slug])
 
   const onSubmit = async (data: DepartmentSchemaType) => {
     console.log(data)
@@ -49,19 +55,24 @@ export default function AddDepartment({ slug }: { slug: string }) {
         API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
         { ...datas }
       );
-    } catch (error) {}
+      if(res.success){
+        router.push(`/dashboard/organization/${slug}/departments`)
+      }
+    } catch (error) {
+      console.log(error,"error")
+    }
     // Handle form submission
   };
 
   return (
-    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
+    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">Add Department</h1>
         <Button
-          onClick={() => "add"}
+          onClick={() => router.back()}
           className="text-base text-[#003465] font-normal"
         >
-          Department List
+          Back 
         </Button>
       </div>
 
@@ -148,7 +159,7 @@ export default function AddDepartment({ slug }: { slug: string }) {
                 onCheckedChange={() => form.setValue("status", false)}
                 className="accent-green-600 w-6 h-6 rounded"
               />
-              <label htmlFor="active">Active</label>
+              <label htmlFor="active">Inactive</label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -157,7 +168,7 @@ export default function AddDepartment({ slug }: { slug: string }) {
                 onCheckedChange={() => form.setValue("status", true)}
                 className="accent-green-600 w-6 h-6 rounded"
               />
-              <label htmlFor="inactive">Inactive</label>
+              <label htmlFor="inactive">Active</label>
             </div>
           </div>
         </div>
@@ -172,9 +183,11 @@ export default function AddDepartment({ slug }: { slug: string }) {
           </Button>
           <Button
             type="submit"
-            className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded"
+            className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-10 text-md rounded min-w-56"
           >
-            Submit
+            {
+              form.formState.isSubmitting ? <Spinner/> : "Submit"
+            }
           </Button>
         </div>
       </form>

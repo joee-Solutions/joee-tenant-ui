@@ -1,9 +1,7 @@
-import React from "react";
-import SingleOrgData from "../SingleOrgData";
+import { redirect } from "next/navigation";
 
-const Page = async ({ params }: { params: Promise<{ org: string }> }) => {
+export default async function Page({ params }: { params: Promise<{ org: string }> }) {
   const slug = (await params).org;
-  return <SingleOrgData slug={slug} />;
-};
-
-export default Page;
+  // Make departments the default landing page
+  redirect(`/dashboard/organization/${slug}/departments`);
+}

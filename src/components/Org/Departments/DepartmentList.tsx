@@ -12,6 +12,8 @@ import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { formatDateFn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // Define Department type
 interface Department {
@@ -47,12 +49,12 @@ export default function Page({ slug }: { slug: string }) {
             Department List
           </h2>
 
-          {/* <Button
-            onClick={() => setIsAddOrg("add")}
+          <Link
+            href={`/dashboard/organization/${slug}/departments/new`}
             className="text-base text-[#4E66A8] font-normal"
           >
             Add Department
-          </Button> */}
+          </Link>
         </header>
         <header className="flex items-center justify-between gap-5 py-6">
           <ListView pageSize={pageSize} setPageSize={setPageSize} />

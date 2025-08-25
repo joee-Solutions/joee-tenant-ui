@@ -28,6 +28,8 @@ export const API_ENDPOINTS = {
     `super/tenants/${tenantId}/${deptId}/employees`,
    GET_TENANTS_EMPLOYEES: (tenantId: number) =>
     `super/tenants/${tenantId}/employees`,
+   UPDATE_TENANT_EMPLOYEE: (tenantId: number, employeeId: number) =>
+     `super/tenants/${tenantId}/employees/${employeeId}`,
   GET_ALL_USERS: "super/tenants",
 
   //  super admin

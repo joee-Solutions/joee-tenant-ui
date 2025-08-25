@@ -62,9 +62,24 @@ httpAuth.interceptors.request.use(
         return;
       }
     }
+    // attach tenant header if available (for tenant-scoped endpoints guarded by TenantDomainMiddleware)
+    let tenantDomain: string | undefined;
+    try {
+      // try to infer from current org route cache
+      const path = typeof window !== "undefined" ? window.location.pathname : "";
+      const parts = path.split("/");
+      // path looks like: /dashboard/organization/[org]/...
+      const orgSlug = parts.length > 4 ? parts[3] : undefined;
+      if (orgSlug) {
+        const stored = localStorage.getItem(`orgDomain:${orgSlug}`);
+        if (stored) tenantDomain = stored;
+      }
+    } catch {}
+
     config.headers = {
       ...config.headers,
       authorization,
+      ...(tenantDomain ? { "x-tenant-id": tenantDomain } : {}),
     };
     return config;
   },
