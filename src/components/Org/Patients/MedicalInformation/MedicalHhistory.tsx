@@ -85,7 +85,7 @@ const routeOptions = [
 
 export const medHistorySchema = z.array(
   z.object({
-    id: z.number(),
+    id: z.number().optional(),
     condition: z.string().optional(),
     onsetDate: z.string().optional(),
     endDate: z.string().optional(),

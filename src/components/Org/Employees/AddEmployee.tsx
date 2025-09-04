@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -73,6 +73,11 @@ export default function AddEmployee({ slug }: { slug: string }) {
     API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
     authFectcher
   );
+  useEffect(() => {
+    if(!slug){
+      router.push(`/dashboard/organization/${slug}/employees`)
+    }
+  }, [slug])
 
   if (isLoading) {
     return <Spinner />;
@@ -123,10 +128,10 @@ export default function AddEmployee({ slug }: { slug: string }) {
         <h1 className="font-semibold text-xl text-black">ADD EMPLOYEE</h1>
 
         <Button
-          onClick={() => "add"}
+          onClick={() => router.back()}
           className="text-base text-[#003465] font-normal"
         >
-          Employees List
+          Back
         </Button>
       </div>
 
@@ -393,7 +398,7 @@ export default function AddEmployee({ slug }: { slug: string }) {
                 onCheckedChange={() => form.setValue("status", false)}
                 className="accent-green-600 w-6 h-6 rounded"
               />
-              <label htmlFor="active">Active</label>
+              <label htmlFor="active">Inactive</label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -402,7 +407,7 @@ export default function AddEmployee({ slug }: { slug: string }) {
                 onCheckedChange={() => form.setValue("status", true)}
                 className="accent-green-600 w-6 h-6 rounded"
               />
-              <label htmlFor="inactive">Inactive</label>
+              <label htmlFor="inactive">Active</label>
             </div>
           </div>
         </div>

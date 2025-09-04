@@ -74,8 +74,10 @@ export default function Page({ slug }: { slug: string }) {
                 key={employee.id}
                 className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100 relative"
               >
+                <TableCell>
                 <Link href={`/dashboard/organization/${slug}/employees/${employee.id}/edit`} className="absolute inset-0" />
-                <TableCell>{index + 1}</TableCell>
+                  {index + 1}
+                  </TableCell>
                 <TableCell className="py-[21px]">
                   <div className="flex items-center gap-[10px]">
                     <span className="w-[42px] h-42px rounded-full overflow-hidden">

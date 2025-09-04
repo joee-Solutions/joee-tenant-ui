@@ -14,8 +14,11 @@ import { SearchInput } from "@/components/ui/search";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Page({ slug }: { slug: string }) {
+  const router = useRouter();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
@@ -26,7 +29,7 @@ export default function Page({ slug }: { slug: string }) {
 
   if (isLoading) {
     return (
-      <section className="px-[30px] mb-10">
+      <section className="mb-10">
         <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -51,9 +54,8 @@ export default function Page({ slug }: { slug: string }) {
       </section>
     );
   }
-
   return (
-    <section className="px-[30px] mb-10">
+    <section className="mb-10">
 
       <>
         <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
@@ -62,22 +64,22 @@ export default function Page({ slug }: { slug: string }) {
               Appointments
             </h2>
 
-            <Button
-              onClick={() => setIsAddOrg("add")}
+            <Link
+              href={`/dashboard/organization/${slug}/appointments/new`}
               className="text-base text-[#4E66A8] font-normal"
             >
               Add Appointment
-            </Button>
+            </Link>
           </header>
           <header className="flex items-center justify-between gap-5 py-6">
             <ListView pageSize={pageSize} setPageSize={setPageSize} />
-            <SearchInput onSearch={(query) => console.log('Searching:', query)} />
+            <SearchInput onSearch={(query: string) => console.log('Searching:', query)} />
 
 
           </header>
           <DataTable tableDataObj={AppointmentData[0]}>
-            {Array.isArray(data?.data) && data.data.length > 0 ? (
-              data.data.map((appointment: any) => {
+            {data.data && Array.isArray(data?.data.data) && data.data.data.length > 0 ? (
+              data?.data.data.map((appointment: any) => {
                 return (
                   <TableRow key={appointment.id} className="px-3 odd:bg-white even:bg-gray-50  hover:bg-gray-100">
                     <TableCell>{appointment.id}</TableCell>
@@ -86,29 +88,35 @@ export default function Page({ slug }: { slug: string }) {
                         <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                           {appointment.patient?.image ? (
                             <Image
-                              src={appointment.patient.image}
+                              src={appointment.patient.image || AppointmentData[0].appointment.image}
                               alt="patient image"
                               className="object-cover aspect-square w-full h-full"
                             />
                           ) : (
                             <span className="text-gray-500 text-sm">
-                              {appointment.patient?.first_name?.charAt(0) || 'P'}
+                              {appointment.patient?.first_name?.charAt(0) || appointment.patient?.first_name?.charAt(0) || 'P'}
+                              {appointment.patient?.last_name?.charAt(0) || appointment.patient?.last_name?.charAt(0) || 'P'}
                             </span>
                           )}
                         </span>
-                        <p className="font-medium text-xs text-black">
-                          {appointment.patient?.first_name} {appointment.patient?.last_name}
+                        <p className="font-medium text-xs text-black flex flex-col gap-1">
+                          <span>
+                            {appointment.patient?.first_name} {appointment.patient?.last_name}
+                          </span>
+                          <span className="text-xs text-[#737373]">
+                            {appointment.patient?.sex}
+                          </span>
                         </p>
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {appointment.patient?.date_of_birth ? 
-                        new Date().getFullYear() - new Date(appointment.patient.date_of_birth).getFullYear() : 
+                      {appointment.patient?.date_of_birth ?
+                        new Date().getFullYear() - new Date(appointment.patient.date_of_birth).getFullYear() :
                         'N/A'
                       }
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {appointment.user?.first_name} {appointment.user?.last_name}
+                      {appointment.user?.firstname} {appointment.user?.lastname}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {appointment.user?.department?.name || 'N/A'}
@@ -119,11 +127,11 @@ export default function Page({ slug }: { slug: string }) {
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {appointment.startTime} - {appointment.endTime}
                     </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
                         <Ellipsis className="text-black size-5" />
                       </button>
-                    </TableCell>
+                    </TableCell> */}
                   </TableRow>
                 );
               })
@@ -136,10 +144,10 @@ export default function Page({ slug }: { slug: string }) {
             )}
           </DataTable>
           <Pagination
-            dataLength={AppointmentData.length}
-            numOfPages={1}
-            pageSize={pageSize}
-            currentPage={currentPage}
+            dataLength={data?.data?.meta?.total}
+            numOfPages={data?.data?.meta?.totalPages}
+            pageSize={data?.data?.meta?.limit}
+            currentPage={data?.data?.meta?.page}
             setCurrentPage={setCurrentPage}
           />
         </section>

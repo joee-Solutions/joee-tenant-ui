@@ -58,7 +58,7 @@ export default function AllergyInformationForm() {
     formState: { errors },
   } = useFormContext<Pick<FormData, 'allergies'>>();
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove } = useFieldArray<Pick<FormData, 'allergies'>>({
     control,
     name: "allergies",
   });

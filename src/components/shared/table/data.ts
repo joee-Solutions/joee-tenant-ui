@@ -124,10 +124,11 @@ export const PatientData: {
   };
   address: string;
   gender: string;
-  age: number;
-  phone: string;
+  date_of_birth: Date;
+  phone_number: string;
   email: string;
-  status: string;
+  option: any;
+  // status: string;
 }[] = [
   {
     id: 1,
@@ -137,76 +138,13 @@ export const PatientData: {
     },
     address: "Los Angeles, U.S.A",
     gender: "Female",
-    age: 43,
-    phone: "(218) 661 8316",
+    date_of_birth: new Date(),
+    phone_number: "(218) 661 8316",
     email: "jenifahudson@gmail.com",
-    status: "Active",
+    option: '',
+    // status: "Active",
   },
-  {
-    id: 2,
-    patient: {
-      name: " David  Ayo",
-      image: orgPlaceholder,
-    },
-    address: "Lagos, Nigeria ",
-    gender: "Male",
-    age: 52,
-    phone: "(797) 506 1265",
-    email: "davidbanks@yahoo,com",
-    status: "Inactive",
-  },
-  {
-    id: 3,
-    patient: {
-      name: "Haruna Newton",
-      image: orgPlaceholder,
-    },
-    address: "Lagos, Nigeria ",
-    gender: "Male",
-    age: 49,
-    phone: "(380) 141 1885",
-    email: "Harunajamal@yahoo.com",
-    status: "Active",
-  },
-  {
-    id: 4,
-    patient: {
-      name: "Mariam  Gloria",
-      image: orgPlaceholder,
-    },
-    address: "Lagos, Nigeria ",
-    gender: "Female",
-    age: 71,
-    phone: "(680) 432 2662",
-    email: "mariamliam@gmail.com",
-    status: "Active",
-  },
-  {
-    id: 5,
-    patient: {
-      name: " Timon Oluwaseun",
-      image: orgPlaceholder,
-    },
-    address: "Lagos, Nigeria ",
-    gender: "Male",
-    age: 38,
-    phone: "(981) 756 6128",
-    email: "timon_pumba@gmail.com",
-    status: "Inactive",
-  },
-  {
-    id: 6,
-    patient: {
-      name: "Tobiah Joshua",
-      image: orgPlaceholder,
-    },
-    address: "Lagos, Nigeria ",
-    gender: "Male",
-    age: 49,
-    phone: "(680) 432 2662",
-    email: "tobiah4everyone@gmail.com",
-    status: "Active",
-  },
+
 ];
 export const AdminListData: {
   ID: string;

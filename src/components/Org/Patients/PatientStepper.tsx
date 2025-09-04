@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -36,8 +36,10 @@ import LifestyleForm from "./MedicalInformation/SocialHistory";
 import VitalSignsForm from "./MedicalInformation/VitalsForm";
 import MedicalSymptomForm from "./MedicalInformation/ReviewOfSystem";
 import MedicalSymptomsForm from "./MedicalInformation/AdditionalReview";
-import MedicationForm from "./MedicalInformation/Prescriptions";
-import MedicalVisitForm from "./MedicalInformation/Visit";
+import MedicationForm, { prescriptionSchema } from "./MedicalInformation/Prescriptions";
+import MedicalVisitForm, { visitEntrySchema } from "./MedicalInformation/Visit";
+import { toast } from "react-toastify";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
 
 
 export const formSchema = z.object({
@@ -52,6 +54,8 @@ export const formSchema = z.object({
   immunizationHistory: immunizationHistorySchema,
   famhistory: famHistorySchema,
   lifeStyle: lifestyleSchema,
+  visits: visitEntrySchema,
+  prescriptions: prescriptionSchema,
 }).partial();
 
 export type FormData = z.infer<typeof formSchema>;
@@ -230,6 +234,35 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         ageOfDiagnosis: "",
         currentAge: ""
       }],
+      visits: [{
+        visitCategory: "",
+        dateOfService: new Date(),
+        duration: "",
+        chiefComplaint: "",
+        hpiOnsetDate: new Date(),
+        hpiDuration: "",
+        severity: "",
+        quality: "",
+        aggravatingFactors: "",
+        diagnosis: "",
+        diagnosisOnsetDate: new Date(),
+        treatmentPlan: "",
+        providerName: "",
+        providerSignature: "",
+      }],
+      prescriptions: [{
+        checkedDrugFormulary: false,
+        controlledSubstance: false,
+        startDate: new Date(),
+        prescriberName: "",
+        dosage: "",
+        directions: "",
+        notes: "",
+        addToMedicationList: "yes",
+      }],
+      
+      
+      
     }
   });
 
@@ -237,10 +270,33 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     setCompletedSteps(prev => new Set([...prev, stepIndex]));
   };
 
+  const handleSaveProgress = () => {
+    console.log(currentStep, "currentStep", methods.getValues())
+    //  save to local storage
+    localStorage.setItem(`patient-${slug}`, JSON.stringify({
+      currentStep,
+      completedSteps: Array.from(completedSteps),
+      data: methods.getValues()
+    }))
+  }
+
+  useEffect(() => {
+    const patientData = localStorage.getItem(`patient-${slug}`);
+    if (patientData) {
+      const parsedData = JSON.parse(patientData);
+      console.log(parsedData, "parsedData")
+      methods.reset(parsedData.data);
+      setCurrentStep(parsedData.currentStep);
+      setCompletedSteps(new Set(parsedData.completedSteps));
+      // toast success
+      toast.success("Patient data loaded successfully");
+    }
+  }, [slug, methods]);
+
   const handleNext = () => {
     // Mark current step as completed
     handleStepComplete(currentStep);
-    
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -265,8 +321,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   };
 
   function mapFormDataToPatientDto(formData: FormData) {
-    const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle } = formData;
-    
+    const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle, visits, prescriptions } = formData ;
+
     // Map to match backend CreatePatientDto structure
     return {
       // Primary info fields
@@ -274,10 +330,9 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       first_name: demographic?.firstName,
       middle_name: demographic?.middleName,
       last_name: demographic?.lastName,
-      preferred_name: demographic?.preferedNmae, // Note: typo in schema
-      medical_redord_number: demographic?.medicalRecord ? parseInt(demographic.medicalRecord) : undefined,
+      preferred_name: demographic?.preferredName, // Note: typo in schema
       sex: demographic?.sex,
-      date_of_birth: demographic?.dateOfBirth,
+      date_of_birth: new Date(demographic?.dateOfBirth || "").toISOString(),
       marital_status: demographic?.maritalStatus,
       race: demographic?.race,
       ethnicity: demographic?.ethnicity,
@@ -337,14 +392,17 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       surgeryHistory: surgeryHistory || [],
       status: patientStatus || {},
       socialHistory: lifeStyle || {},
+      visits: visits || [],
+      prescriptions: prescriptions || [],
     };
   }
 
+  console.log("data", methods.formState.errors)
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError(null);
     setSuccess(false);
-    
+
     try {
       // Validate required fields
       if (!data.demographic?.firstName || !data.demographic?.lastName || !data.demographic?.dateOfBirth) {
@@ -354,28 +412,30 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
 
       const mappedData = mapFormDataToPatientDto(data);
       console.log("Submitting patient data:", mappedData);
-      
+      // return
       const res = await processRequestAuth(
         "post",
-        `super/tenants/${slug}/patients`,
+        API_ENDPOINTS.CREATE_PATIENT(Number(slug)),
         mappedData
       );
-      
+
       console.log("API Response:", res);
-      
+
       if (res && (res.status === true || res.status === 200 || res.success)) {
         setSuccess(true);
         setTimeout(() => {
           router.push(`/dashboard/organization/${slug}/patients`);
         }, 1500);
+        // clear local storage
+        localStorage.removeItem(`patient-${slug}`);
       } else {
         setError(res?.message || res?.error || "Failed to add patient. Please try again.");
       }
     } catch (err: unknown) {
       console.error("Patient submission error:", err);
-      const errorMessage = err instanceof Error ? err.message : 
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 
-        (err as { message?: string })?.message || 
+      const errorMessage = err instanceof Error ? err.message :
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err as { message?: string })?.message ||
         "Failed to add patient. Please check your connection and try again.";
       setError(errorMessage);
     } finally {
@@ -391,44 +451,44 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       <div className="w-80 bg-white shadow-lg border-r border-gray-200 overflow-y-auto">
         <div className="p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Patient Registration</h2>
-          
+
           {/* Personal Information Section */}
           <div className="mb-8">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
               Personal Information
             </h3>
-                         {steps.filter(step => step.category === "personal").map((step, index) => {
-               const stepIndex = steps.findIndex(s => s.id === step.id);
-               const isCompleted = completedSteps.has(stepIndex);
-               const isActive = currentStep === stepIndex;
-               const canAccess = canProceedToStep(stepIndex);
-               
-               return (
-                 <div
-                   key={step.id}
-                   className={cn(
-                     "flex items-center p-3 rounded-lg mb-2 transition-colors",
-                     isActive ? "bg-blue-50 border-l-4 border-blue-500" : "",
-                     isCompleted && !isActive ? "bg-green-50" : "",
-                     canAccess ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed opacity-50"
-                   )}
-                   onClick={() => handleStepClick(stepIndex)}
-                 >
-                   <div className={cn(
-                     "w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-medium",
-                     isCompleted ? "bg-green-500 text-white" : 
-                     isActive ? "bg-blue-500 text-white" : 
-                     canAccess ? "bg-gray-200 text-gray-600" : "bg-gray-100 text-gray-400"
-                   )}>
-                     {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
-                   </div>
-                   <div className="flex-1">
-                     <div className="text-sm font-medium text-gray-900">{step.title}</div>
-                     <div className="text-xs text-gray-500">{step.description}</div>
-                   </div>
-                 </div>
-               );
-             })}
+            {steps.filter(step => step.category === "personal").map((step, index) => {
+              const stepIndex = steps.findIndex(s => s.id === step.id);
+              const isCompleted = completedSteps.has(stepIndex);
+              const isActive = currentStep === stepIndex;
+              const canAccess = canProceedToStep(stepIndex);
+
+              return (
+                <div
+                  key={step.id}
+                  className={cn(
+                    "flex items-center p-3 rounded-lg mb-2 transition-colors",
+                    isActive ? "bg-blue-50 border-l-4 border-blue-500" : "",
+                    isCompleted && !isActive ? "bg-green-50" : "",
+                    canAccess ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed opacity-50"
+                  )}
+                  onClick={() => handleStepClick(stepIndex)}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-medium",
+                    isCompleted ? "bg-green-500 text-white" :
+                      isActive ? "bg-blue-500 text-white" :
+                        canAccess ? "bg-gray-200 text-gray-600" : "bg-gray-100 text-gray-400"
+                  )}>
+                    {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">{step.title}</div>
+                    <div className="text-xs text-gray-500">{step.description}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Medical Information Section */}
@@ -436,38 +496,38 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
               Medical Information
             </h3>
-                         {steps.filter(step => step.category === "medical").map((step, index) => {
-               const stepIndex = steps.findIndex(s => s.id === step.id);
-               const isCompleted = completedSteps.has(stepIndex);
-               const isActive = currentStep === stepIndex;
-               const canAccess = canProceedToStep(stepIndex);
-               
-               return (
-                 <div
-                   key={step.id}
-                   className={cn(
-                     "flex items-center p-3 rounded-lg mb-2 transition-colors",
-                     isActive ? "bg-blue-50 border-l-4 border-blue-500" : "",
-                     isCompleted && !isActive ? "bg-green-50" : "",
-                     canAccess ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed opacity-50"
-                   )}
-                   onClick={() => handleStepClick(stepIndex)}
-                 >
-                   <div className={cn(
-                     "w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-medium",
-                     isCompleted ? "bg-green-500 text-white" : 
-                     isActive ? "bg-blue-500 text-white" : 
-                     canAccess ? "bg-gray-200 text-gray-600" : "bg-gray-100 text-gray-400"
-                   )}>
-                     {isCompleted ? <Check className="w-4 h-4" /> : steps.filter(s => s.category === "personal").length + index + 1}
-                   </div>
-                   <div className="flex-1">
-                     <div className="text-sm font-medium text-gray-900">{step.title}</div>
-                     <div className="text-xs text-gray-500">{step.description}</div>
-                   </div>
-                 </div>
-               );
-             })}
+            {steps.filter(step => step.category === "medical").map((step, index) => {
+              const stepIndex = steps.findIndex(s => s.id === step.id);
+              const isCompleted = completedSteps.has(stepIndex);
+              const isActive = currentStep === stepIndex;
+              const canAccess = canProceedToStep(stepIndex);
+
+              return (
+                <div
+                  key={step.id}
+                  className={cn(
+                    "flex items-center p-3 rounded-lg mb-2 transition-colors",
+                    isActive ? "bg-blue-50 border-l-4 border-blue-500" : "",
+                    isCompleted && !isActive ? "bg-green-50" : "",
+                    canAccess ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed opacity-50"
+                  )}
+                  onClick={() => handleStepClick(stepIndex)}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-medium",
+                    isCompleted ? "bg-green-500 text-white" :
+                      isActive ? "bg-blue-500 text-white" :
+                        canAccess ? "bg-gray-200 text-gray-600" : "bg-gray-100 text-gray-400"
+                  )}>
+                    {isCompleted ? <Check className="w-4 h-4" /> : steps.filter(s => s.category === "personal").length + index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">{step.title}</div>
+                    <div className="text-xs text-gray-500">{step.description}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -497,7 +557,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
 
           {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
-            <div 
+            <div
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
             ></div>
@@ -540,11 +600,11 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                   >
                     Previous
                   </Button>
-                  
+
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleStepComplete(currentStep)}
+                    onClick={handleSaveProgress}
                     className="flex items-center"
                   >
                     Save Progress

@@ -21,6 +21,7 @@ import { processRequestAuth } from "@/framework/https";
 import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import Link from "next/link";
 
 const ScheduleSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -86,9 +87,9 @@ export default function ScheduleForm({ slug }: { slug: string }) {
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
         setSuccess(true);
-        setTimeout(() => {
-          router.push(`/dashboard/organization/${slug}/schedules`);
-        }, 1500);
+        // setTimeout(() => {
+        //   router.push(`/dashboard/organization/${slug}/schedules`);
+        // }, 1500);
       } else {
         setError(res?.message || res?.error || "Failed to create schedule. Please try again.");
       }
@@ -105,12 +106,12 @@ export default function ScheduleForm({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
+    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="text-2xl font-bold">ADD SCHEDULE</h1>
-        <a href="#" className="text-blue-700 font-medium">
+        <Link href={`/dashboard/organization/${slug}/schedules`} className="text-blue-700 font-medium">
           Schedule List
-        </a>
+        </Link>
       </div>
 
       {error && (
@@ -146,7 +147,7 @@ export default function ScheduleForm({ slug }: { slug: string }) {
                   <SelectContent className="z-10 bg-white">
                     {Array.isArray(employeesData?.data) && employeesData.data.map((employee: any) => (
                       <SelectItem key={employee.id} value={employee.id.toString()} className="hover:bg-gray-200">
-                        {employee.first_name} {employee.last_name}
+                        {employee.firstname} {employee.lastname}
                         {employee.department?.name && ` - ${employee.department.name}`}
                       </SelectItem>
                     ))}

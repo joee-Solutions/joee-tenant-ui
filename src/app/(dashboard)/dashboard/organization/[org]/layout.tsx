@@ -12,7 +12,7 @@ const links = [
   { href: "employees", label: "Employees", Icon: Users2 },
   { href: "patients", label: "Patients", Icon: UserSquare2 },
   { href: "appointments", label: "Appointments", Icon: CalendarDays },
-  { href: "schedule", label: "Schedule", Icon: CalendarClock },
+  { href: "schedules", label: "Schedules", Icon: CalendarClock },
   { href: "manage", label: "Manage Organization", Icon: Settings },
 ] as const;
 

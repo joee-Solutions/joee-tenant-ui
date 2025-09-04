@@ -1,9 +1,10 @@
+"use client"
 import { useState } from "react";
 import PersonalInformationTab from "@/components/Org/Patients/PersonalInformationTab";
 import MedicalInformationTab from "@/components/Org/Patients/MedicalInformationTab";
 import { Button } from "@/components/ui/button";
 import { FormProvider, useForm } from "react-hook-form";
-import { Schema, z } from "zod";
+import { z } from "zod";
 import { PatientDemoSchema } from "./PersonalInformation/PatientDemographicsForm";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addionalDemoSchema } from "./PersonalInformation/Additionaldemographics";
@@ -18,7 +19,7 @@ import { famHistorySchema } from "./MedicalInformation/FamilyHistory";
 import { lifestyleSchema } from "./MedicalInformation/SocialHistory";
 import { processRequestAuth } from "@/framework/https";
 import { useRouter } from "next/navigation";
-
+import { prescriptionsSchema } from "./MedicalInformation/Prescriptions";
 
 export const formSchema = z.object({
   demographic: PatientDemoSchema,
@@ -32,6 +33,34 @@ export const formSchema = z.object({
   immunizationHistory: immunizationHistorySchema,
   famhistory: famHistorySchema,
   lifeStyle: lifestyleSchema,
+  prescriptions: prescriptionsSchema,
+}).refine((data) => {
+  // Calculate age from date of birth
+  if (data.demographic.dateOfBirth) {
+    const birthDate = new Date(data.demographic.dateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+    
+    // If patient is under 18, guardian information is required
+    if (actualAge < 18) {
+      return (
+        data.children.fullName && 
+        data.children.fullName.trim() !== "" &&
+        data.children.relationship && 
+        data.children.relationship.trim() !== "" &&
+        data.children.phone && 
+        data.children.phone.trim() !== "" &&
+        data.children.email &&
+        data.children.email.trim() !== ""
+      );
+    }
+  }
+  return true;
+}, {
+  message: "Guardian information (Full Name, Relationship, Phone, and Email) is required for patients under 18 years old",
+  path: ["children"]
 })
 
 export type FormData = z.infer<typeof formSchema>
@@ -103,15 +132,15 @@ export default function PatientFormContainer({ slug }: { slug: string }): React.
       last_name: demographic?.lastName,
       middle_name: demographic?.middleName,
       preferred_name: demographic?.preferredName,
-      email: demographic?.email,
+      // email: demographic?.email, // Not defined in schema yet
       sex: demographic?.sex,
       date_of_birth: demographic?.dateOfBirth,
-      address: demographic?.address,
-      city: demographic?.city,
-      state: demographic?.state,
-      country: demographic?.country,
-      zip_code: demographic?.zipCode,
-      phone_number_home: demographic?.phoneNumberHome,
+      // address: demographic?.address, // Not defined in schema yet
+      // city: demographic?.city, // Not defined in schema yet
+      // state: demographic?.state, // Not defined in schema yet
+      // country: demographic?.country, // Not defined in schema yet
+      // zip_code: demographic?.zipCode, // Not defined in schema yet
+      // phone_number_home: demographic?.phoneNumberHome, // Not defined in schema yet
       // ...add more top-level fields as needed
 
       // Nested objects (adjust as needed)
@@ -154,8 +183,8 @@ export default function PatientFormContainer({ slug }: { slug: string }): React.
       } else {
         setError(res?.message || "Failed to add patient.");
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to add patient.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to add patient.");
     } finally {
       setLoading(false);
     }

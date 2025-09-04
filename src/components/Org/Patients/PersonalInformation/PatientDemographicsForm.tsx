@@ -21,8 +21,7 @@ export const PatientDemoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   middleName: z.string().optional(),
   lastName: z.string().min(1, "Last name is required"),
-  preferedNmae: z.string().optional(),
-  medicalRecord: z.string().optional(),
+  preferredName: z.string().optional(),
   sex: z.string().optional(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   maritalStatus: z.string().optional(),
@@ -194,41 +193,24 @@ export default function PatientInfoForm() {
           {/* Preferred Name */}
           <div>
             <label
-              htmlFor="preferedNmae"
+              htmlFor="preferredName"
               className="block text-base text-black font-normal mb-2"
             >
               Preferred Name
             </label>
             <Input
-              id="preferedNmae"
+              id="preferredName"
               type="text"
               placeholder="Enter here"
               className="w-full h-14 p-3 border border-[#737373] rounded"
-              {...register("demographic.preferedNmae")}
+              {...register("demographic.preferredName")}
             />
-            {errors?.demographic?.preferedNmae && (
-              <p className="text-red-500 text-sm">{errors?.demographic?.preferedNmae.message}</p>
+            {errors?.demographic?.preferredName && (
+              <p className="text-red-500 text-sm">{errors?.demographic?.preferredName.message}</p>
             )}
           </div>
           {/* medical record number */}
-          <div>
-            <label
-              htmlFor="medicalRecord"
-              className="block text-base text-black font-normal mb-2"
-            >
-              Medical Record Number
-            </label>
-            <Input
-              id="medicalRecord"
-              type="text"
-              placeholder="Enter here"
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-              {...register("demographic.medicalRecord")}
-            />
-            {errors?.demographic?.medicalRecord && (
-              <p className="text-red-500 text-sm">{errors?.demographic?.medicalRecord.message}</p>
-            )}
-          </div>
+
           {/* date of birth */}
           <div>
             <label
@@ -245,6 +227,7 @@ export default function PatientInfoForm() {
                   date={field.value ? new Date(field.value) : undefined}
                   onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                   placeholder="Select date of birth"
+
                 />
               )}
             />
@@ -260,33 +243,36 @@ export default function PatientInfoForm() {
               key={key}
               name={`demographic.${key}` as const}
               control={control}
-              render={({ field }) => (
-                <div>
-                  <label
-                    htmlFor={key}
-                    className="block text-base text-black font-normal mb-2"
-                  >
-                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                  </label>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                      <SelectValue placeholder={`Select ${key}`} />
-                    </SelectTrigger>
-                    <SelectContent className="z-10 bg-white">
-                      {dropdownOptions[key].map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors?.demographic?.[key] && (
-                    <p className="text-red-500 text-sm">
-                      {errors?.demographic?.[key]?.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              render={({ field }) => {
+                console.log(field,"field")
+                return (
+                  <div>
+                    <label
+                      htmlFor={key}
+                      className="block text-base text-black font-normal mb-2"
+                    >
+                      {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                    </label>
+                    <Select value={field.value} onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
+                        <SelectValue placeholder={`Select ${key}`} />
+                      </SelectTrigger>
+                      <SelectContent className="z-10 bg-white">
+                        {dropdownOptions[key].map((option) => (
+                          <SelectItem key={option} value={option} defaultValue={field.value}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors?.demographic?.[key] && (
+                      <p className="text-red-500 text-sm">
+                        {errors?.demographic?.[key]?.message}
+                      </p>
+                    )}
+                  </div>
+                )
+              }}
             />
           ))
           }

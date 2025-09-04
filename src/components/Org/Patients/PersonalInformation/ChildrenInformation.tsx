@@ -17,32 +17,52 @@ export const childrenSchema = z.object({
   sex: z.enum(["male", "female", "other"]).optional(),
   relationship: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email("Invalid email address").optional(),
+  email: z
+    .string()
+    .optional()
+    .refine((val) => {
+      // Only validate email format if there's a value
+      if (!val || val.trim() === "") return true;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    }, "Invalid email address"),
 });
 
 
 export default function GuardianInfoForm() {
-  // const {
-  //   register,
-  //   handleSubmit,
-  //   formState: { errors },
-  //   setValue,
-  //   watch,
-  // } = useForm<FormData>({
-  //   resolver: zodResolver(schema),
-  // });
-
   const {
     register,
     formState: { errors },
-    control
+    control,
+    watch,
+  } = useFormContext<FormData>();
 
-  } = useFormContext<Pick<FormData, 'children'>>();
-
+  // Watch the date of birth to determine if fields should be required
+  const dateOfBirth = watch("demographic.dateOfBirth");
+  
+  // Calculate if patient is under 18
+  const isUnder18 = React.useMemo(() => {
+    if (!dateOfBirth) return false;
+    
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+    
+    return actualAge < 18;
+  }, [dateOfBirth]);
 
   return (
     <div className=" mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Guardian Information</h2>
+      
+      {isUnder18 && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-blue-800 text-sm">
+            <strong>Note:</strong> Guardian information (Full Name, Relationship, Phone, and Email) is required for patients under 18 years old.
+          </p>
+        </div>
+      )}
 
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -52,7 +72,7 @@ export default function GuardianInfoForm() {
               htmlFor="fullName"
               className="block text-base text-black font-normal mb-2"
             >
-              Guardian Full Name
+              Guardian Full Name {isUnder18 && <span className="text-red-500">*</span>}
             </label>
             <Input
               type="text"
@@ -111,7 +131,7 @@ export default function GuardianInfoForm() {
               htmlFor="relationship"
               className="block text-base text-black font-normal mb-2"
             >
-              Relationship
+              Relationship {isUnder18 && <span className="text-red-500">*</span>}
             </label>
             <Input
               type="text"
@@ -133,7 +153,7 @@ export default function GuardianInfoForm() {
               htmlFor="phone"
               className="block text-base text-black font-normal mb-2"
             >
-              Phone
+              Phone {isUnder18 && <span className="text-red-500">*</span>}
             </label>
             <Input
               type="tel"
@@ -155,7 +175,7 @@ export default function GuardianInfoForm() {
               htmlFor="email"
               className="block text-base text-black font-normal mb-2"
             >
-              Email
+              Email {isUnder18 && <span className="text-red-500">*</span>}
             </label>
             <Input
               type="email"

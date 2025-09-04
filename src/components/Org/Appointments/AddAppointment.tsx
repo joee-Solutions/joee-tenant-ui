@@ -37,28 +37,28 @@ export default function AddAppointment({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
+
   // Fetch data for dropdowns
   const { data: patientsData } = useSWR(
     API_ENDPOINTS.TENANTS_PATIENTS(parseInt(slug)),
     authFectcher
   );
-  
+
   const { data: employeesData } = useSWR(
     API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
     authFectcher
   );
 
   // Filter employees to only show doctors/medical staff
-  const doctors = Array.isArray(employeesData?.data) 
-    ? employeesData.data.filter((employee: any) => 
-        employee.role?.name?.toLowerCase().includes('doctor') || 
-        employee.role?.name?.toLowerCase().includes('physician') ||
-        employee.role?.name?.toLowerCase().includes('medical') ||
-        employee.department?.name?.toLowerCase().includes('medical')
-      )
+  const doctors = Array.isArray(employeesData?.data)
+    ? employeesData.data.filter((employee: any) =>
+      employee.designation?.toLowerCase().includes('doctor') ||
+      employee.designation?.toLowerCase().includes('physician') ||
+      employee.designation?.toLowerCase().includes('medical') ||
+      employee.department?.toLowerCase().includes('medical')
+    )
     : [];
-  
+
   const form = useForm<AppointmentSchemaType>({
     resolver: zodResolver(AppointmentSchema),
     mode: "onChange",
@@ -71,12 +71,13 @@ export default function AddAppointment({ slug }: { slug: string }) {
       description: "",
     },
   });
+  console.log(patientsData, "patientsData", employeesData);
 
   const onSubmit = async (data: AppointmentSchemaType) => {
     setLoading(true);
     setError(null);
     setSuccess(false);
-    
+
     try {
       const appointmentData = {
         date: data.date,
@@ -84,26 +85,26 @@ export default function AddAppointment({ slug }: { slug: string }) {
         endTime: data.endTime,
         description: data.description || "",
       };
-      
+
       const res = await processRequestAuth(
         "post",
-        `super/tenants/${slug}/appointments/${data.doctorId}/${data.patientId}`,
+        `super/tenants/${slug}/appointments/${data.patientId}/${data.doctorId}`,
         appointmentData
       );
-      
+
       if (res && (res.status === true || res.status === 200 || res.success)) {
         setSuccess(true);
-        setTimeout(() => {
-          router.push(`/dashboard/organization/${slug}/appointments`);
-        }, 1500);
+        // setTimeout(() => {
+        //   router.push(`/dashboard/organization/${slug}/appointments`);
+        // }, 1500);
       } else {
         setError(res?.message || res?.error || "Failed to create appointment. Please try again.");
       }
     } catch (err: unknown) {
       console.error("Appointment creation error:", err);
-      const errorMessage = err instanceof Error ? err.message : 
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 
-        (err as { message?: string })?.message || 
+      const errorMessage = err instanceof Error ? err.message :
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err as { message?: string })?.message ||
         "Failed to create appointment. Please check your connection and try again.";
       setError(errorMessage);
     } finally {
@@ -112,30 +113,30 @@ export default function AddAppointment({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
+    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">Add Appointment</h1>
-    
+
         <Button
-                      onClick={() => ("add")}
-                      className="text-base text-[#4E66A8] font-normal"
-                    >
-                      Appointment List
-                    </Button>
+          onClick={() => router.push(`/dashboard/organization/${slug}/appointments`)}
+          className="text-base text-[#4E66A8] font-normal"
+        >
+          Appointment List
+        </Button>
       </div>
-      
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
-      
+
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
           Appointment created successfully! Redirecting...
         </div>
       )}
-      
+
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Patient Selection */}
@@ -150,9 +151,9 @@ export default function AddAppointment({ slug }: { slug: string }) {
                     <SelectValue placeholder="Select patient" />
                   </SelectTrigger>
                   <SelectContent className="z-10 bg-white">
-                    {Array.isArray(patientsData?.data) && patientsData.data.map((patient: any) => (
+                    {Array.isArray(patientsData?.data.data) && patientsData.data.data.map((patient: any) => (
                       <SelectItem key={patient.id} value={patient.id.toString()} className="hover:bg-gray-200">
-                        {patient.firstname} {patient.lastname}
+                        {patient.firstname} {patient.lastname} ({patient.gender})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -163,7 +164,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.patientId.message}</p>
             )}
           </div>
-          
+
           {/* Doctor Selection */}
           <div>
             <label className="block text-base text-black font-normal mb-2">Doctor</label>
@@ -179,7 +180,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
                     {doctors.length > 0 ? (
                       doctors.map((doctor: any) => (
                         <SelectItem key={doctor.id} value={doctor.id.toString()} className="hover:bg-gray-200">
-                          {doctor.first_name} {doctor.last_name} 
+                          {doctor.firstname} {doctor.lastname}
                           {doctor.department?.name && ` - ${doctor.department.name}`}
                         </SelectItem>
                       ))
@@ -196,7 +197,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.doctorId.message}</p>
             )}
           </div>
-          
+
           {/* Appointment Date */}
           <div>
             <label className="block text-base text-black font-normal mb-2">Appointment Date</label>
@@ -215,11 +216,11 @@ export default function AddAppointment({ slug }: { slug: string }) {
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.date.message}</p>
             )}
           </div>
-          
+
           {/* Start Time */}
           <div>
             <label className="block text-base text-black font-normal mb-2">Start Time</label>
-            <Input 
+            <Input
               placeholder="Enter start time"
               type="time"
               {...form.register("startTime")}
@@ -229,11 +230,11 @@ export default function AddAppointment({ slug }: { slug: string }) {
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.startTime.message}</p>
             )}
           </div>
-          
+
           {/* End Time */}
           <div>
             <label className="block text-base text-black font-normal mb-2">End Time</label>
-            <Input 
+            <Input
               placeholder="Enter end time"
               type="time"
               {...form.register("endTime")}
@@ -244,11 +245,11 @@ export default function AddAppointment({ slug }: { slug: string }) {
             )}
           </div>
         </div>
-        
+
         {/* Appointment Description */}
         <div>
           <label className="block text-base text-black font-normal mb-2">Description (Optional)</label>
-          <Textarea 
+          <Textarea
             {...form.register("description")}
             placeholder="Enter appointment description..."
             className="w-full p-3 min-h-32 border border-[#737373] rounded"
@@ -257,7 +258,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
           )}
         </div>
-        
+
         {/* Action Buttons */}
         <div className="flex space-x-4 pt-4">
           <Button

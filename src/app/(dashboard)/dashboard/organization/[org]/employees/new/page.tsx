@@ -4,9 +4,9 @@ import AddEmployee from "@/components/Org/Employees/AddEmployee";
 export default async function NewEmployeePage({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ org: string }>
 }) {
-  const org = (await params).slug;
+  const {org} = (await params);
   return <AddEmployee slug={org} />;
 }
 

@@ -51,6 +51,7 @@ const TenantLoginPage = () => {
   const handleFormSubmit = async (data: LoginProps) => {
     try {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
+      console.log(rt);
       if (rt) {
         Cookies.set("mfa_token", rt.data.token, { expires: 1 / 48 });
         router.push("/auth/verify-otp");

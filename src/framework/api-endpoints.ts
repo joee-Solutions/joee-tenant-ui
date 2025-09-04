@@ -69,4 +69,11 @@ export const API_ENDPOINTS = {
   GET_TENANT_USERS: (orgId: string) => `super/tenants/${orgId}`,
   ASSIGN_ROLES_TO_USER: (userId: number) => `super/tenants/users/${userId}/roles/assign`,
   REMOVE_ROLE_FROM_USER: (userId: number, roleId: number) => `super/tenants/users/${userId}/roles/${roleId}`,
+  // Patient Management
+  CREATE_PATIENT: (tenantId: number) => `super/tenants/${tenantId}/patients`,
+  GET_PATIENT: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}`,
+  UPDATE_PATIENT: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}`,
+  DELETE_PATIENT: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}`,
+  GET_ALL_PATIENTS: (tenantId: number) => `super/tenants/${tenantId}/patients`,
+  GET_PATIENT_APPOINTMENTS: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}/appointments`,
 };
