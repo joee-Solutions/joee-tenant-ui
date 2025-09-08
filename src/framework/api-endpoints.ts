@@ -66,7 +66,7 @@ export const API_ENDPOINTS = {
   CREATE_PERMISSION: "/management/super/permissions/create",
   
   // User Role Management
-  GET_TENANT_USERS: (orgId: string) => `super/tenants/${orgId}`,
+  GET_TENANT_USERS: (orgId: string) => `super/tenants/${orgId}/employees`,
   ASSIGN_ROLES_TO_USER: (userId: number) => `super/tenants/users/${userId}/roles/assign`,
   REMOVE_ROLE_FROM_USER: (userId: number, roleId: number) => `super/tenants/users/${userId}/roles/${roleId}`,
   // Patient Management

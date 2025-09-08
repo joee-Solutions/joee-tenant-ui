@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   Shield,
@@ -19,6 +20,8 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Role } from "@/lib/types";
+import PermissionsManager from "./PermissionsManager";
+import RoleCard from "@/components/shared/RoleCard";
 
 interface OrganizationUser {
   id: number;
@@ -51,7 +54,7 @@ export default function OrgDetails({ slug }: { slug: string }) {
     try {
       setLoading(true);
       // This endpoint would need to be created in the backend
-      const response = await processRequestAuth("get", API_ENDPOINTS.GET_TENANT_USERS(slug));
+      const response = await processRequestAuth("get", `${API_ENDPOINTS.GET_TENANT_USERS(slug)}?type=Admin`);
       
       if (response && typeof response === 'object' && 'success' in response) {
         if (response.success && response.data) {
@@ -173,17 +176,24 @@ export default function OrgDetails({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Organization Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-[#003465]" />
-            Organization Settings
-          </CardTitle>
-          <CardDescription>
-            Manage organization account settings and user access controls
-          </CardDescription>
-        </CardHeader>
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="users">Users & Roles</TabsTrigger>
+          <TabsTrigger value="permissions">Access Control</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="users">
+          {/* Organization Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-[#003465]" />
+                Organization Settings
+              </CardTitle>
+              <CardDescription>
+                Manage organization account settings and user access controls
+              </CardDescription>
+            </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
@@ -222,10 +232,10 @@ export default function OrgDetails({ slug }: { slug: string }) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#003465]" />
-                Organization Users
+                Organization Admin
               </CardTitle>
               <CardDescription>
-                Manage users and their role assignments within this organization
+                Manage Admin and their role assignments within this organization
               </CardDescription>
             </div>
             <Button
@@ -233,7 +243,7 @@ export default function OrgDetails({ slug }: { slug: string }) {
               className="bg-[#003465] text-white hover:bg-[#002a52] flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Assign Roles
+              Assign Admin Roles
             </Button>
           </div>
         </CardHeader>
@@ -498,41 +508,21 @@ export default function OrgDetails({ slug }: { slug: string }) {
                   <h3 className="text-lg font-medium mb-4">Select Roles</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {availableRoles.map((role) => (
-                      <Card
+                      <RoleCard
                         key={role.id}
-                        className={`cursor-pointer transition-all ${
-                          selectedRoles.includes(role.id)
-                            ? 'ring-2 ring-[#003465] bg-blue-50'
-                            : 'hover:shadow-md'
-                        }`}
-                        onClick={() => {
+                        role={role}
+                        variant="selection"
+                        isSelected={selectedRoles.includes(role.id)}
+                        isSeeded={isSeededRole(role.name)}
+                        showActions={false}
+                        onClick={(role) => {
                           setSelectedRoles(prev => 
                             prev.includes(role.id)
                               ? prev.filter(id => id !== role.id)
                               : [...prev, role.id]
                           );
                         }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Shield className="w-5 h-5 text-[#003465]" />
-                            <div className="flex-1">
-                              <h4 className="font-medium">{role.name}</h4>
-                              <p className="text-sm text-gray-600">{role.description}</p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <Badge variant={role.is_active ? "default" : "secondary"} className="text-xs">
-                                  {role.is_active ? "Active" : "Inactive"}
-                                </Badge>
-                                {isSeededRole(role.name) && (
-                                  <Badge variant="outline" className="text-xs">
-                                    System
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      />
                     ))}
                   </div>
                 </div>
@@ -561,6 +551,12 @@ export default function OrgDetails({ slug }: { slug: string }) {
           </div>
         </div>
       )}
+        </TabsContent>
+        
+        <TabsContent value="permissions">
+          <PermissionsManager slug={slug} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
