@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Controller, useFieldArray, useForm, useFormContext } from "react-hook-form";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 import { z } from "zod";
 
 // Define interfaces for our data structures
@@ -104,7 +104,7 @@ export const medHistorySchema = z.array(
 export type MedicalHistoryFormData = z.infer<typeof medHistorySchema>;
 export default function MedicalHistoryForm() {
 
-  const { control, register, formState: { errors } } = useFormContext<Pick<FormData, 'medHistory'>>()
+  const { control, register, formState: { errors } } = useFormContext<Pick<FormDataStepper, 'medHistory'>>()
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'medHistory',

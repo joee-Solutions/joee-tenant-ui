@@ -1,8 +1,8 @@
-import { useState } from "react";
+
 import { Input } from "@/components/ui/input";
 import { useFormContext, useFieldArray } from "react-hook-form";
-import { FormData } from "../AddPatient";
 import { z } from "zod";
+import { FormDataStepper } from "../PatientStepper";
 
 // Define the type for a family history entry
 type FamilyHistoryEntry = {
@@ -24,7 +24,7 @@ export const famHistorySchema = z.array(
 export type FamilyHistoryData = z.infer<typeof famHistorySchema>;
 
 export default function FamilyHistoryForm() {
-  const { register, formState: { errors }, control } = useFormContext<Pick<FormData, 'famhistory'>>()
+  const { register, formState: { errors }, control } = useFormContext<FormDataStepper>()
   const {
     fields, remove, append
   } = useFieldArray({

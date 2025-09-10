@@ -31,9 +31,9 @@ export default function MedicationForm() {
     control,
     formState: { errors, isSubmitting },
     setValue,
-  } = useFormContext<Pick<FormData, 'prescriptions'>>();
+  } = useFormContext<FormData>();
 
-  const { fields, append, remove } = useFieldArray<Pick<FormData, 'prescriptions'>>({
+  const { fields, append, remove } = useFieldArray<FormData>({
     control,
     name: "prescriptions",
   });

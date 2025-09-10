@@ -18,7 +18,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 // schema.ts
 import { z } from "zod";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 export const allergySchema = z
   .array(
@@ -56,9 +56,9 @@ export default function AllergyInformationForm() {
     control,
     register,
     formState: { errors },
-  } = useFormContext<Pick<FormData, 'allergies'>>();
+  } = useFormContext<Pick<FormDataStepper, 'allergies'>>();
 
-  const { fields, append, remove } = useFieldArray<Pick<FormData, 'allergies'>>({
+  const { fields, append, remove } = useFieldArray<Pick<FormDataStepper, 'allergies'>>({
     control,
     name: "allergies",
   });

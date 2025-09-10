@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 // Validation schema
 export const addionalDemoSchema = z.object({
@@ -186,7 +186,7 @@ export default function ContactDemographicForm() {
     register,
     control,
     formState: { errors },
-  } = useFormContext<Pick<FormData, 'addDemographic'>>();
+  } = useFormContext<Pick<FormDataStepper, 'addDemographic'>>();
 
   return (
     <div className=" mx-auto p-6">

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 // Validation schema
 export const childrenSchema = z.object({
@@ -34,7 +34,7 @@ export default function GuardianInfoForm() {
     formState: { errors },
     control,
     watch,
-  } = useFormContext<FormData>();
+  } = useFormContext<FormDataStepper>();
 
   // Watch the date of birth to determine if fields should be required
   const dateOfBirth = watch("demographic.dateOfBirth");

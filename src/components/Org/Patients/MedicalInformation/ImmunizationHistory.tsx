@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   Select,
@@ -10,7 +9,7 @@ import {
 import { z } from "zod";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 const immunizationTypes = [
   "Influenza (Flu)",
@@ -34,7 +33,7 @@ export const immunizationHistorySchema = z.array(
 export type ImmunizationHistoryData = z.infer<typeof immunizationHistorySchema>;
 
 export default function ImmunizationForm() {
-  const { register, formState: { errors }, control } = useFormContext<Pick<FormData, 'immunizationHistory'>>()
+  const { register, formState: { errors }, control } = useFormContext<Pick<FormDataStepper, 'immunizationHistory'>>()
   const {
     fields, remove, append
   } = useFieldArray({

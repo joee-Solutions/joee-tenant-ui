@@ -21,7 +21,6 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Role } from "@/lib/types";
 import PermissionsManager from "./PermissionsManager";
-import RoleCard from "@/components/shared/RoleCard";
 
 interface OrganizationUser {
   id: number;
@@ -508,21 +507,41 @@ export default function OrgDetails({ slug }: { slug: string }) {
                   <h3 className="text-lg font-medium mb-4">Select Roles</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {availableRoles.map((role) => (
-                      <RoleCard
+                      <Card
                         key={role.id}
-                        role={role}
-                        variant="selection"
-                        isSelected={selectedRoles.includes(role.id)}
-                        isSeeded={isSeededRole(role.name)}
-                        showActions={false}
-                        onClick={(role) => {
+                        className={`cursor-pointer transition-all ${
+                          selectedRoles.includes(role.id)
+                            ? 'ring-2 ring-[#003465] bg-blue-50'
+                            : 'hover:shadow-md'
+                        }`}
+                        onClick={() => {
                           setSelectedRoles(prev => 
                             prev.includes(role.id)
                               ? prev.filter(id => id !== role.id)
                               : [...prev, role.id]
                           );
                         }}
-                      />
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Shield className="w-5 h-5 text-[#003465]" />
+                            <div className="flex-1">
+                              <h4 className="font-medium">{role.name}</h4>
+                              <p className="text-sm text-gray-600">{role.description}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Badge variant={role.is_active ? "default" : "secondary"} className="text-xs">
+                                  {role.is_active ? "Active" : "Inactive"}
+                                </Badge>
+                                {isSeededRole(role.name) && (
+                                  <Badge variant="outline" className="text-xs">
+                                    System
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 </div>

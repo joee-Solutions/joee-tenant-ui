@@ -1,5 +1,4 @@
-import { useForm, Controller, useFieldArray, useFormContext } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import { z } from "zod";
 import {
   Select,
@@ -11,12 +10,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Button } from "@/components/ui/button";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 // Define validation schema for a visit entry
 export const visitEntrySchema = z.array(
   z.object({
+    id: z.number(),
     visitCategory: z.string().min(1, "Visit category is required"),
     dateOfService: z.date({ required_error: "Date of service is required" }),
     duration: z.string().min(1, "Duration is required"),
@@ -34,18 +33,35 @@ export const visitEntrySchema = z.array(
   })
 );
 
-export type VisitEntrySchema = z.infer<typeof visitEntrySchema>;
+export type VisitEntrySchemaType = z.infer<typeof visitEntrySchema>;
 
 
+// Mock data for dropdowns
+const visitCategories = [
+  "Initial Visit",
+  "Follow-up",
+  "Urgent Care",
+  "Annual Physical",
+  "Consultation",
+];
+const durations = [
+  "15 minutes",
+  "30 minutes",
+  "45 minutes",
+  "60 minutes",
+  "90 minutes",
+];
+const severityOptions = ["Mild", "Moderate", "Severe", "Very Severe"];
+const qualityOptions = ["Sharp", "Dull", "Burning", "Throbbing", "Aching"];
+const aggravatingFactors = ["Movement", "Rest", "Cold", "Heat", "Stress", "Food"];
+const conditions = ["Hypertension", "Diabetes", "Asthma", "Arthritis", "Migraine"];
 export default function MedicalVisitForm() {
   const {
     control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
     setValue,
-  } = useFormContext<Pick<FormData, 'visits'>>();
+  } = useFormContext<Pick<FormDataStepper, 'visits'>>();
 
-  const { fields, append, remove } = useFieldArray<Pick<FormData, 'visits'>>({
+  const { fields, append, remove } = useFieldArray<Pick<FormDataStepper, 'visits'>>({
     control,
     name: "visits",
   });
@@ -61,16 +77,16 @@ export default function MedicalVisitForm() {
       {
         id: newId,
         visitCategory: "",
-        dateOfService: "",
+        dateOfService: new Date(),
         duration: "",
         chiefComplaint: "",
-        hpiOnsetDate: "",
+        hpiOnsetDate: new Date(),
         hpiDuration: "",
         severity: "",
         quality: "",
         aggravatingFactors: "",
         diagnosis: "",
-        diagnosisOnsetDate: "",
+        diagnosisOnsetDate: new Date(),
         treatmentPlan: "",
         providerName: "",
         providerSignature: "",
@@ -78,36 +94,17 @@ export default function MedicalVisitForm() {
     ]);
   };
 
-  const removeVisitEntry = (id: number): void => {
-    remove(id);
+  const removeVisitEntry = (id: string): void => {
+    remove(parseInt(id));
   };
 
 
 
 
-  const handleInputChange = (id: number, field: string, value: string): void => {
-    setValue(`visits?.${id}.${field as string}`, value);
+  const handleInputChange = (id: string, field: keyof VisitEntrySchemaType, value: string): void => {
+    setValue(`visits?.${parseInt(id)}.${field as unknown as string}`, value);
   };
 
-  // Mock data for dropdowns
-  const visitCategories = [
-    "Initial Visit",
-    "Follow-up",
-    "Urgent Care",
-    "Annual Physical",
-    "Consultation",
-  ];
-  const durations = [
-    "15 minutes",
-    "30 minutes",
-    "45 minutes",
-    "60 minutes",
-    "90 minutes",
-  ];
-  const severityOptions = ["Mild", "Moderate", "Severe", "Very Severe"];
-  const qualityOptions = ["Sharp", "Dull", "Burning", "Throbbing", "Aching"];
-  const aggravatingFactors = ["Movement", "Rest", "Cold", "Heat", "Stress", "Food"];
-  const conditions = ["Hypertension", "Diabetes", "Asthma", "Arthritis", "Migraine"];
 
   return (
     <div className=" mx-auto p-6 ">
@@ -151,7 +148,7 @@ export default function MedicalVisitForm() {
                 <Select
                   value={entry.visitCategory}
                   onValueChange={(value) =>
-                    handleInputChange(entry.id, "visitCategory", value)
+                    handleInputChange(entry.id,"visitCategory", value)
                   }
                 >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -175,7 +172,7 @@ export default function MedicalVisitForm() {
                 <DatePicker
                   date={entry.dateOfService ? new Date(entry.dateOfService) : undefined}
                   onDateChange={(date) =>
-                    handleInputChange(entry.id, "dateOfService", date ? date.toISOString().split('T')[0] : '')
+                    handleInputChange(entry.id,'dateOfService', date ? date.toISOString().split('T')[0] : '')
                   }
                   placeholder="Select date of service"
                 />

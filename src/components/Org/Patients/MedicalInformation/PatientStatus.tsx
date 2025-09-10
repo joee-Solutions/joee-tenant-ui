@@ -1,6 +1,5 @@
 import React from "react";
 import { useFormContext, useFieldArray, Controller } from "react-hook-form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   Select,
@@ -13,7 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 // schema.ts
 import { z } from "zod";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 export const dischargeEntrySchema = z.object({
   patientStatus: z.string().optional(),
@@ -28,7 +27,7 @@ export const patientStatusSchema = z.object({
 export type patientStatusData = z.infer<typeof patientStatusSchema>;
 
 export default function PatientDischargeForm() {
-  const { control, register, setValue, watch,formState:{errors} } = useFormContext<Pick<FormData, 'patientStatus'>>();
+  const { control, register, setValue, watch, formState: { errors }  } = useFormContext<FormDataStepper>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "patientStatus.dischargeEntries",
@@ -42,7 +41,7 @@ export default function PatientDischargeForm() {
   ];
 
   const dischargeEntries = watch('patientStatus.dischargeEntries');
-  console.log(dischargeEntries, 'dischargeEntries',fields);
+  console.log(dischargeEntries, 'dischargeEntries', fields);
   return (
     <div className="mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Patient Discharge Information</h1>
@@ -148,13 +147,7 @@ export default function PatientDischargeForm() {
               placeholder="Enter reason for discharge"
               {...register(`patientStatus.dischargeEntries.${index}.reasonForDischarge`)}
             />
-            {
-              errors.patientStatus?.dischargeEntries?.[index]?.reasonForDischarge && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.patientStatus.dischargeEntries[index].reasonForDischarge.message}
-                </p>
-              )
-            }
+            {/* Error display for reason for discharge */}
           </div>
         </div>
       ))}

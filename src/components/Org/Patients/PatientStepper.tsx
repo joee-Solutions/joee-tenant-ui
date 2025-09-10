@@ -58,7 +58,7 @@ export const formSchema = z.object({
   prescriptions: prescriptionSchema,
 }).partial();
 
-export type FormData = z.infer<typeof formSchema>;
+export type FormDataStepper = z.infer<typeof formSchema>;
 
 const steps = [
   // Personal Information Steps
@@ -185,7 +185,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   const [success, setSuccess] = useState(false);
   const router = useRouter();
 
-  const methods = useForm<FormData>({
+  const methods = useForm<FormDataStepper>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
@@ -260,9 +260,6 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         notes: "",
         addToMedicationList: "yes",
       }],
-      
-      
-      
     }
   });
 
@@ -320,7 +317,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     return stepIndex <= lastCompletedStep + 1;
   };
 
-  function mapFormDataToPatientDto(formData: FormData) {
+  function mapFormDataToPatientDto(formData: FormDataStepper) {
     const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle, visits, prescriptions } = formData ;
 
     // Map to match backend CreatePatientDto structure
@@ -398,7 +395,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   }
 
   console.log("data", methods.formState.errors)
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormDataStepper) => {
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -423,9 +420,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
         setSuccess(true);
-        setTimeout(() => {
           router.push(`/dashboard/organization/${slug}/patients`);
-        }, 1500);
         // clear local storage
         localStorage.removeItem(`patient-${slug}`);
       } else {

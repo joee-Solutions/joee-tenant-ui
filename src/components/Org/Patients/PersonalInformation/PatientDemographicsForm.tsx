@@ -14,7 +14,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { z } from "zod";
 import { Controller, useFormContext } from "react-hook-form";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 export const PatientDemoSchema = z.object({
   suffix: z.string().optional(),
@@ -35,7 +35,6 @@ export const PatientDemoSchema = z.object({
   patientImage: z.string().optional(),
 });
 
-type PatientSchemaType = z.infer<typeof PatientDemoSchema>;
 const dropdownOptions = {
   suffix: ["Mr.", "Mrs.", "Ms.", "Dr.", "Jr.", "Sr.", "II", "III", "IV"],
   sex: ["Male", "Female", "Other", "Prefer not to say"],
@@ -113,7 +112,7 @@ export default function PatientInfoForm() {
     register,
     formState: { errors },
     control
-  } = useFormContext<Pick<FormData, 'demographic'>>(); // retrieve all hook methods
+  } = useFormContext<Pick<FormDataStepper, 'demographic'>>(); // retrieve all hook methods
 
   const [fileName, setFileName] = useState("");
 

@@ -35,7 +35,7 @@ const surgeryTypes = [
 
 // schema.ts
 import { z } from "zod";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 export const surgeryHistorySchema = z.array(
   z.object({
     surgeryType: z.string().optional(),
@@ -47,7 +47,7 @@ export const surgeryHistorySchema = z.array(
 export type SurgeryHistoryData = z.infer<typeof surgeryHistorySchema>;
 export default function SurgeryHistoryForm() {
 
-  const { control, register, formState: { errors } } = useFormContext<Pick<FormData, 'surgeryHistory'>>();
+  const { control, register, formState: { errors } } = useFormContext<FormDataStepper>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "surgeryHistory",
