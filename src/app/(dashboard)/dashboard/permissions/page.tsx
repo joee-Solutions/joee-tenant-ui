@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEventHandler } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Permission, Role } from "@/lib/types";
 import { useRouter } from "next/navigation";
+import { ChangeHandler } from "react-hook-form";
 
 export default function PermissionsPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -154,8 +155,10 @@ export default function PermissionsPage() {
           <Input
             placeholder="Search permissions..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value) as any}
             className="pl-10"
+            name="searchTerm"
+            onBlur={(e) => setSearchTerm(e.target.value) as any}
           />
         </div>
         <div className="relative">

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { z } from "zod";
 import { Controller, useFormContext } from "react-hook-form";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 import { Checkbox } from "@/components/ui/Checkbox";
 
 // Data for sexual history options
@@ -33,7 +33,7 @@ export const lifestyleSchema = z.object({
 export type LifestyleData = z.infer<typeof lifestyleSchema>;
 
 export default function LifestyleForm() {
-  const { register, watch, formState: { errors }, control } = useFormContext<Pick<FormData, 'lifeStyle'>>()
+  const { register, watch, formState: { errors }, control } = useFormContext<Pick<FormDataStepper, 'lifeStyle'>>()
   const tobaccoUse = watch("lifeStyle.tobaccoUse");
   const drugUse = watch("lifeStyle.drugUse");
   const dietExercise = watch("lifeStyle.dietExercise");

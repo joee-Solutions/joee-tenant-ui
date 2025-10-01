@@ -23,10 +23,10 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { cn, formatDateFn } from "@/lib/utils";
 import useSWR from "swr";
-import { chartList } from "../page";
 import Link from "next/link";
 import { Tenant } from "@/lib/types";
 import { useDashboardData } from "@/hooks/swr";
+import { chartList } from "@/components/icons/chart";
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
@@ -144,7 +144,7 @@ export default function Page() {
           )}
           {data?.data &&
             data.data?.length > 0 &&
-            data.data?.map((data: Tenant) => {
+            data.data?.map((data: any) => {
               return (
                 <TableRow key={data.id} className="px-3 relative">
                   <TableCell>{data.id}</TableCell>

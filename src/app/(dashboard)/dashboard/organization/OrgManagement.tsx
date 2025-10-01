@@ -85,7 +85,8 @@ export default function OrgManagement({ setIsAddOrg }: OrgManagementProps) {
         </aside>
         <div className="px-10 pt-[32px] pb-[56px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md">
           {currTab === 1 ? (
-            <EditOrg />
+            // <EditOrg />
+            <></>
           ) : currTab === 2 ? (
             <CheckHMS />
           ) : (

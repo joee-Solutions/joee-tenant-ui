@@ -1,26 +1,24 @@
-import { useForm, Controller, useFormContext, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useFormContext, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Button } from "@/components/ui/button";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 // Define the validation schema
 export const prescriptionSchema = z.array(z.object({
-  checkedDrugFormulary: z.boolean().default(false),
-  controlledSubstance: z.boolean().default(false),
-  startDate: z.date().optional(),
-  prescriberName: z.string().min(1, "Prescriber name is required").max(100, "Name too long"),
-  dosage: z.string().min(1, "Dosage is required").max(50, "Dosage description too long"),
-  directions: z.string().min(1, "Directions are required").max(500, "Directions too long"),
-  notes: z.string().max(1000, "Notes too long").optional(),
+  checkedDrugFormulary: z.boolean().default(false).optional(),
+  controlledSubstance: z.boolean().default(false).optional(),
+  startDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  prescriberName: z.string().optional(),
+  dosage: z.string().optional(),
+  directions: z.string().optional(),
+  notes: z.string().optional(),
   addToMedicationList: z.enum(["yes", "no"], {
     required_error: "Please select whether to add to medication list",
-  }),
+  }).optional().default("no"),
 }));
 
 export type PrescriptionFormData = z.infer<typeof prescriptionSchema>;
@@ -29,28 +27,30 @@ export default function MedicationForm() {
   const {
     register,
     control,
-    formState: { errors, isSubmitting },
-    setValue,
-  } = useFormContext<FormData>();
+    formState: { errors, },
+    // setValue,
+    getValues,
+  } = useFormContext<Pick<FormDataStepper, 'prescriptions'>>();
 
-  const { fields, append, remove } = useFieldArray<FormData>({
+  const { fields, append, remove } = useFieldArray<Pick<FormDataStepper, 'prescriptions'>>({
     control,
     name: "prescriptions",
   });
 
-  const handleChange = (id: number, field: string, value: string): void => {
-    setValue(`prescriptions?.${id}.${field as string}`, value);
-  };
+  // const handleChange = (id: number, field: string, value: string): void => {
+  //   setValue(`prescriptions.${id}.${field as string}`, value);
+  // };
+  console.log(getValues('prescriptions'), 'getValues prese ')
 
 
   return (
-    <div className="mx-auto p-6">
+    <div className="mx-auto p-6 flex flex-col gap-4">
       {
         fields.map((field, index) => (
           <div key={field.id} className="mb-8 border-b pb-6">
             <div className="flex flex-col justify-between mb-4">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col justify-between mb-4">
+                <div className="flex gap-2 mb-3">
                   {fields.length > 1 && (
                     <button
                       type="button"
@@ -65,10 +65,9 @@ export default function MedicationForm() {
                       type="button"
                       onClick={() =>
                         append({
-                          id: Date.now(),
                           checkedDrugFormulary: false,
                           controlledSubstance: false,
-                          startDate: undefined,
+                          startDate: new Date(),
                           prescriberName: "",
                           dosage: "",
                           directions: "",
@@ -85,7 +84,7 @@ export default function MedicationForm() {
                 <div className="flex gap-12 mb-8">
                   <div className="flex items-center gap-2">
                     <Controller
-                      name="prescriptions?.checkedDrugFormulary"
+                      name={`prescriptions.${index}.checkedDrugFormulary`}
                       control={control}
                       render={({ field }) => (
                         <Checkbox
@@ -97,19 +96,19 @@ export default function MedicationForm() {
                       )}
                     />
                     <label htmlFor="checkedDrugFormulary" className="block text-base text-black font-normal mb-2">
-                      Checked Drug Formulary
+                       Drug Formulary
                     </label>
                   </div>
 
                   <div className="flex gap-2">
                     <Controller
-                      name="prescriptions?.controlledSubstance"
+                      name={`prescriptions.${index}.controlledSubstance`}
                       control={control}
                       render={({ field }) => (
                         <Checkbox
                           id="controlledSubstance"
                           className="accent-green-600 w-6 h-6 rounded"
-                          checked={field.value}
+                          checked={field.value as boolean}
                           onCheckedChange={field.onChange}
                         />
                       )}
@@ -126,13 +125,13 @@ export default function MedicationForm() {
                       Start Date
                     </label>
                     <Controller
-                      name="prescriptions?.startDate"
+                      name={`prescriptions.${index}.startDate`}
                       control={control}
                       key={field.id}
                       render={({ field }) => (
                         <DatePicker
-                          date={field.value}
-                          onDateChange={field.onChange}
+                          date={field.value ? new Date(field.value) : undefined}
+                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                           placeholder="Select start date"
                         />
                       )}
@@ -149,8 +148,8 @@ export default function MedicationForm() {
                       placeholder="Enter here"
                       key={field.id}
                       className="w-full h-14 p-3 border border-[#737373] rounded"
-                      {...register("prescriptions?.prescriberName")}
-                      error={errors.prescriptions?.prescriberName?.message}
+                      {...register(`prescriptions.${index}.prescriberName`)}
+                      error={errors.prescriptions?.[index]?.prescriberName?.message}
                     />
                   </div>
                 </div>
@@ -161,13 +160,13 @@ export default function MedicationForm() {
                       Dosage
                     </label>
                     <Input
-                      id="prescriptions?.dosage"
+                      id="prescriptions.dosage"
                       type="text"
                       placeholder="Enter here"
                       key={field.id}
                       className="w-full h-14 p-3 border border-[#737373] rounded"
-                      {...register("prescriptions?.dosage")}
-                      error={errors.prescriptions?.dosage?.message}
+                      {...register(`prescriptions.${index}.dosage`)}
+                      error={errors.prescriptions?.[index]?.dosage?.message}
                     />
                   </div>
 
@@ -176,13 +175,13 @@ export default function MedicationForm() {
                       Directions
                     </label>
                     <Input
-                      id="prescriptions?.directions"
+                      id="prescriptions.directions"
                       type="text"
                       key={field.id}
                       placeholder="Enter here"
                       className="w-full h-14 p-3 border border-[#737373] rounded"
-                      {...register("prescriptions?.directions")}
-                      error={errors.prescriptions?.directions?.message}
+                      {...register(`prescriptions.${index}.directions`)}
+                      error={errors.prescriptions?.[index]?.directions?.message}
                     />
                   </div>
                 </div>
@@ -192,21 +191,21 @@ export default function MedicationForm() {
                     Notes
                   </label>
                   <Textarea
-                    id="prescriptions?.notes"
+                    id="prescriptions.notes"
                     key={field.id}
                     placeholder="Enter notes here"
                     className="w-full h-32 p-3 border border-[#737373] rounded"
-                    {...register("notes")}
+                    {...register(`prescriptions.${index}.notes`)}
                   />
-                  {errors.prescriptions?.notes && (
-                    <p className="text-red-500 text-sm mt-1">{errors.prescriptions?.notes.message}</p>
+                  {errors.prescriptions?.[index]?.notes && (
+                    <p className="text-red-500 text-sm mt-1">{errors.prescriptions?.[index]?.notes.message}</p>
                   )}
                 </div>
 
                 <div className="mb-8">
                   <span className="block text-base text-black font-normal mb-2">Add to Medication List</span>
                   <Controller
-                    name="prescriptions?.addToMedicationList"
+                    name={`prescriptions.${index}.addToMedicationList`}
                     control={control}
                     render={({ field }) => (
                       <RadioGroup value={field.value} onValueChange={field.onChange} className="space-x-4 flex">
@@ -219,8 +218,8 @@ export default function MedicationForm() {
                       </RadioGroup>
                     )}
                   />
-                  {errors.prescriptions?.addToMedicationList && (
-                    <p className="text-red-500 text-sm mt-1">{errors.prescriptions?.addToMedicationList.message}</p>
+                  {errors.prescriptions?.[index]?.addToMedicationList && (
+                    <p className="text-red-500 text-sm mt-1">{errors.prescriptions?.[index]?.addToMedicationList.message}</p>
                   )}
                 </div>
 

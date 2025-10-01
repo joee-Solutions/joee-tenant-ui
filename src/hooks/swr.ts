@@ -98,7 +98,7 @@ export const useDashboardData = () => {
   );
 
   return {
-    data: extractData<DashboardData>(data) as DashboardData,
+    data: extractData<DashboardData>(data) as any,
     meta: extractMeta(data),
     isLoading,
     error,

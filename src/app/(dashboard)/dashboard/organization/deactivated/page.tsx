@@ -21,7 +21,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { cn, formatDateFn } from "@/lib/utils";
 import useSWR from "swr";
-import { chartList } from "../page";
+import { chartList } from "@/components/icons/chart";
 import { Tenant } from "@/lib/types";
 
 export default function Page() {

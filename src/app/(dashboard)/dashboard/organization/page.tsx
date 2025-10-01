@@ -19,22 +19,11 @@ import OrgManagement from "./OrgManagement";
 import Link from "next/link";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { cn, formatDateFn } from "@/lib/utils";
-import {
-  ActiveOrgChart,
-  AllOrgChart,
-  DeactivatedOrgChart,
-  InactiveOrgChart,
-} from "@/components/icons/icon";
 import { useDashboardData, useTenantsData } from "@/hooks/swr";
 import { Tenant } from "@/lib/types";
+import { AllOrgChart } from "@/components/icons/icon";
+import { chartList } from "@/components/icons/chart";
 
-export const chartList = {
-  total: <AllOrgChart className="w-full h-full object-fit" />,
-  active: <ActiveOrgChart className="w-full h-full object-fit" />,
-  inactive: <InactiveOrgChart className="w-full h-full object-fit" />,
-  deactivated: <DeactivatedOrgChart className="w-full h-full object-fit" />,
-  all: <AllOrgChart className="w-full h-full object-fit" />,
-};
 
 export default function Page() {
   const [pageSize, setPageSize] = useState(10);
@@ -43,7 +32,7 @@ export default function Page() {
   const [sortBy, setSortBy] = useState("");
   const [status, setStatus] = useState("");
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
-  
+
   // Fetch dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData();
   // Map sortBy to backend fields
@@ -80,14 +69,14 @@ export default function Page() {
   }, [search, sortBy, status, pageSize]);
 
   const keyToCardTypeMap: Record<
-  "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants",
-  "all" | "active" | "inactive" | "deactivated"
-> = {
-  totalTenants: "all",
-  activeTenants: "active",
-  inactiveTenants: "inactive",
-  deactivatedTenants: "deactivated",
-};
+    "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants",
+    "all" | "active" | "inactive" | "deactivated"
+  > = {
+    totalTenants: "all",
+    activeTenants: "active",
+    inactiveTenants: "inactive",
+    deactivatedTenants: "deactivated",
+  };
   const datas = (
     Object.keys(dashboardData || {}) as Array<
       "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants"
@@ -106,7 +95,7 @@ export default function Page() {
       ),
       barChartIcon: <ChartNoAxesColumn />,
       OrgPercentChanges: parseFloat(
-          (key !== "totalTenants" && dashboardData?.totalTenants
+        (key !== "totalTenants" && dashboardData?.totalTenants
           ? (value * 100) / dashboardData.totalTenants
           : 0
         ).toFixed(2)
@@ -123,8 +112,8 @@ export default function Page() {
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <h2 className="text-2xl font-semibold text-red-600">Failed to Load Organizations</h2>
           <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Refresh Page
@@ -211,7 +200,7 @@ export default function Page() {
                   </TableRow>
                 ))
               ) : Array.isArray(tenantsData) && tenantsData.length > 0 ? (
-                tenantsData.map((data: Tenant) => (
+                tenantsData.map((data: any) => (
                   <TableRow key={data.id} className="px-3 relative">
                     <TableCell>{data.id}</TableCell>
                     <TableCell className="py-[21px] ">
@@ -223,7 +212,7 @@ export default function Page() {
                         <span className="w-[42px] h-42px rounded-full overflow-hidden">
                           <Image
                             src={
-                                    data?.logo ||
+                              data?.logo ||
                               orgPlaceholder
                             }
                             alt="organization image"
@@ -236,17 +225,16 @@ export default function Page() {
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                        {formatDateFn(data?.created_at)}
+                      {formatDateFn(data?.created_at)}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {data?.address}{" "}
                     </TableCell>
                     <TableCell
-                      className={`font-semibold text-xs ${
-                        data?.status?.toLowerCase() === "ACTIVE"
+                      className={`font-semibold text-xs ${data?.status?.toLowerCase() === "active"
                           ? "text-[#3FA907]"
                           : "text-[#EC0909]"
-                      }`}
+                        }`}
                     >
                       {data?.status?.toUpperCase()}
                     </TableCell>

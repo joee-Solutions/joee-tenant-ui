@@ -45,7 +45,7 @@ const OrganizationList: FC<OrganizationListProps> = ({ organizations }) => {
     <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h3 className="font-medium text-lg md:text-xl text-black">Organization List</h3>
-        <Link href="/organizations" className="text-blue-600 text-sm flex items-center font-medium">
+        <Link href="/dashboard/organization" className="text-blue-600 text-sm flex items-center font-medium">
           View all
           <svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

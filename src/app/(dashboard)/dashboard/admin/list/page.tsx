@@ -10,6 +10,7 @@ import Pagination from "@/components/shared/table/pagination";
 import { useAdminUsersData } from "@/hooks/swr";
 import { AdminUser } from "@/lib/types";
 import { Edit, Trash2, User } from "lucide-react";
+import Image from "next/image";
 
 // Mock table data structure - replace with actual data from API
 const adminTableData = [
@@ -99,10 +100,12 @@ export default function AdminListPage() {
                     <div className="flex items-center gap-[10px]">
                       <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                         {admin.profile_picture ? (
-                          <img
+                          <Image
                             src={admin.profile_picture}
                             alt="admin profile"
                             className="object-cover aspect-square w-full h-full"
+                            width={42}
+                            height={42}
                           />
                         ) : (
                           <User className="w-6 h-6 text-gray-500" />

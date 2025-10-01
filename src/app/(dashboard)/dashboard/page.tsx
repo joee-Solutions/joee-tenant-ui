@@ -270,7 +270,7 @@ console.log(employeesData,'employeesData')
                     'firstname' in u &&
                     'lastname' in u 
                   )
-                  .map((user) => ({
+                  .map((user:any) => ({
                     id: user.id,
                     name: `${user.firstname} ${user.lastname}`.trim(),
                     role: user.roles && user.roles.length > 0 ? user.roles[0].name : "Employee",

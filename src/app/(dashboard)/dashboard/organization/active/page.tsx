@@ -19,7 +19,7 @@ import { authFectcher } from "@/hooks/swr";
 import useSWR from "swr";
 import { AllOrgChart } from "@/components/icons/icon";
 import { cn, formatDateFn } from "@/lib/utils";
-import { chartList } from "../page";
+import { chartList } from "@/components/icons/chart";
 import Link from "next/link";
 import { Spinner } from "@/components/icons/Spinner";
 import { Tenant } from "@/lib/types";

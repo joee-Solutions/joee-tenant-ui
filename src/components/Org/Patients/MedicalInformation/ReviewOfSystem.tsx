@@ -87,10 +87,9 @@ export default function MedicalSymptomForm() {
         <p className="text-gray-700 mb-2">Details</p>
         <Textarea
           name={detailsName}
-          className="w-full h-32 p-3 border border-[#737373] rounded"
           value={formData[detailsName] as string}
           onChange={(e) => handleTextChange(detailsName, e.target.value)}
-          className="w-full border border-gray-300 rounded p-2 h-32"
+          className="w-full border border-[#737373] rounded p-2 h-32"
         />
       </div>
     </div>

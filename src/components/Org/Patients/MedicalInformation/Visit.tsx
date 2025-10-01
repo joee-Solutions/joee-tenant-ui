@@ -1,4 +1,4 @@
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { ChangeHandler, useFieldArray, useFormContext } from "react-hook-form";
 import { z } from "zod";
 import {
   Select,
@@ -11,27 +11,27 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormDataStepper } from "../PatientStepper";
+import { ChangeEventHandler } from "react";
 
 // Define validation schema for a visit entry
 export const visitEntrySchema = z.array(
   z.object({
-    id: z.number(),
-    visitCategory: z.string().min(1, "Visit category is required"),
-    dateOfService: z.date({ required_error: "Date of service is required" }),
-    duration: z.string().min(1, "Duration is required"),
-    chiefComplaint: z.string().min(1, "Chief complaint is required").max(500, "Chief complaint too long"),
-    hpiOnsetDate: z.date({ required_error: "HPI onset date is required" }),
-    hpiDuration: z.string().min(1, "HPI duration is required"),
-    severity: z.string().min(1, "Severity is required"),
-    quality: z.string().min(1, "Quality is required"),
-    aggravatingFactors: z.string().max(500, "Aggravating factors too long").optional(),
-    diagnosis: z.string().min(1, "Diagnosis is required").max(500, "Diagnosis too long"),
-    diagnosisOnsetDate: z.date({ required_error: "Diagnosis onset date is required" }),
-    treatmentPlan: z.string().min(1, "Treatment plan is required").max(1000, "Treatment plan too long"),
-    providerName: z.string().min(1, "Provider name is required").max(100, "Provider name too long"),
-    providerSignature: z.string().min(1, "Provider signature is required").max(100, "Provider signature too long"),
+    visitCategory: z.string().optional(),
+    dateOfService: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    duration: z.string().optional(),
+    chiefComplaint: z.string().optional(),
+    hpiOnsetDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    hpiDuration: z.string().optional(),
+    severity: z.string().optional(),
+    quality: z.string().optional(),
+    aggravatingFactors: z.string().optional(),
+    diagnosis: z.string().optional(),
+    diagnosisOnsetDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    treatmentPlan: z.string().optional(),
+    providerName: z.string().optional(),
+    providerSignature: z.string().optional(),
   })
-);
+).optional();
 
 export type VisitEntrySchemaType = z.infer<typeof visitEntrySchema>;
 
@@ -72,10 +72,8 @@ export default function MedicalVisitForm() {
         ? Math.max(...fields.map((entry) => entry.id as unknown as number)) + 1
         : 1;
 
-    append([
-      ...fields,
+    append(
       {
-        id: newId,
         visitCategory: "",
         dateOfService: new Date(),
         duration: "",
@@ -91,18 +89,19 @@ export default function MedicalVisitForm() {
         providerName: "",
         providerSignature: "",
       }
-    ]);
+    );
   };
 
-  const removeVisitEntry = (id: string): void => {
-    remove(parseInt(id));
+  const removeVisitEntry = (id: number): void => {
+    remove(id);
   };
 
 
+console.log(fields, 'fields')
 
-
-  const handleInputChange = (id: string, field: keyof VisitEntrySchemaType, value: string): void => {
-    setValue(`visits?.${parseInt(id)}.${field as unknown as string}`, value);
+  const handleInputChange = (id: number, field: keyof VisitEntrySchemaType, value: string): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setValue(`visits.${id}.${String(field)}` as any, value);
   };
 
 
@@ -112,7 +111,7 @@ export default function MedicalVisitForm() {
 
       <div>
         {fields.map((entry, index) => (
-          <div key={entry.id} className="mb-8">
+          <div key={index} className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">
                 Visit Entry {index + 1}
@@ -121,7 +120,7 @@ export default function MedicalVisitForm() {
                 {fields.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => removeVisitEntry(entry.id)}
+                    onClick={() => removeVisitEntry(index)}
                     className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Remove
@@ -148,7 +147,7 @@ export default function MedicalVisitForm() {
                 <Select
                   value={entry.visitCategory}
                   onValueChange={(value) =>
-                    handleInputChange(entry.id,"visitCategory", value)
+                    handleInputChange(index, "visitCategory" as keyof VisitEntrySchemaType, value)
                   }
                 >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -172,7 +171,7 @@ export default function MedicalVisitForm() {
                 <DatePicker
                   date={entry.dateOfService ? new Date(entry.dateOfService) : undefined}
                   onDateChange={(date) =>
-                    handleInputChange(entry.id,'dateOfService', date ? date.toISOString().split('T')[0] : '')
+                    handleInputChange(index, 'dateOfService' as keyof VisitEntrySchemaType, date ? date.toISOString().split('T')[0] : '')
                   }
                   placeholder="Select date of service"
                 />
@@ -186,7 +185,7 @@ export default function MedicalVisitForm() {
                 <Select
                   value={entry.duration}
                   onValueChange={(value) =>
-                    handleInputChange(entry.id, "duration", value)
+                    handleInputChange(index, "duration" as keyof VisitEntrySchemaType, value)
                   }
                 >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -216,7 +215,7 @@ export default function MedicalVisitForm() {
                   value={entry.chiefComplaint}
                   className="w-full h-32 p-3 border border-[#737373] rounded"
                   onChange={(e) =>
-                    handleInputChange(entry.id, "chiefComplaint", e.target.value)
+                    handleInputChange(index, "chiefComplaint" as keyof VisitEntrySchemaType, e.target.value)
                   }
                 />
               </div>
@@ -232,7 +231,7 @@ export default function MedicalVisitForm() {
                   <DatePicker
                     date={entry.hpiOnsetDate ? new Date(entry.hpiOnsetDate) : undefined}
                     onDateChange={(date) =>
-                      handleInputChange(entry.id, "hpiOnsetDate", date ? date.toISOString().split('T')[0] : '')
+                      handleInputChange(index, "hpiOnsetDate" as keyof VisitEntrySchemaType, date ? date.toISOString().split('T')[0] : '')
                     }
                     placeholder="Select onset date"
                   />
@@ -246,7 +245,7 @@ export default function MedicalVisitForm() {
                   <Select
                     value={entry.hpiDuration}
                     onValueChange={(value) =>
-                      handleInputChange(entry.id, "hpiDuration", value)
+                      handleInputChange(index, "hpiDuration" as keyof VisitEntrySchemaType, value)
                     }
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -270,7 +269,7 @@ export default function MedicalVisitForm() {
                   <Select
                     value={entry.severity}
                     onValueChange={(value) =>
-                      handleInputChange(entry.id, "severity", value)
+                      handleInputChange(index, "severity" as keyof VisitEntrySchemaType, value)
                     }
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -294,7 +293,7 @@ export default function MedicalVisitForm() {
                   <Select
                     value={entry.quality}
                     onValueChange={(value) =>
-                      handleInputChange(entry.id, "quality", value)
+                      handleInputChange(index, "quality" as keyof VisitEntrySchemaType, value)
                     }
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -319,7 +318,7 @@ export default function MedicalVisitForm() {
                 <Select
                   value={entry.aggravatingFactors}
                   onValueChange={(value) =>
-                    handleInputChange(entry.id, "aggravatingFactors", value)
+                    handleInputChange(index, "aggravatingFactors" as keyof VisitEntrySchemaType, value)
                   }
                 >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -349,7 +348,7 @@ export default function MedicalVisitForm() {
                   <Select
                     value={entry.diagnosis}
                     onValueChange={(value) =>
-                      handleInputChange(entry.id, "diagnosis", value)
+                      handleInputChange(index, "diagnosis" as keyof VisitEntrySchemaType, value)
                     }
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -373,7 +372,7 @@ export default function MedicalVisitForm() {
                   <DatePicker
                     date={entry.diagnosisOnsetDate ? new Date(entry.diagnosisOnsetDate) : undefined}
                     onDateChange={(date) =>
-                      handleInputChange(entry.id, "diagnosisOnsetDate", date ? date.toISOString().split('T')[0] : '')
+                      handleInputChange(index, "diagnosisOnsetDate" as keyof VisitEntrySchemaType, date ? date.toISOString().split('T')[0] : '')
                     }
                     placeholder="Select diagnosis onset date"
                   />
@@ -393,7 +392,7 @@ export default function MedicalVisitForm() {
                   value={entry.treatmentPlan}
                   className="w-full h-32 p-3 border border-[#737373] rounded"
                   onChange={(e) =>
-                    handleInputChange(entry.id, "treatmentPlan", e.target.value)
+                    handleInputChange(index, "treatmentPlan" as keyof VisitEntrySchemaType, e.target.value)
                   }
                   rows={4}
                 />
@@ -410,8 +409,8 @@ export default function MedicalVisitForm() {
                   type="text"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.providerName}
-                  onChange={(e) =>
-                    handleInputChange(entry.id, "providerName", e.target.value)
+                  onChange={(e: ChangeEventHandler<HTMLInputElement>) =>
+                    handleInputChange(index, "providerName" as keyof VisitEntrySchemaType, e.target.value)
                   }
                   placeholder="Enter here"
                 />
@@ -425,7 +424,7 @@ export default function MedicalVisitForm() {
                   value={entry.providerSignature}
                   className="w-full h-32 p-3 border border-[#737373] rounded"
                   onChange={(e) =>
-                    handleInputChange(entry.id, "providerSignature", e.target.value)
+                    handleInputChange(index, "providerSignature" as keyof VisitEntrySchemaType, e.target.value)
                   }
                   rows={4}
                 />

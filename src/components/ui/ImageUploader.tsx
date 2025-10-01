@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 
 export default function ProfileImageUploader({ title="Upload Profile Image" }: { title?: string }) {
   const [image, setImage] = useState(null);
@@ -114,10 +115,12 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
         >
           {image ? (
             <div className="relative w-full h-full flex items-center justify-center">
-              <img
+              <Image
                 src={image}
                 alt="Profile preview"
                 className="max-w-full max-h-full object-contain rounded"
+                width={300}
+                height={300}
               />
               <button
                 className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"

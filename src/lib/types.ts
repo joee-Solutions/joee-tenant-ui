@@ -14,6 +14,14 @@ export interface Organization {
     description?: string;
     image: string;
   }
+  export interface User {
+    id: number;
+    name: string;
+    role: string;
+    organization: string;
+    description?: string;
+    image: string;
+  }
   
   export interface Patient {
     id: number;
