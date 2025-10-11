@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Printer, 
+import {
+  Search,
+  Filter,
+  Download,
+  Printer,
   Calendar,
   Clock,
   User,
@@ -79,7 +79,7 @@ interface FilterState {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 const DEPARTMENTS = [
-  'Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'Oncology', 
+  'Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'Oncology',
   'Gynaecology', 'Nephrology', 'Dermatology', 'Psychiatry', 'Emergency'
 ];
 
@@ -116,7 +116,7 @@ export default function EnhancedAppointmentsList() {
   const [appointmentsData, setAppointmentsData] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { data: tenantsData } = useTenantsData({ limit: 100 });
-  
+
   // Fetch appointment-related activity logs
   const { activityLogs: appointmentActivities, isLoading: activityLoading } = useRecentActivity({
     resource: 'appointment',
@@ -132,7 +132,7 @@ export default function EnhancedAppointmentsList() {
         const status = statuses[Math.floor(Math.random() * statuses.length)];
         const department = DEPARTMENTS[Math.floor(Math.random() * DEPARTMENTS.length)];
         const appointmentDate = new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000);
-        
+
         return {
           id: i + 1,
           patientName: `Patient ${i + 1}`,
@@ -152,7 +152,7 @@ export default function EnhancedAppointmentsList() {
           created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
         };
       });
-      
+
       setAppointmentsData(mockAppointments);
       setIsLoading(false);
     }, 1000);
@@ -162,15 +162,15 @@ export default function EnhancedAppointmentsList() {
   useEffect(() => {
     if (appointmentsData.length > 0) {
       const filteredAppointments = filterAppointments(appointmentsData);
-      
+
       const totalAppointments = filteredAppointments.length;
       const completedAppointments = filteredAppointments.filter(a => a.status === 'completed').length;
       const cancelledAppointments = filteredAppointments.filter(a => a.status === 'cancelled').length;
       const noShowAppointments = filteredAppointments.filter(a => a.status === 'no-show').length;
-      const averageDuration = filteredAppointments.length > 0 
+      const averageDuration = filteredAppointments.length > 0
         ? Math.round(filteredAppointments.reduce((sum, a) => sum + a.duration, 0) / filteredAppointments.length)
         : 0;
-      
+
       // Status distribution
       const statusCounts = new Map<string, number>();
       filteredAppointments.forEach(appointment => {
@@ -216,8 +216,8 @@ export default function EnhancedAppointmentsList() {
         date.setMonth(date.getMonth() - i);
         const monthAppointments = filteredAppointments.filter(appointment => {
           const appointmentDate = new Date(appointment.appointmentDate);
-          return appointmentDate.getMonth() === date.getMonth() && 
-                 appointmentDate.getFullYear() === date.getFullYear();
+          return appointmentDate.getMonth() === date.getMonth() &&
+            appointmentDate.getFullYear() === date.getFullYear();
         });
         return {
           month: format(date, 'MMM yyyy'),
@@ -244,7 +244,7 @@ export default function EnhancedAppointmentsList() {
       // Search filter
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
-        const matchesSearch = 
+        const matchesSearch =
           appointment.patientName.toLowerCase().includes(searchLower) ||
           appointment.doctorName.toLowerCase().includes(searchLower) ||
           appointment.department.toLowerCase().includes(searchLower) ||
@@ -279,7 +279,7 @@ export default function EnhancedAppointmentsList() {
 
   const handleExportCSV = () => {
     if (!appointmentsData) return;
-    
+
     const filteredAppointments = filterAppointments(appointmentsData);
     const csvContent = [
       ['Appointment ID', 'Patient Name', 'Doctor Name', 'Department', 'Date', 'Time', 'Duration', 'Status', 'Type', 'Organization', 'Created Date'],
@@ -541,7 +541,7 @@ export default function EnhancedAppointmentsList() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Organizations</SelectItem>
-                  {tenantsData?.map((tenant: Tenant) => (
+                  {(tenantsData as Tenant[])?.map((tenant: Tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
                     </SelectItem>
@@ -599,8 +599,10 @@ export default function EnhancedAppointmentsList() {
                 <Input
                   placeholder="Search appointments..."
                   value={filters.searchTerm}
-                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
                   className="pl-10"
+                  onBlur={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
+                  name="searchTerm"
                 />
               </div>
             </div>
@@ -616,7 +618,7 @@ export default function EnhancedAppointmentsList() {
               <CardTitle>Appointments List</CardTitle>
               <CardDescription>
                 Showing {filteredAppointments.length} appointments
-                {filters.dateRange?.from && filters.dateRange?.to && 
+                {filters.dateRange?.from && filters.dateRange?.to &&
                   ` from ${format(filters.dateRange.from, "MMM dd, yyyy")} to ${format(filters.dateRange.to, "MMM dd, yyyy")}`
                 }
               </CardDescription>

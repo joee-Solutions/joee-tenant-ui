@@ -123,11 +123,15 @@ export default function VitalSignsForm() {
                   id={`temperature-${entry.id}`}
                   type="text"
                   placeholder="Temperature"
-            className="w-full h-14 p-3 border border-[#737373] rounded"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.temperature}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "temperature", e.target.value)
+                    updateVitalSignEntry(entry.id, "temperature", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "temperature", e.target.value) as any
+                  }
+                  name="temperature"
                 />
               </div>
               <div>
@@ -141,8 +145,13 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.systolic}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "systolic", e.target.value)
+                    updateVitalSignEntry(entry.id, "systolic", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "systolic", e.target.value) as any
+                  }
+                  name="systolic"
+
                 />
               </div>
               <div>
@@ -156,8 +165,12 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.diastolic}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "diastolic", e.target.value)
+                    updateVitalSignEntry(entry.id, "diastolic", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "diastolic", e.target.value) as any
+                  }
+                  name="diastolic"
                 />
               </div>
             </div>
@@ -174,8 +187,14 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.heartRate}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "heartRate", e.target.value)
+                    updateVitalSignEntry(entry.id, "heartRate", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "heartRate", e.target.value) as any
+                  }
+                  name="heartRate"
+
+
                 />
               </div>
               <div>
@@ -189,8 +208,15 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.respiratoryRate}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "respiratoryRate", e.target.value)
+                    updateVitalSignEntry(entry.id, "respiratoryRate", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "respiratoryRate", e.target.value) as any
+                  }
+                  name="respiratoryRate"
+
+
+
                 />
               </div>
               <div>
@@ -204,8 +230,16 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.oxygenSaturation}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "oxygenSaturation", e.target.value)
+                    updateVitalSignEntry(entry.id, "oxygenSaturation", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "oxygenSaturation", e.target.value) as any
+                  }
+                  name="oxygenSaturation"
+
+
+
+
                 />
               </div>
             </div>
@@ -222,8 +256,12 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.glucose}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "glucose", e.target.value)
+                    updateVitalSignEntry(entry.id, "glucose", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "glucose", e.target.value) as any
+                  }
+                  name="glucose"
                 />
               </div>
               <div>
@@ -237,8 +275,12 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.height}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "height", e.target.value)
+                    updateVitalSignEntry(entry.id, "height", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "height", e.target.value) as any
+                  }
+                  name="height"
                 />
               </div>
               <div>
@@ -252,8 +294,12 @@ export default function VitalSignsForm() {
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.weight}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "weight", e.target.value)
+                    updateVitalSignEntry(entry.id, "weight", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "weight", e.target.value) as any
+                  }
+                  name="weight"
                 />
               </div>
             </div>
@@ -270,6 +316,13 @@ export default function VitalSignsForm() {
                   placeholder="BMI"
                   value={entry.bmi}
                   readOnly
+                  onChange={(e) =>
+                    updateVitalSignEntry(entry.id, "bmi", e.target.value) as any
+                  }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "bmi", e.target.value) as any
+                  }
+                  name="bmi"
                 />
               </div>
               <div>
@@ -283,8 +336,12 @@ export default function VitalSignsForm() {
                   placeholder="Pain Score"
                   value={entry.painScore}
                   onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "painScore", e.target.value)
+                    updateVitalSignEntry(entry.id, "painScore", e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "painScore", e.target.value) as any
+                  }
+                  name="painScore"  
                 />
               </div>
             </div>

@@ -11,10 +11,12 @@ const mockRole: Role = {
   description: "Full administrative access to hospital management functions",
   is_active: true,
   permissions: [
-    { id: 1, name: "MANAGE_PATIENT", description: "Manage patient records", category: "patient" },
-    { id: 2, name: "MANAGE_APPOINTMENT", description: "Manage appointments", category: "appointment" },
-    { id: 3, name: "MANAGE_DEPARTMENT", description: "Manage departments", category: "department" },
-  ]
+    { id: 1, name: "MANAGE_PATIENT", description: "Manage patient records", category: "patient", is_active: true, created_at: new Date().toDateString(), updated_at: new Date().toDateString() },
+    { id: 2, name: "MANAGE_APPOINTMENT", description: "Manage appointments", category: "appointment", is_active: true, created_at: new Date().toDateString(), updated_at: new Date().toDateString() },
+    { id: 3, name: "MANAGE_DEPARTMENT", description: "Manage departments", category: "department", is_active: true, created_at: new Date().toDateString(), updated_at: new Date().toDateString() },
+  ],
+  created_at: new Date().toDateString(),
+  updated_at: new Date().toDateString()
 };
 
 export function RoleCardExamples() {
@@ -60,7 +62,7 @@ export function RoleCardExamples() {
             onClick={(role) => console.log("Toggle selection for:", role.name)}
           />
           <RoleCard
-            role={{...mockRole, name: "Doctor"}}
+            role={{ ...mockRole, name: "Doctor" }}
             variant="selection"
             isSelected={true}
             showActions={false}
@@ -74,7 +76,7 @@ export function RoleCardExamples() {
         <h3 className="text-lg font-semibold mb-4">4. System Role Card (Read-only)</h3>
         <div className="max-w-sm">
           <RoleCard
-            role={{...mockRole, name: "Super_Admin"}}
+            role={{ ...mockRole, name: "Super_Admin" }}
             onViewPermissions={(role) => console.log("View permissions for:", role.name)}
             isSeeded={true} // System role, no edit allowed
           />

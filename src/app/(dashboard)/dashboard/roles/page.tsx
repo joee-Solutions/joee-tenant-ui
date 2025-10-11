@@ -164,8 +164,9 @@ export default function RolesPage() {
           <Input
             placeholder="Search roles..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            onChange={(e) => setSearchTerm(e.target.value) as any}
+            name="searchTerm"
+            onBlur={(e) => setSearchTerm(e.target.value) as any}
           />
         </div>
       </div>

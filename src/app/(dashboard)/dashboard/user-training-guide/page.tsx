@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useTrainingGuidesData, useTrainingGuideCategories } from "@/hooks/swr";
 import { toast } from "react-toastify";
+import { TrainingGuide } from "@/lib/types";
 
 export default function UserTrainingGuidePage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,11 +24,11 @@ export default function UserTrainingGuidePage() {
   const { data: guidesData, isLoading } = useTrainingGuidesData({
     status: statusFilter,
     category: categoryFilter || undefined,
-  });
+  }); 
 
   const { data: categories } = useTrainingGuideCategories();
 
-  const guides = guidesData?.guides || [];
+  const guides = guidesData?.guides as any || [];
 
   const handleDownload = async (guide: any) => {
     try {
@@ -72,11 +73,11 @@ export default function UserTrainingGuidePage() {
     });
   };
 
-  const filteredGuides = guides.filter(guide =>
+  const filteredGuides = guides && guides.length > 0 ? guides.filter(guide =>
     guide.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     guide.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     guide.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   if (isLoading) {
     return (
@@ -103,8 +104,11 @@ export default function UserTrainingGuidePage() {
             <Input
               placeholder="Search training guides..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value) as any}
               className="pl-10"
+              onBlur={(e) => setSearchTerm(e.target.value) as any}
+              name="searchTerm"
+
             />
           </div>
           <select
@@ -113,14 +117,14 @@ export default function UserTrainingGuidePage() {
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Categories</option>
-            {categories?.map((category: string) => (
+            {categories?.map((category: any) => (
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
         </div>
 
         {/* Featured Guides */}
-        {filteredGuides.filter(guide => guide.is_featured).length > 0 && (
+        { filteredGuides && filteredGuides.filter(guide => guide.is_featured).length > 0 && (
           <div>
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Star className="text-yellow-500" size={20} />
@@ -183,7 +187,7 @@ export default function UserTrainingGuidePage() {
         <div>
           <h2 className="text-xl font-semibold mb-4">All Training Guides</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGuides
+            {filteredGuides && filteredGuides.length > 0 && filteredGuides
               .filter(guide => !guide.is_featured)
               .map((guide) => (
                 <Card key={guide.id}>
@@ -231,7 +235,7 @@ export default function UserTrainingGuidePage() {
           </div>
         </div>
 
-        {filteredGuides.length === 0 && (
+        {filteredGuides && filteredGuides.length === 0 && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No training guides found</h3>

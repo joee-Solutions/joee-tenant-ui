@@ -409,9 +409,13 @@ console.log(fields, 'fields')
                   type="text"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   value={entry.providerName}
-                  onChange={(e: ChangeEventHandler<HTMLInputElement>) =>
-                    handleInputChange(index, "providerName" as keyof VisitEntrySchemaType, e.target.value)
+                  onChange={(e) =>
+                    handleInputChange(index, "providerName" as keyof VisitEntrySchemaType, e.target.value) as any
                   }
+                  onBlur={(e) =>
+                    handleInputChange(index, "providerName" as keyof VisitEntrySchemaType, e.target.value) as any
+                  }
+                  name="providerName"
                   placeholder="Enter here"
                 />
               </div>

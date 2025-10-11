@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FormData } from "../AddPatient";
+import { FormDataStepper } from "../PatientStepper";
 
 // Validation schema
 export const emergencySchema = z.object({
@@ -35,7 +35,7 @@ export default function EmergencyContactForm() {
   const {
     register,
     formState: { errors },
-  } = useFormContext<Pick<FormData, 'emergency'>>();
+  } = useFormContext<Pick<FormDataStepper, 'emergency'>>();
 
   return (
     <div className=" mx-auto p-6 ">

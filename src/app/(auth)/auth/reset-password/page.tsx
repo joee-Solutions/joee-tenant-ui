@@ -1,9 +1,14 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ResetPasswordClient from "./ResetPasswordClient";
 
 const ResetPassword = () => {
 
-  return <ResetPasswordClient/>;
+  return (
+    <Suspense>
+      <ResetPasswordClient />;
+    </Suspense>
+  )
+
 };
 
 export default ResetPassword;

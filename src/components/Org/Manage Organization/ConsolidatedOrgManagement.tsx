@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Search, 
+import {
+  Search,
   Shield,
   Users,
   Eye,
@@ -66,7 +66,7 @@ export default function ConsolidatedOrgManagement({ slug }: { slug: string }) {
     try {
       setLoading(true);
       const response = await processRequestAuth("get", `/tenant/permissions/users`);
-      
+
       if (response && response.status) {
         setOrganizationUsers(response.data || []);
       } else {
@@ -83,7 +83,7 @@ export default function ConsolidatedOrgManagement({ slug }: { slug: string }) {
   const fetchAvailablePermissions = async () => {
     try {
       const response = await processRequestAuth("get", `/tenant/permissions/available`);
-      
+
       if (response && response.status) {
         setAvailablePermissions(response.data || []);
       }
@@ -217,8 +217,11 @@ export default function ConsolidatedOrgManagement({ slug }: { slug: string }) {
                   <Input
                     placeholder="Search users..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value) as any}
                     className="pl-10"
+                    onBlur={(e) => setSearchTerm(e.target.value) as any}
+                    name="seacrh-user"
+
                   />
                 </div>
               </div>
@@ -289,8 +292,11 @@ export default function ConsolidatedOrgManagement({ slug }: { slug: string }) {
                   <Input
                     placeholder="Search permissions..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value) as any}
                     className="pl-10"
+                    onBlur={(e) => setSearchTerm(e.target.value) as any}
+                  name="seacrh-perm"
+
                   />
                 </div>
               </div>
@@ -357,7 +363,7 @@ export default function ConsolidatedOrgManagement({ slug }: { slug: string }) {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h4 className="font-medium text-gray-900">Basic Information</h4>
@@ -365,7 +371,7 @@ export default function ConsolidatedOrgManagement({ slug }: { slug: string }) {
                   <p><span className="font-medium">Name:</span> {selectedUser.firstname} {selectedUser.lastname}</p>
                   <p><span className="font-medium">Email:</span> {selectedUser.email}</p>
                   <p><span className="font-medium">Department:</span> {selectedUser.department || 'Not assigned'}</p>
-                  <p><span className="font-medium">Status:</span> 
+                  <p><span className="font-medium">Status:</span>
                     <Badge variant={selectedUser.status === 'active' ? 'default' : 'secondary'} className="ml-2">
                       {selectedUser.status}
                     </Badge>

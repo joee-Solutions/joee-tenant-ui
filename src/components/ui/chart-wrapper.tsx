@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ResponsiveContainer } from "recharts";
 
 interface ChartWrapperProps {
-  children: React.ReactNode;
+  children: any;
   width?: string | number;
   height?: string | number;
   className?: string;

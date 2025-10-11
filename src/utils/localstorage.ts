@@ -10,7 +10,7 @@ export const localStorageUtils = {
 
     let value = localStorage.getItem(name)
     try {
-      value = JSON.parse(value)
+      value = JSON.parse(value || "{}")
     } catch (e) {
       console.error('not object')
     }

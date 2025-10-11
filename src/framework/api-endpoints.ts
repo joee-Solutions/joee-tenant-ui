@@ -64,6 +64,7 @@ export const API_ENDPOINTS = {
   // Permissions Management
   GET_ALL_PERMISSIONS: "/management/super/permissions/all",
   CREATE_PERMISSION: "/management/super/permissions/create",
+  UPDATE_PERMISSION: (permissionId: number) => `/management/super/permissions/${permissionId}/update`,
   
   // User Role Management
   GET_TENANT_USERS: (orgId: string) => `super/tenants/${orgId}/employees`,

@@ -146,7 +146,7 @@ console.log(employeesData,'employeesData')
   };
   
   // Map backend data to AppointmentsChart expected props
-  let appointmentsChartData = null;
+  let appointmentsChartData: any = null;
   if (
     appointmentsData &&
     typeof appointmentsData === 'object' &&
@@ -162,7 +162,7 @@ console.log(employeesData,'employeesData')
   }
 
   // Map backend data to PatientsDonut expected props
-  let patientsDonutData = null;
+  let patientsDonutData: any = null;
   if (
     patientsData &&
     typeof patientsData === 'object' &&

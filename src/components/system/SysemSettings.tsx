@@ -51,11 +51,11 @@ export default function SystemSettings() {
     resolver: zodResolver(SystemSettingsSchema),
     mode: "onChange",
     defaultValues: {
-      firstName: "JP",
-      lastName: "Morgan",
+      name: "JP",
+      title: "Morgan",
       email: "jpMorgan@gmail.com",
       phoneNumber: "0818888888",
-      role: "",
+      address: "",
       company: "Joee Solution",
     },
   });

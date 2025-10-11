@@ -7,7 +7,7 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -69,7 +69,7 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
       setTimeout(() => {
         const reader = new FileReader();
         reader.onload = () => {
-          setImage(reader.result);
+          setImage(reader.result as any);
           setUploading(false);
         };
         reader.readAsDataURL(file);
@@ -86,7 +86,7 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
   };
 
   const openFileDialog = () => {
-    fileInputRef.current.click();
+    fileInputRef?.current?.click();
   };
 
   return (

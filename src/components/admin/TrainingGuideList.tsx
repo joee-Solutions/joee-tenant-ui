@@ -205,8 +205,11 @@ export default function TrainingGuideList() {
           <Input
             placeholder="Search training guides..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value) as any}
             className="pl-10"
+            onBlur={(e) => setSearchTerm(e.target.value) as any}
+            name="searchh-train"
+
           />
         </div>
         <select
@@ -292,7 +295,7 @@ export default function TrainingGuideList() {
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>

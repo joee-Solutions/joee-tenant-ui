@@ -187,7 +187,9 @@ export default function PermissionsManager({ slug }: { slug: string }) {
                       type="text"
                       placeholder="Search permissions..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => setSearchTerm(e.target.value) as any}
+                      onBlur={(e) => setSearchTerm(e.target.value) as any}
+                      name="seacrh-perm"
                       className="pl-10"
                     />
                   </div>

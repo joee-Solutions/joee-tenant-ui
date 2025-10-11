@@ -100,7 +100,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
   // Calculate stats based on filtered data
   useEffect(() => {
     if (users && Array.isArray(users)) {
-      const filteredUsers = filterUsers(users);
+      const filteredUsers = filterUsers(users  as any[]);
       
       const totalUsers = filteredUsers.length;
       const activeUsers = filteredUsers.filter(user => user.is_active).length;
@@ -185,7 +185,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
   const handleExportCSV = () => {
     if (!users) return;
     
-    const filteredUsers = filterUsers(users);
+    const filteredUsers = filterUsers(users as any[]);
     const csvContent = [
       ['ID', 'First Name', 'Last Name', 'Email', 'Organization', 'Status', 'Created Date'],
       ...filteredUsers.map(user => [
@@ -213,7 +213,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
     window.print();
   };
 
-  const filteredUsers = users ? filterUsers(users) : [];
+  const filteredUsers = users ? filterUsers(users as any[]) : [];
 
   if (error) {
     return (
@@ -402,7 +402,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Organizations</SelectItem>
-                  {tenantsData?.map((tenant: Tenant) => (
+                  {(tenantsData as Tenant[])?.map((tenant: Tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
                     </SelectItem>
@@ -419,8 +419,10 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
                 <Input
                   placeholder="Search users..."
                   value={filters.searchTerm}
-                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
                   className="pl-10"
+                  onBlur={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
+                  name="search-user"
                 />
               </div>
             </div>

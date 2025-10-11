@@ -297,7 +297,7 @@ export const useTenantsData = (filters?: { search?: string; sort?: string; statu
     revalidateOnReconnect: true,
   });
   return {
-    data: extractData<Tenant[]>(data),
+    data: extractData<Tenant[]>(data) as any,
     meta: extractMeta(data),
     isLoading,
     error,
@@ -441,7 +441,7 @@ export const useTrainingGuidesData = (filters?: {
   });
 
   return {
-    data: extractData<TrainingGuide[]>(data),
+    data: extractData<any[]>(data) as any,
     meta: extractMeta(data),
     isLoading,
     error,

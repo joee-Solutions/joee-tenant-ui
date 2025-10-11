@@ -466,7 +466,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Organizations</SelectItem>
-                  {tenantsData?.map((tenant: Tenant) => (
+                  {(tenantsData as Tenant[])?.map((tenant: Tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
                     </SelectItem>
@@ -522,7 +522,9 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                 <Input
                   placeholder="Search patients..."
                   value={filters.searchTerm}
-                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
+                  onBlur={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
+                  name="searchTerm"
                   className="pl-10"
                 />
               </div>
