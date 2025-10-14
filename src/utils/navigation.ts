@@ -120,26 +120,6 @@ export const sideNavigation = [
         icon: icons.FileChartColumn,
         href: "/dashboard/reports",
       },
-      {
-        title: "Users Report",
-        icon: icons.Users,
-        href: "/dashboard/reports?tab=users",
-      },
-      {
-        title: "Patients Report",
-        icon: icons.UserCheck,
-        href: "/dashboard/reports?tab=patients",
-      },
-      {
-        title: "Appointments Report",
-        icon: icons.Calendar,
-        href: "/dashboard/reports?tab=appointments",
-      },
-      {
-        title: "Prescriptions Report",
-        icon: icons.Pill,
-        href: "/dashboard/reports?tab=prescriptions",
-      },
     ],
   },
   { 

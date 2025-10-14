@@ -30,7 +30,7 @@ export const API_ENDPOINTS = {
     `super/tenants/${tenantId}/employees`,
    UPDATE_TENANT_EMPLOYEE: (tenantId: number, employeeId: number) =>
      `super/tenants/${tenantId}/employees/${employeeId}`,
-  GET_ALL_USERS: "super/tenants",
+  GET_ALL_USERS: "super/tenants/employees",
 
   //  super admin
   GET_SUPER_ADMIN: "/management/super/admin/all",

@@ -82,7 +82,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
   const { data: allUsersData, isLoading: allLoading, error: allError } = useAllUsersData();
   const { data: tenantUsersData, isLoading: tenantLoading, error: tenantError } = useTenantUsersData(organizationId || '');
   const { data: tenantsData } = useTenantsData({ limit: 100 });
-  
+  console.log(tenantUsersData, "tenantUsersData", allUsersData, "allUsersData", tenantLoading, "tenantLoading", allLoading, "allLoading");
   // Fetch user-related activity logs
   const { activityLogs: userActivities, isLoading: activityLoading } = useRecentActivity({
     resource: 'user',
@@ -170,9 +170,21 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
       }
 
       // Date range filter
-      if (filters.dateRange?.from && filters.dateRange?.to) {
+      if (filters.dateRange?.from || filters.dateRange?.to) {
         const userDate = new Date(user.createdAt);
-        if (userDate < filters.dateRange.from || userDate > filters.dateRange.to) return false;
+        userDate.setHours(0, 0, 0, 0); // Normalize to start of day
+        
+        if (filters.dateRange?.from) {
+          const fromDate = new Date(filters.dateRange.from);
+          fromDate.setHours(0, 0, 0, 0);
+          if (userDate < fromDate) return false;
+        }
+        
+        if (filters.dateRange?.to) {
+          const toDate = new Date(filters.dateRange.to);
+          toDate.setHours(23, 59, 59, 999); // End of day
+          if (userDate > toDate) return false;
+        }
       }
 
       // Inactive users filter
@@ -372,10 +384,15 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Filters
+            </CardTitle>
+            <CardDescription>
+              {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} match{filteredUsers.length === 1 ? 'es' : ''} current filters
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -441,6 +458,24 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
               </label>
             </div>
           </div>
+          
+          {/* Clear Filters Button */}
+          {(filters.dateRange || filters.organization !== "all" || filters.searchTerm || filters.includeInactive) && (
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilters({
+                  dateRange: undefined,
+                  organization: "all",
+                  includeInactive: false,
+                  searchTerm: ""
+                })}
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -497,9 +532,9 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
             ) : filteredUsers.length > 0 ? (
               filteredUsers
                 .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                .map((user) => (
+                .map((user,idx) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
+                    <TableCell className="font-medium">{idx + 1}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">

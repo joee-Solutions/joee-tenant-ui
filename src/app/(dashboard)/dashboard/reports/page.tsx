@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,18 @@ import { formatDistanceToNow } from "date-fns";
 import { clsx } from "clsx";
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get("tab");
+  
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "overview");
+
+  // Update active tab when URL changes
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
   const { activityLogs: recentActivity, isLoading: activityLoading } = useRecentActivity({ limit: 5 });
   const { stats: activityStats, isLoading: statsLoading } = useActivityStats();
   const { data: dashboardData, isLoading: dashboardLoading } = useDashboardData();
@@ -62,6 +74,16 @@ export default function ReportsPage() {
       description: "Medication and prescription management"
     }
   ];
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Update URL with the new tab
+    if (value === "overview") {
+      router.push("/dashboard/reports");
+    } else {
+      router.push(`/dashboard/reports?tab=${value}`);
+    }
+  };
 
   const handleExportAllReports = () => {
     // This would trigger export of all report data
@@ -288,7 +310,7 @@ export default function ReportsPage() {
         )}
 
         {/* Report Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-8">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full mt-8">
           <TabsList className="flex w-full rounded-xl shadow border border-gray-200 bg-white overflow-hidden">
             {reportTabs.map((tab) => (
               <TabsTrigger
