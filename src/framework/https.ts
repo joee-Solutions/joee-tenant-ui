@@ -105,13 +105,13 @@ const processRequestNoAuth = async (
   //   }
   try {
     if (method === "post") {
-      rt = await httpNoAuth.post(`/api/${path}`, data);
+      rt = await httpNoAuth.post(`/api${path}`, data);
     } else if (method === "get") {
-      rt = await httpNoAuth.get(`/api/${path}`, {
+      rt = await httpNoAuth.get(`/api${path}`, {
         signal: controller.signal,
       });
     } else if (method === "put") {
-      rt = await httpNoAuth.put(`/api/${path}`, data);
+      rt = await httpNoAuth.put(`/api${path}`, data);
     } else if (method === "delete") {
       rt = await httpNoAuth.delete(path);
     } else {
@@ -151,13 +151,13 @@ const processRequestAuth = async (
 
   try {
     if (method === "post") {
-      rt = await httpAuth.post(`/api/${path}`, data);
+      rt = await httpAuth.post(`/api${path}`, data);
     } else if (method === "get") {
-      rt = await httpAuth.get(`/api/${path}`, {
+      rt = await httpAuth.get(`/api${path}`, {
         signal: controller.signal,
       });
     } else if (method === "put") {
-      rt = await httpAuth.put(`/api/${path}`, data);
+      rt = await httpAuth.put(`/api${path}`, data);
     } else if (method === "delete") {
       rt = await httpAuth.delete(path);
     } else {

@@ -9,28 +9,28 @@ export const API_ENDPOINTS = {
   VERIFY_OTP: "/auth/super/verify-otp",
   VERIFY_LOGIN: "/auth/super/verify-login-otp",
   RESEND_OTP: "/auth/super/resend-otp",
-  GET_DASHBOARD_DATA: "super/tenants/dashboard",
-  GET_DASHBOARD_APPOINTMENTS: "super/tenants/dashboard/appointments",
-  GET_DASHBOARD_USERS: "super/tenants/dashboard/users",
-  GET_DASHBOARD_PATIENTS: "super/tenants/dashboard/patients",
-  CREATE_TENANTs: "super/tenants",
-  GET_ALL_TENANTS: "super/tenants",
+  GET_DASHBOARD_DATA: "/super/tenants/dashboard",
+  GET_DASHBOARD_APPOINTMENTS: "/super/tenants/dashboard/appointments",
+  GET_DASHBOARD_USERS: "/super/tenants/dashboard/users",
+  GET_DASHBOARD_PATIENTS: "/super/tenants/dashboard/patients",
+  CREATE_TENANTs: "/super/tenants",
+  GET_ALL_TENANTS: "/super/tenants",
   GET_TENANT: (tenantId: string) => `super/tenants/${tenantId}`,
-  EDIT_ORGANIZATION: (tenantId: string) => `super/tenants/${tenantId}`,
+  EDIT_ORGANIZATION: (tenantId: string) => `/super/tenants/${tenantId}`,
   TENANTS_DEPARTMENTS: (tenantId: number) =>
-    `super/tenants/${tenantId}/departments`,
-  TENANTS_PATIENTS: (tenantId: number) => `super/tenants/${tenantId}/patients`,
+    `/super/tenants/${tenantId}/departments`,
+  TENANTS_PATIENTS: (tenantId: number) => `/super/tenants/${tenantId}/patients`,
   TENANTS_APPOINTMENTS: (tenantId: number) =>
-    `super/tenants/${tenantId}/appointments`,
+    `/super/tenants/${tenantId}/appointments`,
   TENANTS_SCHEDULES: (tenantId: number) =>
-    `super/tenants/${tenantId}/schedules`,
+    `/super/tenants/${tenantId}/schedules`,
    TENANTS_EMPLOYEES: (tenantId: number,deptId:number) =>
-    `super/tenants/${tenantId}/${deptId}/employees`,
+    `/super/tenants/${tenantId}/${deptId}/employees`,
    GET_TENANTS_EMPLOYEES: (tenantId: number) =>
-    `super/tenants/${tenantId}/employees`,
+    `/super/tenants/${tenantId}/employees`,
    UPDATE_TENANT_EMPLOYEE: (tenantId: number, employeeId: number) =>
-     `super/tenants/${tenantId}/employees/${employeeId}`,
-  GET_ALL_USERS: "super/tenants/employees",
+     `/super/tenants/${tenantId}/employees/${employeeId}`,
+  GET_ALL_USERS: "/super/tenants/employees",
 
   //  super admin
   GET_SUPER_ADMIN: "/management/super/admin/all",
@@ -67,14 +67,14 @@ export const API_ENDPOINTS = {
   UPDATE_PERMISSION: (permissionId: number) => `/management/super/permissions/${permissionId}/update`,
   
   // User Role Management
-  GET_TENANT_USERS: (orgId: string) => `super/tenants/${orgId}/employees`,
-  ASSIGN_ROLES_TO_USER: (userId: number) => `super/tenants/users/${userId}/roles/assign`,
-  REMOVE_ROLE_FROM_USER: (userId: number, roleId: number) => `super/tenants/users/${userId}/roles/${roleId}`,
+  GET_TENANT_USERS: (orgId: string) => `/super/tenants/${orgId}/employees`,
+  ASSIGN_ROLES_TO_USER: (userId: number) => `/super/tenants/users/${userId}/roles/assign`,
+  REMOVE_ROLE_FROM_USER: (userId: number, roleId: number) => `/super/tenants/users/${userId}/roles/${roleId}`,
   // Patient Management
-  CREATE_PATIENT: (tenantId: number) => `super/tenants/${tenantId}/patients`,
-  GET_PATIENT: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}`,
-  UPDATE_PATIENT: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}`,
-  DELETE_PATIENT: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}`,
-  GET_ALL_PATIENTS: (tenantId: number) => `super/tenants/${tenantId}/patients`,
-  GET_PATIENT_APPOINTMENTS: (tenantId: number, patientId: number) => `super/tenants/${tenantId}/patients/${patientId}/appointments`,
+  CREATE_PATIENT: (tenantId: number) => `/super/tenants/${tenantId}/patients`,
+  GET_PATIENT: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}`,
+  UPDATE_PATIENT: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}`,
+  DELETE_PATIENT: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}`,
+  GET_ALL_PATIENTS: (tenantId: number) => `/super/tenants/${tenantId}/patients`,
+  GET_PATIENT_APPOINTMENTS: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}/appointments`,
 };
