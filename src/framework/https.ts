@@ -12,7 +12,7 @@ export const resetController = () => {
   controller.abort();
   controller = new AbortController(); // reassign
 };
-
+console.log("siteConfig.siteUrl-->", siteConfig.siteUrl);
 if (typeof window !== undefined) {
   httpNoAuth = axios.create({
     baseURL: siteConfig.siteUrl,
