@@ -7,6 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 
 const apiUrl = siteConfig.host;
+
 export async function GET(req: NextRequest) {
   console.log("req-->", apiUrl);
   const requestPath = new URL(req.url).pathname;
