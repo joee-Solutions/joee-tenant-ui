@@ -3,12 +3,7 @@
 import { FC } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import Link from "next/link";
-
-interface AgeGroup {
-  range: string;
-  percentage: number;
-  color: string;
-}
+import { AgeGroup } from "@/lib/types";
 
 interface PatientsDonutProps {
   data: {

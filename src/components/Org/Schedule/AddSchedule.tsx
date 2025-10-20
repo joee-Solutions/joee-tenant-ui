@@ -81,7 +81,7 @@ export default function ScheduleForm({ slug }: { slug: string }) {
 
       const res = await processRequestAuth(
         "post",
-        `super/tenants/${slug}/schedules/${data.employeeId}`,
+        `/super/tenants/${slug}/schedules/${data.employeeId}`,
         scheduleData
       );
 

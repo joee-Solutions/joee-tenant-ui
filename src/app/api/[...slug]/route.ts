@@ -17,10 +17,11 @@ export async function GET(req: NextRequest) {
     req.headers.get("authorization") || req.headers.get("Authorization");
   const query = req.nextUrl.searchParams;
   const queryString = query.toString();
-
+const pathUrl = `${apiUrl}${pathName}${queryString ? "?" + queryString : ""}`;
+console.log("pathUrl-->", pathUrl);
   try {
     const res = await axios.get(
-      `${apiUrl}${pathName} ${queryString ? "?" + queryString : ""}`,
+      pathUrl,
       {
         headers: {
           "Content-Type": "application/json",
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const query = req.nextUrl.searchParams;
   const queryString = query.toString();
-  const path = `${apiUrl}${pathName} ${queryString ? "?" + queryString : ""}`;
+  const path = `${apiUrl}${pathName}${queryString ? "?" + queryString : ""}`;
   try {
     const res = await axios.post(path, body, {
       headers: {

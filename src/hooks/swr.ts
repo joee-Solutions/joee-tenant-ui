@@ -9,6 +9,7 @@ import {
   DashboardData,
   Notification,
   Employee,
+  AgeGroup,
 } from "@/lib/types";
 import { extractData, extractMeta } from "@/framework/joee.client";
 
@@ -105,20 +106,22 @@ export const useDashboardData = () => {
   };
 };
 
-// Temporary types for dashboard appointments and patients
+// Types for dashboard appointments data
+interface AppointmentsByDay {
+  day: string;
+  male: number;
+  female: number;
+}
+
 interface DashboardAppointmentsData {
-  totalUsers?: number;
-  activeUsers?: number;
-  inactiveUsers?: number;
-  // Add more fields as needed
+  clinic: string;
+  weeklyGrowth: number;
+  appointmentsByDay: AppointmentsByDay[];
 }
 
 interface DashboardPatientsData {
-  totalPatients?: number;
-  malePatients?: number;
-  femalePatients?: number;
-  otherPatients?: number;
-  // Add more fields as needed
+  totalPatients: number;
+  ageDistribution: AgeGroup[];
 }
 // Custom hook for dashboard appointments data
 export const useDashboardAppointments = () => {
@@ -134,8 +137,9 @@ export const useDashboardAppointments = () => {
       revalidateOnReconnect: true,
     }
   );
+  
   return {
-    data: extractData<DashboardAppointmentsData>(data),
+    data: extractData<DashboardAppointmentsData>(data?.data?.data),
     isLoading,
     error,
   };
@@ -155,8 +159,13 @@ export const useDashboardPatients = () => {
       revalidateOnReconnect: true,
     }
   );
+  console.log('data patients',data?.data)
+
+  console.log('Raw patients API response:', data);
+  console.log('Extracted patients data:', extractData<DashboardPatientsData>(data?.data?.data));
+
   return {
-    data: extractData<DashboardPatientsData>(data),
+    data: extractData<DashboardPatientsData>(data?.data?.data),
     isLoading,
     error,
   };
@@ -177,7 +186,7 @@ export const useDashboardEmployees = () => {
     }
   );
   return {
-    data: extractData<AdminUser[]>(data),
+    data: extractData<AdminUser[]>(data?.data?.data),
     isLoading,
     error,
   };
@@ -206,7 +215,7 @@ export const useAllUsersData = () => {
 // Custom hook for all patients across all organizations
 export const useAllPatientsData = () => {
   const { data, isLoading, error } = useSWR(
-    "super/tenants/patients",
+    "/super/tenants/patients",
     authFectcher,
     {
       onError: (error) => {
@@ -226,7 +235,7 @@ export const useAllPatientsData = () => {
 // Custom hook for patients in a specific organization
 export const useTenantPatientsData = (orgId: string) => {
   const { data, isLoading, error } = useSWR(
-    orgId ? `super/tenants/${orgId}/patients` : null,
+    orgId ? `/super/tenants/${orgId}/patients` : null,
     authFectcher,
     {
       onError: (error) => {
@@ -265,7 +274,7 @@ export interface RecentActivity {
 // Custom hook for recent activity data
 export const useRecentActivityData = (limit: number = 10) => {
   const { data, isLoading, error } = useSWR(
-    `super/tenants/activity/recent?limit=${limit}`,
+    `/super/tenants/activity/recent?limit=${limit}`,
     authFectcher,
     {
       onError: (error) => {

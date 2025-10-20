@@ -167,7 +167,7 @@ const processRequestAuth = async (
     if (callback) {
       callback(path, rt.data);
     }
-    console.log(rt.data, "rt.data");
+    // console.log(rt.data, "rt.data");
     return rt.data;
   } catch (error: any) {
     if (!refreshingToking && error?.response?.status === 401) {

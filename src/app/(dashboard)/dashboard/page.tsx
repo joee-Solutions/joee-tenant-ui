@@ -145,36 +145,12 @@ console.log(employeesData,'employeesData')
     networkTab: { icon: <></> },
   };
   
-  // Map backend data to AppointmentsChart expected props
-  let appointmentsChartData: any = null;
-  if (
-    appointmentsData &&
-    typeof appointmentsData === 'object' &&
-    !Array.isArray(appointmentsData)
-  ) {
-    appointmentsChartData = {
-      clinic: 'clinic' in appointmentsData && typeof appointmentsData.clinic === 'string' ? appointmentsData.clinic : '',
-      weeklyGrowth: 'weeklyGrowth' in appointmentsData && typeof appointmentsData.weeklyGrowth === 'number' ? appointmentsData.weeklyGrowth : 0,
-      appointmentsByDay: Array.isArray((appointmentsData as { appointmentsByDay?: unknown[] })?.appointmentsByDay)
-        ? (appointmentsData as { appointmentsByDay: AppointmentsByDay[] }).appointmentsByDay
-        : [],
-    };
-  }
+  // Use appointments data directly from backend
+  const appointmentsChartData = appointmentsData;
 
-  // Map backend data to PatientsDonut expected props
-  let patientsDonutData: any = null;
-  if (
-    patientsData &&
-    typeof patientsData === 'object' &&
-    !Array.isArray(patientsData)
-  ) {
-    patientsDonutData = {
-      totalPatients: typeof patientsData.totalPatients === 'number' ? patientsData.totalPatients : 0,
-      ageDistribution: Array.isArray((patientsData as { ageDistribution?: unknown[] })?.ageDistribution)
-        ? (patientsData as { ageDistribution: AgeGroup[] }).ageDistribution
-        : [],
-    };
-  }
+  // Use patients data directly from backend
+  const patientsDonutData = patientsData;
+  console.log(patientsData,'patientsData',patientsDonutData,'passdd')
 
   return (
     <div className="min-h-screen w-full  mb-10">
@@ -239,7 +215,7 @@ console.log(employeesData,'employeesData')
               <SkeletonBox className="h-[300px] w-full" />
             ) : errorAppointments ? (
               <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load appointments data</div>
-            ) : appointmentsChartData && appointmentsChartData.appointmentsByDay && appointmentsChartData.appointmentsByDay.length > 0 ? (
+            ) : appointmentsChartData && !Array.isArray(appointmentsChartData) && appointmentsChartData.appointmentsByDay && appointmentsChartData.appointmentsByDay.length > 0 ? (
               <AppointmentsChart data={appointmentsChartData} />
             ) : (
               <div className="bg-white p-6 rounded-lg shadow-md text-gray-500 h-[300px] w-full flex items-center justify-center">No appointments data available</div>
@@ -249,7 +225,7 @@ console.log(employeesData,'employeesData')
               <SkeletonBox className="h-[300px] w-full" />
             ) : errorPatients ? (
               <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load patients data</div>
-            ) : patientsDonutData && patientsDonutData.ageDistribution && patientsDonutData.ageDistribution.length > 0 ? (
+            ) : patientsDonutData && !Array.isArray(patientsDonutData) && patientsDonutData.ageDistribution && patientsDonutData.ageDistribution.length > 0 ? (
               <PatientsDonut data={patientsDonutData} />
             ) : (
               <div className="bg-white p-6 rounded-lg shadow-md text-gray-500 h-[300px] w-full flex items-center justify-center">No patients data available</div>

@@ -88,7 +88,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
 
       const res = await processRequestAuth(
         "post",
-        `super/tenants/${slug}/appointments/${data.patientId}/${data.doctorId}`,
+        `/super/tenants/${slug}/appointments/${data.patientId}/${data.doctorId}`,
         appointmentData
       );
 
