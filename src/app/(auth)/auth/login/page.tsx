@@ -80,14 +80,13 @@ const TenantLoginPage = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-24  items-center justify-center font-poppins place-items-center">
       <div className="content col-span-1 text-white hidden md:flex flex-col justify-center space-y-8">
-        <h1 className="header font-bold text-4xl md:text-8xl">Welcome!</h1>
+        <h1 className="header font-bold text-4xl md:text-8xl">Welcome to LoCi Care</h1>
         <div className="line border-2 border-white w-40"></div>
         <div className="line border-3 border-white"></div>
         <span className="welcom md:w-3/4 text-lg leading-8">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Qui
-          repudiandae, saepe reprehenderit voluptate at a ipsum atque quod
-          debitis. Excepturi magnam officia soluta ex at. Iusto fugiat numquam
-          error doloremque?
+          Empowering Missions. Strengthening Communities.
+          <br />
+          Together, we connect people, data, and care—driving innovation, compassion, and operational excellence to advance community well-being
         </span>
       </div>
       <div className=" col-span-1 shadow-lg rounded-2xl  border border-blue-500 text-white z-40 w-full max-w-[350px] md:max-w-[550px] md:px-8 px-8 py-20 [linear-gradient:rgb()] bg-[#5882C147]">
