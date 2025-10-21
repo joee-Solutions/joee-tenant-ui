@@ -206,7 +206,7 @@ export const useAllUsersData = () => {
     }
   );
   return {
-    data: extractData<OrganizationUser[]>(data),
+    data: extractData<OrganizationUser[]>(data?.data.data),
     isLoading,
     error,
   };
@@ -226,7 +226,7 @@ export const useAllPatientsData = () => {
     }
   );
   return {
-    data: extractData<any[]>(data),
+    data: extractData<any[]>(data?.data?.data),
     isLoading,
     error,
   };
@@ -352,7 +352,7 @@ export const useTenantUsersData = (orgId: string) => {
   );
 
   return {
-    data: extractData<AdminUser[]>(data),
+    data: extractData<AdminUser[]>(data?.data.data),
     meta: extractMeta(data),
     isLoading,
     error,

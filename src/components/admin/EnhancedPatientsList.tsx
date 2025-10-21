@@ -38,15 +38,15 @@ import { useRecentActivity } from "@/hooks/useActivityLogs";
 
 interface Patient {
   id: number;
-  firstname: string;
-  lastname: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string;
   address: string;
   city: string;
   state: string;
   country: string;
-  dateOfBirth: string;
+  date_of_birth: string;
   gender: string;
   race: string;
   ethnicity: string;
@@ -56,6 +56,12 @@ interface Patient {
   };
   created_at: string;
   service_date?: string;
+  sex: string;
+  contact_info: {
+    phone_number_home: string;
+    email: string;
+    address: string;
+  };
 }
 
 interface PatientStats {
@@ -154,7 +160,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
       // Age distribution
       const ageCounts = new Map<string, number>();
       filteredPatients.forEach(patient => {
-        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+        const age = new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear();
         const ageGroup = AGE_GROUPS.find(group => age >= group.min && age <= group.max)?.label || 'Unknown';
         ageCounts.set(ageGroup, (ageCounts.get(ageGroup) || 0) + 1);
       });
@@ -197,8 +203,8 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
         const matchesSearch = 
-          patient.firstname.toLowerCase().includes(searchLower) ||
-          patient.lastname.toLowerCase().includes(searchLower) ||
+          patient.first_name.toLowerCase().includes(searchLower) ||
+          patient.last_name.toLowerCase().includes(searchLower) ||
           patient.email.toLowerCase().includes(searchLower) ||
           patient.phone.toLowerCase().includes(searchLower) ||
           patient.address.toLowerCase().includes(searchLower);
@@ -217,7 +223,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
 
       // Age group filter
       if (filters.ageGroup !== "all") {
-        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+        const age = new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear();
         const ageGroup = AGE_GROUPS.find(group => age >= group.min && age <= group.max)?.label;
         if (ageGroup !== filters.ageGroup) return false;
       }
@@ -239,11 +245,11 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
     const csvContent = [
       ['Patient ID', 'Date Created', 'Patient Name', 'Patient Address', 'Age', 'Gender', 'Race', 'Ethnicity', 'Phone', 'Email', 'Organization', 'State', 'Country'],
       ...filteredPatients.map(patient => {
-        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+        const age = new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear();
         return [
           patient.id,
           new Date(patient.created_at).toLocaleDateString(),
-          `${patient.firstname} ${patient.lastname}`,
+          `${patient.first_name} ${patient.last_name}`,
           patient.address,
           age,
           patient.gender,
@@ -331,7 +337,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
             <div className="text-2xl font-bold text-green-600">
               {filteredPatients.length > 0 
                 ? Math.round(filteredPatients.reduce((sum, p) => {
-                    const age = new Date().getFullYear() - new Date(p.dateOfBirth).getFullYear();
+                    const age = new Date().getFullYear() - new Date(p.date_of_birth).getFullYear();
                     return sum + age;
                   }, 0) / filteredPatients.length)
                 : 0
@@ -589,7 +595,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
               filteredPatients
                 .slice((currentPage - 1) * pageSize, currentPage * pageSize)
                 .map((patient) => {
-                  const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+                  const age = new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear();
                   return (
                     <TableRow key={patient.id}>
                       <TableCell className="font-medium">{patient.id}</TableCell>
@@ -599,20 +605,20 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                             <User className="w-4 h-4 text-gray-500" />
                           </div>
                           <span className="font-medium">
-                            {patient.firstname} {patient.lastname}
+                            {patient.first_name} {patient.last_name}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{patient.address}</TableCell>
+                      <TableCell>{patient.contact_info.address}</TableCell>
                       <TableCell>{age}</TableCell>
                       <TableCell>
-                        <Badge variant={patient.gender === 'Male' ? "default" : "secondary"}>
-                          {patient.gender}
+                        <Badge variant={patient.sex === 'Male' ? "default" : "secondary"}>
+                          {patient.sex}
                         </Badge>
                       </TableCell>
                       <TableCell>{patient.tenant.name}</TableCell>
-                      <TableCell>{patient.phone}</TableCell>
-                      <TableCell>{patient.email}</TableCell>
+                      <TableCell>{patient.contact_info.phone_number_home}</TableCell>
+                      <TableCell>{patient.contact_info.email}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline">
