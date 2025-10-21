@@ -3,13 +3,21 @@ import { devtools, persist } from "zustand/middleware";
 
 export type StoreActions = {
   setStoreState: (state: Partial<StoreState>) => void;
+  setUser: (user: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: string;
+  }) => void;
 };
 export type StoreState = {
   loading: boolean;
   error: string | null;
   user?: {
     id: string;
-    name: string;
+    first_name: string;
+    last_name: string;
     email: string;
     role: string;
   };
@@ -36,6 +44,11 @@ export const createJoeeStore = (initState: StoreState = initialState) => {
             setStoreState: (state) => {
               set((prev) => ({
                 state: { ...prev.state, ...state },
+              }));
+            },
+            setUser: (user) => {
+              set((prev) => ({
+                state: { ...prev.state, user },
               }));
             },
           },

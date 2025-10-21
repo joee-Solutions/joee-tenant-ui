@@ -131,15 +131,15 @@ export const sideNavigation = [
 
     children: [
       {
-        title: "Training Guides",
+        title: "User Training Guide",
         icon: icons.FileArchive,
         href: "/dashboard/training-guides",
       },
-      {
-        title: "User Training Guide",
-        icon: icons.FileText,
-        href: "/dashboard/user-training-guide",
-      },
+      // {
+      //   title: "User Training Guide",
+      //   icon: icons.FileText,
+      //   href: "/dashboard/user-training-guide",
+      // },
       {
         title: "System Settings",
         icon: icons.Cog,

@@ -42,6 +42,10 @@ export const API_ENDPOINTS = {
   CREATE_TRAINING_GUIDE: "/management/super/training-guides",
   UPDATE_TRAINING_GUIDE: (id: number) => `/management/super/training-guides/${id}`,
   DELETE_TRAINING_GUIDE: (id: number) => `/management/super/training-guides/${id}`,
+  
+  // System Settings
+  GET_SYSTEM_SETTINGS: "/management/super/system-settings",
+  UPDATE_SYSTEM_SETTINGS: "/management/super/system-settings",
   GET_TRAINING_GUIDE_CATEGORIES: "/management/super/training-guides/categories",
   
   // Notifications

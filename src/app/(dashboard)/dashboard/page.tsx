@@ -16,6 +16,7 @@ import type { User } from "@/lib/types";
 import { useTenantsData } from "@/hooks/swr";
 import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
+import { useTenantStore } from "@/contexts/AuthProvider";
 
 // import { Organization, Employee, Patient } from '@/lib/types';
 
@@ -49,23 +50,24 @@ const DashboardPage: NextPage = () => {
   const { data: patientsData, isLoading: loadingPatients, error: errorPatients } = useDashboardPatients();
   const { data: employeesData, isLoading: loadingEmployees, error: errorEmployees } = useDashboardEmployees();
   const { data: tenantsData, isLoading: loadingTenants, error: errorTenants } = useTenantsData({ limit: 4 });
+  const user = useTenantStore(state => state.state.user);
   const organizations = Array.isArray(tenantsData)
     ? tenantsData.filter((t): t is import("@/lib/types").Tenant => typeof t === 'object' && t !== null && 'id' in t && 'name' in t)
-        .slice(0, 4)
-        .map((tenant) => ({
-          id: tenant.id,
-          name: tenant.name,
-          location: tenant.address || tenant.domain || "-",
-          status:
-            tenant.status === "ACTIVE"
-              ? "Active"
-              : tenant.status === "INACTIVE"
+      .slice(0, 4)
+      .map((tenant) => ({
+        id: tenant.id,
+        name: tenant.name,
+        location: tenant.address || tenant.domain || "-",
+        status:
+          tenant.status === "active"
+            ? "Active"
+            : tenant.status === "inactive"
               ? "Inactive"
-              : tenant.status === "DEACTIVATED"
-              ? "Deactivated"
-              : "Inactive",
-          image: tenant.logo || "/assets/images/profilepic.png",
-        }))
+              : tenant.status === "deactivated"
+                ? "Deactivated"
+                : "Inactive",
+        image: tenant.logo || "/assets/images/profilepic.png",
+      }))
     : [];
 
   const { data: orgStatusData, isLoading: loadingOrgStatus, error: errorOrgStatus } = useSWR(
@@ -87,7 +89,6 @@ const DashboardPage: NextPage = () => {
     totalCount: 0,
     completionPercentage: 0,
   };
-console.log(employeesData,'employeesData')
   // Handle error state
   if (error) {
     return (
@@ -96,8 +97,8 @@ console.log(employeesData,'employeesData')
           <div className="flex flex-col items-center justify-center gap-4 py-12">
             <h2 className="text-2xl font-semibold text-red-600">Failed to Load Dashboard</h2>
             <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               Refresh Page
@@ -119,8 +120,7 @@ console.log(employeesData,'employeesData')
     deactivatedOrganizations: parseFloat(
       (data?.deactivatedTenants ? (data?.deactivatedTenants * 100) / data?.totalTenants : 0).toFixed(2)),
   };
-  
-  console.log("Growth Data:", growth);
+
   const stats = {
     allOrganizations: {
       count: data?.totalTenants || 0,
@@ -144,13 +144,12 @@ console.log(employeesData,'employeesData')
     },
     networkTab: { icon: <></> },
   };
-  
+
   // Use appointments data directly from backend
   const appointmentsChartData = appointmentsData;
 
   // Use patients data directly from backend
   const patientsDonutData = patientsData;
-  console.log(patientsData,'patientsData',patientsDonutData,'passdd')
 
   return (
     <div className="min-h-screen w-full  mb-10">
@@ -161,7 +160,7 @@ console.log(employeesData,'employeesData')
               Welcome,
             </h1>
             <h2 className="text-[20px] md:text-[24px] font-bold text-[#003465]">
-              Daniel James!
+              {user?.first_name} {user?.last_name}
             </h2>
           </div>
           <span className="text-[#737373] text-[12px]">
@@ -244,15 +243,16 @@ console.log(employeesData,'employeesData')
                     u !== null &&
                     'id' in u &&
                     'firstname' in u &&
-                    'lastname' in u 
+                    'lastname' in u
                   )
-                  .map((user:any) => ({
+                  .map((user: any) => ({
                     id: user.id,
                     name: `${user.firstname} ${user.lastname}`.trim(),
                     role: user.roles && user.roles.length > 0 ? user.roles[0].name : "Employee",
                     organization: hasTenant(user) && user.tenant && 'name' in user.tenant ? user.tenant.name || "-" : "-",
                     description: user.about || "",
                     image: user.image_url || "/assets/images/employeeprofile.png",
+                    orgId: user.tenant?.id || 0,
                   }))
               }
             />

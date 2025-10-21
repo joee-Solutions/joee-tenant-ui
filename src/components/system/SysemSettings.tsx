@@ -27,6 +27,9 @@ import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
 import ProfileImageUploader from "../ui/ImageUploader";
 import { useRouter } from "next/navigation";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { toast } from "react-toastify";
 
 const SystemSettingsSchema = z.object({
   name: z.string().min(1, "This field is required"),
@@ -47,25 +50,88 @@ type SystemSettingsSchemaType = z.infer<typeof SystemSettingsSchema>;
 const orgStatus = ["Admin", "Super Admin", "User"];
 
 export default function SystemSettings() {
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [isFetching, setIsFetching] = React.useState(true);
+  const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
+  
   const form = useForm<SystemSettingsSchemaType>({
     resolver: zodResolver(SystemSettingsSchema),
     mode: "onChange",
     defaultValues: {
-      name: "JP",
-      title: "Morgan",
-      email: "jpMorgan@gmail.com",
-      phoneNumber: "0818888888",
+      name: "",
+      title: "",
+      email: "",
+      phoneNumber: "",
       address: "",
-      company: "Joee Solution",
+      company: "",
     },
   });
 
-  const onSubmit = (payload: SystemSettingsSchemaType) => {
-    console.log(payload);
+  // Fetch system settings on component mount
+  React.useEffect(() => {
+    const fetchSystemSettings = async () => {
+      try {
+        setIsFetching(true);
+        const response = await processRequestAuth("get", API_ENDPOINTS.GET_SYSTEM_SETTINGS);
+        console.log(response, "response");
+        if (response.success && response.data) {
+          // Populate form with fetched data
+          form.reset({
+            name: response.data.name || "",
+            title: response.data.title || "",
+            email: response.data.email || "",
+            phoneNumber: response.data.phoneNumber || "",
+            address: response.data.address || "",
+            company: response.data.company || "",
+            profileImage: response.data.profileImage || "",
+          });
+        } else {
+          toast.error("Failed to load system settings");
+        }
+      } catch (error) {
+        console.error("Error fetching system settings:", error);
+        toast.error("Failed to load system settings");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchSystemSettings();
+  }, [form]);
+
+  const onSubmit = async (payload: SystemSettingsSchemaType) => {
+    setIsLoading(true);
+    try {
+      const response = await processRequestAuth("put", API_ENDPOINTS.UPDATE_SYSTEM_SETTINGS, payload);
+      
+      if (response.status) {
+        setShowSuccessDialog(true);
+        toast.success("System settings updated successfully");
+      } else {
+        toast.error(response.message || "Failed to update system settings");
+      }
+    } catch (error) {
+      console.error("Error updating system settings:", error);
+      toast.error("Failed to update system settings");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleEdit = () => {};
+  const handleEdit = () => {
+    form.handleSubmit(onSubmit)();
+  };
+  
   const router = useRouter();
+  
+  if (isFetching) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-[#003465] border-blue-200"></div>
+      </div>
+    );
+  }
+  
   return (
     <>
       <h2 className="font-bold text-base text-black mb-[30px]">
@@ -129,12 +195,24 @@ export default function SystemSettings() {
           />
 
           <div className="flex items-center gap-7">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full">
-                  Edit <EditIcon className="text-white size-4 ml-2" />
-                </Button>
-              </AlertDialogTrigger>
+            <Button 
+              onClick={handleEdit}
+              disabled={isLoading}
+              className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Save Changes <EditIcon className="text-white size-4 ml-2" />
+                </>
+              )}
+            </Button>
+
+            <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
               <AlertDialogContent className="bg-white flex flex-col items-center text-center">
                 <AlertDialogHeader className="flex flex-col items-center">
                   <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
@@ -146,24 +224,18 @@ export default function SystemSettings() {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogAction className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base">
-                    <button
-                      onClick={() => router.push("/dashboard/admin/list")}
-                    >
-                      Continue
-                    </button>
+                  <AlertDialogAction 
+                    className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base"
+                    onClick={() => {
+                      setShowSuccessDialog(false);
+                      router.push("/dashboard/admin/list");
+                    }}
+                  >
+                    Continue
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-
-            {/* <Button
-              onClick={handleEdit}
-              type="button"
-              className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
-            >
-              Submit
-            </Button> */}
           </div>
         </div>
       </FormComposer>

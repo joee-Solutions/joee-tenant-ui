@@ -19,12 +19,14 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { Spinner } from "@/components/icons/Spinner";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { useTenantStore } from "@/contexts/AuthProvider";
 
 type VerifyOtpLogin = z.infer<typeof schema>;
 const schema = z.object({
   otp: z.string().length(6),
 });
 const VerifyOtpLoginClient = ({ token }: { token: string }) => {
+  const { setUser } = useTenantStore(state => state.actions);
   useEffect(() => {}, []);
   // const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
@@ -59,6 +61,7 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
         Cookies.set("user", JSON.stringify(rt.data.user), {
           expires: 1,
         });
+        setUser(rt.data.user);
         router.push(`/dashboard`);
       }
     } catch (error: any) {

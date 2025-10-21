@@ -107,7 +107,7 @@ export interface Tenant {
   phone_number?: string;
   fax_number?: string;
   logo?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'DEACTIVATED';
+  status: 'active' | 'inactive' | 'deactivated';
   created_at: string;
   updated_at: string;
 }
