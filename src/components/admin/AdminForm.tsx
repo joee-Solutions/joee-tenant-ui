@@ -21,6 +21,7 @@ import {
   Edit,
   EyeClosedIcon,
   EyeOffIcon,
+  Save,
   Trash2,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -32,6 +33,8 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { tr } from "date-fns/locale";
 import { Input } from "../ui/input";
+import { Spinner } from "../icons/Spinner";
+import { toast } from "react-toastify";
 
 const AdminFormSchema = z.object({
   first_name: z.string().min(1, "This field is required"),
@@ -74,11 +77,20 @@ export default function AdminForm() {
     console.log('Submitting payload:', payload);
     try {
       await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, payload);
-      form.reset();
-      console.log("Admin created successfully");
 
+      form.reset();
+      router.push("/dashboard/admin/list");
+      toast.success("Admin created successfully");
     } catch (error) {
       console.error("Error creating admin:", error);
+      toast.error("Failed to create admin", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
   const [showPassword, setShowPassword] = React.useState(false);
@@ -191,7 +203,9 @@ export default function AdminForm() {
               placeholder="Enter here"
             /> */}
           <Button className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full" type="submit">
-            Submit
+            {
+              form.formState.isSubmitting ? <Spinner /> : <Save className="w-4 h-4" /> 
+            }
           </Button>
           <div className="flex items-center gap-7">
             <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
