@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   CircleArrowLeft,
   Edit,
+  EyeClosedIcon,
+  EyeOffIcon,
   Trash2,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -29,6 +31,7 @@ import { useRouter } from "next/navigation";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { tr } from "date-fns/locale";
+import { Input } from "../ui/input";
 
 const AdminFormSchema = z.object({
   first_name: z.string().min(1, "This field is required"),
@@ -77,6 +80,10 @@ export default function AdminForm() {
     } catch (error) {
       console.error("Error creating admin:", error);
     }
+  };
+  const [showPassword, setShowPassword] = React.useState(false);
+  const handleShowPassword = () => {
+    setShowPassword((prev) => !prev);
   };
 
   const handleEdit = () => { };
@@ -149,14 +156,40 @@ export default function AdminForm() {
             type="text"
             placeholder="Enter here"
           />
-          <FieldBox
-            bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-            name="password"
-            control={form.control}
-            labelText="Password"
-            type="password"
-            placeholder="Enter here"
-          />
+          <div className="grid gap-[6px]">
+            <label htmlFor="login-password" className="text-sm font-medium">
+              Password
+            </label>
+            <Input
+              id="login-password"
+                type={showPassword ? "text" : "password"}
+                {...form.register("password")}
+                icon={
+                  showPassword ? (
+                    <EyeOffIcon
+                      className="size-5"
+                      onClick={handleShowPassword}
+                    />
+                  ) : (
+                    <EyeClosedIcon
+                      className="size-5"
+                      onClick={handleShowPassword}
+                    />
+                  )
+                }
+              placeholder="Enter Password"
+              className="text-gray-700"
+              error={form.formState.errors.password?.message}
+            />
+          </div>
+            {/* <FieldBox
+              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+              name="password"
+              control={form.control}
+              labelText="Password"
+              type="password"
+              placeholder="Enter here"
+            /> */}
           <Button className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full" type="submit">
             Submit
           </Button>
