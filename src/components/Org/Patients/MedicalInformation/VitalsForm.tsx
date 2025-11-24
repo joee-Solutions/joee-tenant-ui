@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { usePathname } from "next/navigation";
 
 // Define the type for a vital sign entry
 type VitalSignEntry = {
@@ -18,6 +19,24 @@ type VitalSignEntry = {
 };
 
 export default function VitalSignsForm() {
+  const pathname = usePathname();
+  const slug = pathname?.split('/organization/')[1]?.split('/')[0] || '';
+  
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`vitals-${slug}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setVitalSignEntries(parsed);
+        }
+      } catch (e) {
+        console.error("Error loading vitals from localStorage:", e);
+      }
+    }
+  }, [slug]);
+
   const [vitalSignEntries, setVitalSignEntries] = useState<VitalSignEntry[]>([
     {
       id: 1,
@@ -34,6 +53,22 @@ export default function VitalSignsForm() {
       painScore: "",
     },
   ]);
+
+  // Auto-save to localStorage
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(`vitals-${slug}`, JSON.stringify(vitalSignEntries));
+    }, 1000);
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [vitalSignEntries, slug]);
 
   const addVitalSignEntry = (): void => {
     const newId =
@@ -72,9 +107,27 @@ export default function VitalSignsForm() {
     value: string
   ): void => {
     setVitalSignEntries(
-      vitalSignEntries.map((entry) =>
-        entry.id === id ? { ...entry, [field]: value } : entry
-      )
+      vitalSignEntries.map((entry) => {
+        if (entry.id === id) {
+          const updated = { ...entry, [field]: value };
+          // Auto-calculate BMI when height or weight changes
+          if (field === "height" || field === "weight") {
+            const height = parseFloat(updated.height);
+            const weight = parseFloat(updated.weight);
+            if (height > 0 && weight > 0) {
+              // BMI = weight (kg) / (height (m))^2
+              // Assuming height is in cm, convert to meters
+              const heightInMeters = height / 100;
+              const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(2);
+              updated.bmi = bmi;
+            } else {
+              updated.bmi = "";
+            }
+          }
+          return updated;
+        }
+        return entry;
+      })
     );
   };
 
@@ -313,15 +366,9 @@ export default function VitalSignsForm() {
                   id={`bmi-${entry.id}`}
                   type="text"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                  placeholder="BMI"
+                  placeholder="BMI (auto-calculated)"
                   value={entry.bmi}
                   readOnly
-                  onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "bmi", e.target.value) as any
-                  }
-                  onBlur={(e) =>
-                    updateVitalSignEntry(entry.id, "bmi", e.target.value) as any
-                  }
                   name="bmi"
                 />
               </div>
@@ -348,14 +395,7 @@ export default function VitalSignsForm() {
           </div>
         ))}
 
-        <div className="mt-8">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Save
-          </button>
-        </div>
+        {/* Save button removed - form saves automatically */}
       </form>
     </div>
   );

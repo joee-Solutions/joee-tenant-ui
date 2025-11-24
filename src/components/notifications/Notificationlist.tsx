@@ -99,11 +99,10 @@ export default function NotificationList() {
             Notification History
           </h2>
 
-          <Link
-            href={"/dashboard/notifications/send"}
-            className="text-base text-[#4E66A8] font-normal"
-          >
-            Send New Notification
+          <Link href={"/dashboard/notifications/send"}>
+            <Button className="font-normal text-base text-white bg-[#003465] h-[60px] px-6">
+              Send New Notification
+            </Button>
           </Link>
         </header>
         <div className="px-6 py-8">

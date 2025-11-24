@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -267,15 +267,30 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     setCompletedSteps(prev => new Set([...prev, stepIndex]));
   };
 
-  const handleSaveProgress = () => {
-    console.log(currentStep, "currentStep", methods.getValues())
-    //  save to local storage
-    localStorage.setItem(`patient-${slug}`, JSON.stringify({
-      currentStep,
-      completedSteps: Array.from(completedSteps),
-      data: methods.getValues()
-    }))
-  }
+  // Auto-save progress whenever form data changes
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const subscription = methods.watch(() => {
+      // Clear previous timeout
+      clearTimeout(timeoutId);
+      
+      // Debounce auto-save to avoid too frequent saves
+      timeoutId = setTimeout(() => {
+        const formData = methods.getValues();
+        localStorage.setItem(`patient-${slug}`, JSON.stringify({
+          currentStep,
+          completedSteps: Array.from(completedSteps),
+          data: formData
+        }));
+      }, 1000); // Save 1 second after last change
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
+  }, [methods, currentStep, completedSteps, slug]);
 
   useEffect(() => {
     const patientData = localStorage.getItem(`patient-${slug}`);
@@ -339,35 +354,35 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       sexual_orientation: demographic?.sexualOrientation,
       image: demographic?.patientImage,
 
-      // Contact info
+      // Contact info - only include phone numbers if they have valid values
       contact_info: {
-        country: addDemographic?.country,
-        state: addDemographic?.state,
-        city: addDemographic?.city,
-        zip_code: addDemographic?.postal,
-        email: addDemographic?.email,
-        email_work: addDemographic?.workEmail,
-        phone_number_mobile: addDemographic?.mobilePhone,
-        phone_number_home: addDemographic?.homePhone,
-        address: addDemographic?.address,
-        current_address: addDemographic?.currentAddress,
-        method_of_contact: addDemographic?.contactMethod,
-        lived_address_from: addDemographic?.addressFrom,
-        lived_address_to: addDemographic?.addressTo,
-        current_living_situation: addDemographic?.livingSituation,
-        referral_source: addDemographic?.referralSource,
-        occupational_status: addDemographic?.occupationStatus,
-        industry: addDemographic?.industry,
-        household_size: addDemographic?.householdSize,
-        notes: addDemographic?.notes,
+        country: addDemographic?.country || "",
+        state: addDemographic?.state || "",
+        city: addDemographic?.city || "",
+        zip_code: addDemographic?.postal || "",
+        email: addDemographic?.email || "",
+        email_work: addDemographic?.workEmail || "",
+        ...(addDemographic?.mobilePhone && addDemographic.mobilePhone.trim() ? { phone_number_mobile: addDemographic.mobilePhone.trim() } : {}),
+        ...(addDemographic?.homePhone && addDemographic.homePhone.trim() ? { phone_number_home: addDemographic.homePhone.trim() } : {}),
+        address: addDemographic?.address || "",
+        current_address: addDemographic?.currentAddress || "",
+        method_of_contact: addDemographic?.contactMethod || "",
+        lived_address_from: addDemographic?.addressFrom || "",
+        lived_address_to: addDemographic?.addressTo || "",
+        current_living_situation: addDemographic?.livingSituation || "",
+        referral_source: addDemographic?.referralSource || "",
+        occupational_status: addDemographic?.occupationStatus || "",
+        industry: addDemographic?.industry || "",
+        household_size: addDemographic?.householdSize || 0,
+        notes: addDemographic?.notes || "",
       },
 
-      // Emergency info
+      // Emergency info - only include phone number if it has a valid value
       emergencyInfo: {
-        emergency_contact_name: emergency?.name,
-        emergency_contact_phone_number: emergency?.phone,
-        emergency_contact_relationship: emergency?.relationship,
-        emergency_contact_email: emergency?.email,
+        emergency_contact_name: emergency?.name || "",
+        ...(emergency?.phone && emergency.phone.trim() ? { emergency_contact_phone_number: emergency.phone.trim() } : {}),
+        emergency_contact_relationship: emergency?.relationship || "",
+        emergency_contact_email: emergency?.email || "",
         contact_emergency_contact: emergency?.permission === "Yes",
       },
 
@@ -588,21 +603,11 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                 <div className="flex gap-3">
                   <Button
                     type="button"
-                    variant="outline"
                     onClick={handlePrevious}
                     disabled={currentStep === 0}
-                    className="flex items-center"
+                    className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleSaveProgress}
-                    className="flex items-center"
-                  >
-                    Save Progress
                   </Button>
                 </div>
 
@@ -611,7 +616,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                     <Button
                       type="button"
                       onClick={handleNext}
-                      className="flex items-center bg-blue-600 hover:bg-blue-700"
+                      className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 flex items-center"
                     >
                       Next Step
                       <ChevronRight className="ml-2 w-4 h-4" />
@@ -620,7 +625,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                      className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 disabled:opacity-50 flex items-center"
                     >
                       {loading ? (
                         <>

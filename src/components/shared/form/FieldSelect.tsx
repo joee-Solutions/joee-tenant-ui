@@ -23,7 +23,8 @@ interface FieldSelectProps<T extends FieldValues> {
   options: string[];
   fieldDescription?: string;
   bgSelectClass?: string;
-  defaultOption?:string
+  defaultOption?: string;
+  disabled?: boolean;
 }
 
 function FieldSelect<T extends FieldValues>({
@@ -34,7 +35,8 @@ function FieldSelect<T extends FieldValues>({
   options,
   fieldDescription,
   bgSelectClass,
-  defaultOption
+  defaultOption,
+  disabled = false
 }: FieldSelectProps<T>) {
   return (
     <FormField
@@ -47,12 +49,18 @@ function FieldSelect<T extends FieldValues>({
               {labelText}
             </FormLabel>
           )}
-          <Select onValueChange={field.onChange} defaultValue={defaultOption}>
+          <Select 
+            onValueChange={field.onChange} 
+            defaultValue={defaultOption}
+            disabled={disabled}
+            value={field.value || undefined}
+          >
             <FormControl>
               <SelectTrigger
                 className={`h-[60px] border border-[#737373] focus:ring-transparent text-[#737373] text-xs font-normal ${
                   bgSelectClass ? bgSelectClass : "bg-white"
-                }`}
+                } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={disabled}
               >
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>

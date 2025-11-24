@@ -19,9 +19,26 @@ interface OrganizationStatusProps {
 }
 
 const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
-  const activeData = [{ name: "Active", value: data.activeCount }];
-  const inactiveData = [{ name: "Inactive", value: data.inactiveCount }];
-  const deactivatedData = [{ name: "Deactivated", value: data.deactivatedCount }];
+  const placeholderColor = "#E5E7EB"; // light gray
+  
+  const hasAnyData = data.totalCount > 0;
+  const hasActiveData = data.activeCount > 0;
+  const hasInactiveData = data.inactiveCount > 0;
+  const hasDeactivatedData = data.deactivatedCount > 0;
+  
+  // Use actual values when data exists, use 1 as placeholder when no data (so ring still renders)
+  // For single data point Pie with fixed startAngle/endAngle, the value doesn't affect arc length
+  // but Recharts needs value > 0 to render
+  // IMPORTANT: Convert to number - API might return strings, Recharts requires numbers
+  const activeValue = hasActiveData ? (typeof data.activeCount === 'string' ? parseInt(data.activeCount, 10) : Number(data.activeCount)) || 1 : 1;
+  const inactiveValue = hasInactiveData ? (typeof data.inactiveCount === 'string' ? parseInt(data.inactiveCount, 10) : Number(data.inactiveCount)) || 1 : 1;
+  const deactivatedValue = hasDeactivatedData ? (typeof data.deactivatedCount === 'string' ? parseInt(data.deactivatedCount, 10) : Number(data.deactivatedCount)) || 1 : 1;
+  
+  const activeData = [{ name: "Active", value: activeValue }];
+  const inactiveData = [{ name: "Inactive", value: inactiveValue }];
+  const deactivatedData = [{ name: "Deactivated", value: deactivatedValue }];
+
+
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -31,6 +48,7 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
         <div className="relative flex-shrink-0 mr-8">
           <ResponsiveContainer width={250} height={250}>
             <PieChart>
+              {/* Active Pie - Outer ring */}
               <Pie
                 data={activeData}
                 cx="50%"
@@ -39,13 +57,21 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
                 outerRadius="100%"
                 startAngle={90}
                 endAngle={-250}
-                paddingAngle={2}
+                paddingAngle={0}
                 dataKey="value"
                 cornerRadius={10}
+                isAnimationActive={false}
               >
-                <Cell fill={colors.active} />
+                {activeData.map((entry, index) => (
+                  <Cell 
+                    key={`active-cell-${index}`} 
+                    fill={hasActiveData ? colors.active : placeholderColor}
+                    stroke="none"
+                  />
+                ))}
               </Pie>
 
+              {/* Inactive Pie - Middle ring */}
               <Pie
                 data={inactiveData}
                 cx="50%"
@@ -54,13 +80,21 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
                 outerRadius="75%"
                 startAngle={90}
                 endAngle={-200}
-                paddingAngle={2}
+                paddingAngle={0}
                 dataKey="value"
                 cornerRadius={10}
+                isAnimationActive={false}
               >
-                <Cell fill={colors.inactive} />
+                {inactiveData.map((entry, index) => (
+                  <Cell 
+                    key={`inactive-cell-${index}`} 
+                    fill={hasInactiveData ? colors.inactive : placeholderColor}
+                    stroke="none"
+                  />
+                ))}
               </Pie>
 
+              {/* Deactivated Pie - Inner ring */}
               <Pie
                 data={deactivatedData}
                 cx="50%"
@@ -69,17 +103,29 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
                 outerRadius="50%"
                 startAngle={90}
                 endAngle={-160}
-                paddingAngle={2}
+                paddingAngle={0}
                 dataKey="value"
                 cornerRadius={10}
+                isAnimationActive={false}
               >
-                <Cell fill={colors.deactivated} />
+                {deactivatedData.map((entry, index) => (
+                  <Cell 
+                    key={`deactivated-cell-${index}`} 
+                    fill={hasDeactivatedData ? colors.deactivated : placeholderColor}
+                    stroke="none"
+                  />
+                ))}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
 
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-            <div className="text-xl font-medium">{data.completionPercentage}%</div>
+            <div className={`text-xl font-medium ${!hasAnyData ? 'text-gray-400' : ''}`}>
+              {hasAnyData ? `${data.completionPercentage}%` : '0%'}
+            </div>
+            {!hasAnyData && (
+              <div className="text-xs text-gray-400 mt-1">No data</div>
+            )}
           </div>
         </div>
 

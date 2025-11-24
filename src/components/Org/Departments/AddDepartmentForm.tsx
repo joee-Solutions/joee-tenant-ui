@@ -69,8 +69,8 @@ export default function AddDepartment({ slug }: { slug: string }) {
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">Add Department</h1>
         <Button
-          onClick={() => router.back()}
-          className="text-base text-[#003465] font-normal"
+          onClick={() => router.push(`/dashboard/organization/${slug}/departments`)}
+          className="font-normal text-base text-white bg-[#003465] h-[60px] px-6"
         >
           Back 
         </Button>
@@ -177,7 +177,7 @@ export default function AddDepartment({ slug }: { slug: string }) {
           <Button
             type="button"
             className=" border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
-            onClick={() => router.back()}
+            onClick={() => router.push(`/dashboard/organization/${slug}/departments`)}
           >
             Cancel
           </Button>

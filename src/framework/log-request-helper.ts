@@ -37,40 +37,36 @@ interface ClientInfo {
 export const getRequestInfo = async (req: any) => {
   if (!req) return {};
 
-  const forwardIp =
-    req.headers["X-Forwarded-For"] ||
-    req.headers["x-forwarded-for"] ||
-    req.socket?.remoteAddress;
-  const protocol =
-    req.headers["X-Forwarded-Proto"] ||
-    req.headers["x-forwarded-proto"] ||
-    req["protocol"];
-  const host =
-    req.headers["X-Forwarded-Host"] ||
-    req.headers["x-forwarded-host"] ||
-    req.headers["host"];
-  const connectionIp = req.headers["DO-Connecting-IP"];
-  const socketIp = req.socket?.remoteAddress || "";
-  const clientIp =
-    req.headers["X-Real-IP"] ||
-    req.headers["x-real-ip"] ||
-    req.connection?.remoteAddress;
-  const realIp = connectionIp || forwardIp || clientIp;
-  const url = req.url;
+  // Next.js Request uses headers.get() method, but also supports direct access
+  const getHeader = (name: string) => {
+    if (req.headers?.get) {
+      return req.headers.get(name) || req.headers.get(name.toLowerCase());
+    }
+    return req.headers?.[name] || req.headers?.[name.toLowerCase()];
+  };
 
-  const userAgentString = req.headers["user-agent"] || "";
+  const forwardIp = getHeader("X-Forwarded-For") || getHeader("x-forwarded-for");
+  const protocol = getHeader("X-Forwarded-Proto") || getHeader("x-forwarded-proto") || "http";
+  const host = getHeader("X-Forwarded-Host") || getHeader("x-forwarded-host") || getHeader("host");
+  const connectionIp = getHeader("DO-Connecting-IP");
+  const socketIp = ""; // Not available in Next.js Request
+  const clientIp = getHeader("X-Real-IP") || getHeader("x-real-ip");
+  const realIp = connectionIp || forwardIp || clientIp || "";
+  const url = req.url || "";
+
+  const userAgentString = getHeader("user-agent") || getHeader("User-Agent") || "";
   const parser = new UAParser(userAgentString);
   const result = parser.getResult();
-  const browser = result.browser.name;
-  const browserVersion = result.browser.version;
-  const os = result.os.name;
-  const osVersion = result.os.version;
+  const browser = result.browser.name || "";
+  const browserVersion = result.browser.version || "";
+  const os = result.os.name || "";
+  const osVersion = result.os.version || "";
   const deviceType = result.device.type;
   const deviceVendor = result.device.vendor;
   const deviceModel = result.device.model;
 
-  const referrer = req.headers.referer || "";
-  const domain = req.headers.host;
+  const referrer = getHeader("referer") || getHeader("Referer") || "";
+  const domain = getHeader("host") || "";
   const siteName = siteConfig.siteName;
   return {
     siteName,

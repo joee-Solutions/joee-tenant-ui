@@ -1,4 +1,4 @@
-import { ChangeHandler, useFieldArray, useFormContext } from "react-hook-form";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { z } from "zod";
 import {
   Select,
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormDataStepper } from "../PatientStepper";
-import { ChangeEventHandler } from "react";
 
 // Define validation schema for a visit entry
 export const visitEntrySchema = z.array(
@@ -58,7 +57,6 @@ const conditions = ["Hypertension", "Diabetes", "Asthma", "Arthritis", "Migraine
 export default function MedicalVisitForm() {
   const {
     control,
-    setValue,
   } = useFormContext<Pick<FormDataStepper, 'visits'>>();
 
   const { fields, append, remove } = useFieldArray<Pick<FormDataStepper, 'visits'>>({
@@ -67,24 +65,19 @@ export default function MedicalVisitForm() {
   });
 
   const addVisitEntry = (): void => {
-    const newId =
-      fields.length > 0
-        ? Math.max(...fields.map((entry) => entry.id as unknown as number)) + 1
-        : 1;
-
     append(
       {
         visitCategory: "",
-        dateOfService: new Date(),
+        dateOfService: new Date().toISOString().split('T')[0],
         duration: "",
         chiefComplaint: "",
-        hpiOnsetDate: new Date(),
+        hpiOnsetDate: new Date().toISOString().split('T')[0],
         hpiDuration: "",
         severity: "",
         quality: "",
         aggravatingFactors: "",
         diagnosis: "",
-        diagnosisOnsetDate: new Date(),
+        diagnosisOnsetDate: new Date().toISOString().split('T')[0],
         treatmentPlan: "",
         providerName: "",
         providerSignature: "",
@@ -94,14 +87,6 @@ export default function MedicalVisitForm() {
 
   const removeVisitEntry = (id: number): void => {
     remove(id);
-  };
-
-
-console.log(fields, 'fields')
-
-  const handleInputChange = (id: number, field: keyof VisitEntrySchemaType, value: string): void => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setValue(`visits.${id}.${String(field)}` as any, value);
   };
 
 
@@ -140,66 +125,78 @@ console.log(fields, 'fields')
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Visit Category */}
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  Visit Category
-                </label>
-                <Select
-                  value={entry.visitCategory}
-                  onValueChange={(value) =>
-                    handleInputChange(index, "visitCategory" as keyof VisitEntrySchemaType, value)
-                  }
-                >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Enter here" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {visitCategories.map((category) => (
-                      <SelectItem key={category} value={category} className="hover:bg-gray-200">
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Controller
+                name={`visits.${index}.visitCategory`}
+                control={control}
+                render={({ field }) => (
+                  <div>
+                    <label className="block text-base text-black font-normal mb-2">
+                      Visit Category
+                    </label>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                        <SelectValue placeholder="Select visit category" />
+                      </SelectTrigger>
+                      <SelectContent className="z-10 bg-white">
+                        {visitCategories.map((category) => (
+                          <SelectItem key={category} value={category} className="hover:bg-gray-200">
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
 
               {/* Date of Service */}
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  Date of Service
-                </label>
-                <DatePicker
-                  date={entry.dateOfService ? new Date(entry.dateOfService) : undefined}
-                  onDateChange={(date) =>
-                    handleInputChange(index, 'dateOfService' as keyof VisitEntrySchemaType, date ? date.toISOString().split('T')[0] : '')
-                  }
-                  placeholder="Select date of service"
-                />
-              </div>
+              <Controller
+                name={`visits.${index}.dateOfService`}
+                control={control}
+                render={({ field }) => (
+                  <div>
+                    <label className="block text-base text-black font-normal mb-2">
+                      Date of Service
+                    </label>
+                    <DatePicker
+                      date={field.value ? new Date(field.value) : undefined}
+                      onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                      placeholder="Select date of service"
+                    />
+                  </div>
+                )}
+              />
 
               {/* Duration */}
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  Duration
-                </label>
-                <Select
-                  value={entry.duration}
-                  onValueChange={(value) =>
-                    handleInputChange(index, "duration" as keyof VisitEntrySchemaType, value)
-                  }
-                >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Enter here" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {durations.map((duration) => (
-                      <SelectItem key={duration} value={duration} className="hover:bg-gray-200">
-                        {duration}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Controller
+                name={`visits.${index}.duration`}
+                control={control}
+                render={({ field }) => (
+                  <div>
+                    <label className="block text-base text-black font-normal mb-2">
+                      Duration
+                    </label>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                        <SelectValue placeholder="Select duration" />
+                      </SelectTrigger>
+                      <SelectContent className="z-10 bg-white">
+                        {durations.map((duration) => (
+                          <SelectItem key={duration} value={duration} className="hover:bg-gray-200">
+                            {duration}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
             </div>
 
             {/* Presenting Complaint & History of Present Illness */}
@@ -207,132 +204,157 @@ console.log(fields, 'fields')
               <h3 className="text-base font-medium mb-4">Presenting Complaint & History of Present Illness</h3>
 
               {/* Chief Complaint */}
-              <div className="mb-6">
-                <label className="block text-base text-black font-normal mb-2">
-                  Chief Complaint
-                </label>
-                <Textarea
-                  value={entry.chiefComplaint}
-                  className="w-full h-32 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    handleInputChange(index, "chiefComplaint" as keyof VisitEntrySchemaType, e.target.value)
-                  }
-                />
-              </div>
+              <Controller
+                name={`visits.${index}.chiefComplaint`}
+                control={control}
+                render={({ field }) => (
+                  <div className="mb-6">
+                    <label className="block text-base text-black font-normal mb-2">
+                      Chief Complaint
+                    </label>
+                    <Textarea
+                      {...field}
+                      value={field.value || ""}
+                      className="w-full h-32 p-3 border border-[#737373] rounded focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+                      placeholder="Enter chief complaint"
+                    />
+                  </div>
+                )}
+              />
 
               <h3 className="text-base font-medium mb-4">History of Present Illness (HPI)</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* HPI Onset Date */}
-                <div>
-                  <label className="block text-base text-black font-normal mb-2">
-                    Onset date
-                  </label>
-                  <DatePicker
-                    date={entry.hpiOnsetDate ? new Date(entry.hpiOnsetDate) : undefined}
-                    onDateChange={(date) =>
-                      handleInputChange(index, "hpiOnsetDate" as keyof VisitEntrySchemaType, date ? date.toISOString().split('T')[0] : '')
-                    }
-                    placeholder="Select onset date"
-                  />
-                </div>
+                <Controller
+                  name={`visits.${index}.hpiOnsetDate`}
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <label className="block text-base text-black font-normal mb-2">
+                        Onset date
+                      </label>
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select onset date"
+                      />
+                    </div>
+                  )}
+                />
 
                 {/* HPI Duration */}
-                <div>
-                  <label className="block text-base text-black font-normal mb-2">
-                    Duration
-                  </label>
-                  <Select
-                    value={entry.hpiDuration}
-                    onValueChange={(value) =>
-                      handleInputChange(index, "hpiDuration" as keyof VisitEntrySchemaType, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                      <SelectValue placeholder="Enter here" />
-                    </SelectTrigger>
-                    <SelectContent className="z-10 bg-white">
-                      {durations.map((duration) => (
-                        <SelectItem key={duration} value={duration} className="hover:bg-gray-200">
-                          {duration}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Controller
+                  name={`visits.${index}.hpiDuration`}
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <label className="block text-base text-black font-normal mb-2">
+                        Duration
+                      </label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select duration" />
+                        </SelectTrigger>
+                        <SelectContent className="z-10 bg-white">
+                          {durations.map((duration) => (
+                            <SelectItem key={duration} value={duration} className="hover:bg-gray-200">
+                              {duration}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
 
                 {/* Severity */}
-                <div>
-                  <label className="block text-base text-black font-normal mb-2">
-                    Severity
-                  </label>
-                  <Select
-                    value={entry.severity}
-                    onValueChange={(value) =>
-                      handleInputChange(index, "severity" as keyof VisitEntrySchemaType, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                      <SelectValue placeholder="Enter here" />
-                    </SelectTrigger>
-                    <SelectContent className="z-10 bg-white">
-                      {severityOptions.map((option) => (
-                        <SelectItem key={option} value={option} className="hover:bg-gray-200">
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Controller
+                  name={`visits.${index}.severity`}
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <label className="block text-base text-black font-normal mb-2">
+                        Severity
+                      </label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select severity" />
+                        </SelectTrigger>
+                        <SelectContent className="z-10 bg-white">
+                          {severityOptions.map((option) => (
+                            <SelectItem key={option} value={option} className="hover:bg-gray-200">
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
 
                 {/* Quality */}
-                <div>
-                  <label className="block text-base text-black font-normal mb-2">
-                    Quality
-                  </label>
-                  <Select
-                    value={entry.quality}
-                    onValueChange={(value) =>
-                      handleInputChange(index, "quality" as keyof VisitEntrySchemaType, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                      <SelectValue placeholder="Enter here" />
-                    </SelectTrigger>
-                    <SelectContent className="z-10 bg-white">
-                      {qualityOptions.map((option) => (
-                        <SelectItem key={option} value={option} className="hover:bg-gray-200">
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Controller
+                  name={`visits.${index}.quality`}
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <label className="block text-base text-black font-normal mb-2">
+                        Quality
+                      </label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select quality" />
+                        </SelectTrigger>
+                        <SelectContent className="z-10 bg-white">
+                          {qualityOptions.map((option) => (
+                            <SelectItem key={option} value={option} className="hover:bg-gray-200">
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
               </div>
 
               {/* Aggravating/relieving factors */}
-              <div className="mt-6">
-                <label className="block text-base text-black font-normal mb-2">
-                  Aggravating/relieving factors
-                </label>
-                <Select
-                  value={entry.aggravatingFactors}
-                  onValueChange={(value) =>
-                    handleInputChange(index, "aggravatingFactors" as keyof VisitEntrySchemaType, value)
-                  }
-                >
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Enter here" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {aggravatingFactors.map((factor) => (
-                      <SelectItem key={factor} value={factor} className="hover:bg-gray-200">
-                        {factor}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Controller
+                name={`visits.${index}.aggravatingFactors`}
+                control={control}
+                render={({ field }) => (
+                  <div className="mt-6">
+                    <label className="block text-base text-black font-normal mb-2">
+                      Aggravating/relieving factors
+                    </label>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                        <SelectValue placeholder="Select aggravating factors" />
+                      </SelectTrigger>
+                      <SelectContent className="z-10 bg-white">
+                        {aggravatingFactors.map((factor) => (
+                          <SelectItem key={factor} value={factor} className="hover:bg-gray-200">
+                            {factor}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
             </div>
 
             {/* Diagnosis */}
@@ -341,98 +363,115 @@ console.log(fields, 'fields')
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Condition */}
-                <div>
-                  <label className="block text-base text-black font-normal mb-2">
-                    Condition
-                  </label>
-                  <Select
-                    value={entry.diagnosis}
-                    onValueChange={(value) =>
-                      handleInputChange(index, "diagnosis" as keyof VisitEntrySchemaType, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                      <SelectValue placeholder="Enter here" />
-                    </SelectTrigger>
-                    <SelectContent className="z-10 bg-white">
-                      {conditions.map((condition) => (
-                        <SelectItem key={condition} value={condition} className="hover:bg-gray-200">
-                          {condition}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Controller
+                  name={`visits.${index}.diagnosis`}
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <label className="block text-base text-black font-normal mb-2">
+                        Condition
+                      </label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select diagnosis" />
+                        </SelectTrigger>
+                        <SelectContent className="z-10 bg-white">
+                          {conditions.map((condition) => (
+                            <SelectItem key={condition} value={condition} className="hover:bg-gray-200">
+                              {condition}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
 
                 {/* Diagnosis Onset Date */}
-                <div>
-                  <label className="block text-base text-black font-normal mb-2">
-                    Onset date
-                  </label>
-                  <DatePicker
-                    date={entry.diagnosisOnsetDate ? new Date(entry.diagnosisOnsetDate) : undefined}
-                    onDateChange={(date) =>
-                      handleInputChange(index, "diagnosisOnsetDate" as keyof VisitEntrySchemaType, date ? date.toISOString().split('T')[0] : '')
-                    }
-                    placeholder="Select diagnosis onset date"
-                  />
-                </div>
+                <Controller
+                  name={`visits.${index}.diagnosisOnsetDate`}
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <label className="block text-base text-black font-normal mb-2">
+                        Onset date
+                      </label>
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select diagnosis onset date"
+                      />
+                    </div>
+                  )}
+                />
               </div>
             </div>
 
             {/* Treatment Plan */}
-            <div className="mt-6">
-              <h3 className="text-base font-medium mb-4">Treatment Plan</h3>
-
-              <div className="mb-6">
-                <label className="block text-base text-black font-normal mb-2">
-                  Notes
-                </label>
-                <Textarea
-                  value={entry.treatmentPlan}
-                  className="w-full h-32 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    handleInputChange(index, "treatmentPlan" as keyof VisitEntrySchemaType, e.target.value)
-                  }
-                  rows={4}
-                />
-              </div>
-            </div>
+            <Controller
+              name={`visits.${index}.treatmentPlan`}
+              control={control}
+              render={({ field }) => (
+                <div className="mt-6">
+                  <h3 className="text-base font-medium mb-4">Treatment Plan</h3>
+                  <div className="mb-6">
+                    <label className="block text-base text-black font-normal mb-2">
+                      Notes
+                    </label>
+                    <Textarea
+                      {...field}
+                      value={field.value || ""}
+                      className="w-full h-32 p-3 border border-[#737373] rounded focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+                      rows={4}
+                      placeholder="Enter treatment plan"
+                    />
+                  </div>
+                </div>
+              )}
+            />
 
             {/* Provider Information */}
             <div className="mt-6">
-              <div className="mb-6">
-                <label className="block text-base text-black font-normal mb-2">
-                  Provider name
-                </label>
-                <Input
-                  type="text"
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  value={entry.providerName}
-                  onChange={(e) =>
-                    handleInputChange(index, "providerName" as keyof VisitEntrySchemaType, e.target.value) as any
-                  }
-                  onBlur={(e) =>
-                    handleInputChange(index, "providerName" as keyof VisitEntrySchemaType, e.target.value) as any
-                  }
-                  name="providerName"
-                  placeholder="Enter here"
-                />
-              </div>
+              <Controller
+                name={`visits.${index}.providerName`}
+                control={control}
+                render={({ field }) => (
+                  <div className="mb-6">
+                    <label className="block text-base text-black font-normal mb-2">
+                      Provider name
+                    </label>
+                    <Input
+                      {...field}
+                      type="text"
+                      className="w-full h-14 p-3 border border-[#737373] rounded focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+                      value={field.value || ""}
+                      placeholder="Enter provider name"
+                    />
+                  </div>
+                )}
+              />
 
-              <div className="mb-6">
-                <label className="block text-base text-black font-normal mb-2">
-                  Provider signature with date and time stamp
-                </label>
-                <Textarea
-                  value={entry.providerSignature}
-                  className="w-full h-32 p-3 border border-[#737373] rounded"
-                  onChange={(e) =>
-                    handleInputChange(index, "providerSignature" as keyof VisitEntrySchemaType, e.target.value)
-                  }
-                  rows={4}
-                />
-              </div>
+              <Controller
+                name={`visits.${index}.providerSignature`}
+                control={control}
+                render={({ field }) => (
+                  <div className="mb-6">
+                    <label className="block text-base text-black font-normal mb-2">
+                      Provider signature with date and time stamp
+                    </label>
+                    <Textarea
+                      {...field}
+                      value={field.value || ""}
+                      className="w-full h-32 p-3 border border-[#737373] rounded focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+                      rows={4}
+                      placeholder="Enter provider signature"
+                    />
+                  </div>
+                )}
+              />
             </div>
 
             <hr className="my-8 border-gray-200" />

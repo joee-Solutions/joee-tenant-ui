@@ -75,8 +75,8 @@ export default function AllergyInformationForm() {
               {fields.length > 1 && (
                 <Button
                   type="button"
-                  variant="destructive"
                   onClick={() => remove(index)}
+                  className="font-normal text-base text-white bg-[#003465] h-[60px] px-6"
                 >
                   Remove
                 </Button>
@@ -94,6 +94,7 @@ export default function AllergyInformationForm() {
                       comments: "",
                     })
                   }
+                  className="font-normal text-base text-white bg-[#003465] h-[60px] px-6"
                 >
                   Add Another
                 </Button>

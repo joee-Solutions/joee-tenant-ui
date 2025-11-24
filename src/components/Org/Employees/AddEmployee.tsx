@@ -22,6 +22,8 @@ import { authFectcher } from "@/hooks/swr";
 import { Spinner } from "@/components/icons/Spinner";
 import { processRequestAuth } from "@/framework/https";
 import { parse } from "path";
+import { toast } from "react-toastify";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const EmployeeSchema = z.object({
   firstname: z.string().min(1, "First name is required"),
@@ -30,15 +32,15 @@ const EmployeeSchema = z.object({
   phone_number: z.string().min(1, "Phone number is required"),
   address: z.string().min(1, "Address is required"),
   region: z.string().min(1, "Region/State is required"),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
+  date_of_birth: z.date({ required_error: "Date of birth is required" }),
   specialty: z.string().optional(),
   designation: z.string().min(1, "Designation is required"),
   department: z.string().min(1, "Department is required"),
   gender: z.string().min(1, "Gender is required"),
   image_url: z.string().optional(),
-  hire_date: z.string().min(1, "Hire date is required"),
+  hire_date: z.date({ required_error: "Hire date is required" }),
   about: z.string().optional(),
-  status: z.boolean().default(false),
+  status: z.string(),
 });
 
 type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
@@ -46,6 +48,8 @@ type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
 export default function AddEmployee({ slug }: { slug: string }) {
   const router = useRouter();
   const [fileSelected, setFileSelected] = useState<string>("");
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
+  const [hireDate, setHireDate] = useState<Date | undefined>(undefined);
 
   const form = useForm<EmployeeSchemaType>({
     resolver: zodResolver(EmployeeSchema),
@@ -57,15 +61,15 @@ export default function AddEmployee({ slug }: { slug: string }) {
       phone_number: "",
       address: "",
       region: "",
-      date_of_birth: "",
+      date_of_birth: undefined,
       specialty: "",
       designation: "",
       department: "",
       gender: "",
       image_url: "",
-      hire_date: "",
+      hire_date: undefined,
       about: "",
-      status: false,
+      status: undefined,
     },
   });
 
@@ -83,8 +87,6 @@ export default function AddEmployee({ slug }: { slug: string }) {
     return <Spinner />;
   }
 
-  // Sample data for dropdowns
-  const regions = ["New York", "Lagos", "Texas", "Florida", "Abuja"];
   const departments = Array.isArray(data?.data) && data.data.length > 0
     ? data.data.map((dept) => dept.name)
     : [];
@@ -105,11 +107,50 @@ export default function AddEmployee({ slug }: { slug: string }) {
 
   const onSubmit = async (data: EmployeeSchemaType) => {
     try {
-      console.log(data);
+      // Validate that status is selected
+      if (!data.status) {
+        toast.error("Please select a status (Active or Inactive)", {
+          toastId: "status-required-error",
+        });
+        form.setError("status", {
+          type: "manual",
+          message: "Status is required. Please select Active or Inactive.",
+        });
+        return;
+      }
+      
+      // Get the current status value directly from form state to ensure accuracy
+      const currentStatus = form.getValues("status");
+      const statusToSend = currentStatus || data.status;
+      
+      // Ensure status is explicitly set and is either "active" or "inactive"
+      if (!statusToSend || (statusToSend !== "active" && statusToSend !== "inactive")) {
+        toast.error("Please select a status (Active or Inactive)", {
+          toastId: "status-required-error",
+        });
+        form.setError("status", {
+          type: "manual",
+          message: "Status is required. Please select Active or Inactive.",
+        });
+        return;
+      }
+      
       const payload = {
-        ...data,
-        status: data.status === false ? "inactive" : "active",
+        firstname: data.firstname,
+        lastname: data.lastname,
+        email: data.email,
+        phone_number: data.phone_number,
+        address: data.address,
+        region: data.region,
+        date_of_birth: data.date_of_birth instanceof Date ? data.date_of_birth.toISOString().split('T')[0] : '',
+        specialty: data.specialty,
+        designation: data.designation,
         department: deptId,
+        gender: data.gender,
+        image_url: data.image_url,
+        hire_date: data.hire_date instanceof Date ? data.hire_date.toISOString().split('T')[0] : '',
+        about: data.about,
+        status: statusToSend, // Explicitly set status as "active" or "inactive"
       };
 
       const res = await processRequestAuth(
@@ -117,10 +158,104 @@ export default function AddEmployee({ slug }: { slug: string }) {
         API_ENDPOINTS.TENANTS_EMPLOYEES(parseInt(slug), parseInt(deptId)),
         payload
       );
-      if (res.status) {
-        router.push(`/dashboard/organization/${slug}/view/`);
+      
+      // Check if response contains an error (even if status code suggests success)
+      const errorText = typeof res?.error === 'string' ? res.error : '';
+      const hasConstraintError = errorText.includes('duplicate key value violates unique constraint');
+      const hasError = res?.error || 
+                       res?.statusCode === 500 || 
+                       (res?.statusCode && res.statusCode >= 400) || 
+                       res?.validationErrors ||
+                       hasConstraintError;
+      
+      if (hasError) {
+        const errorMessage = res?.validationErrors || res?.error || res?.message || "Failed to create employee. Please try again.";
+        
+        // Check for specific unique constraint violations using constraint IDs
+        // Employee email duplicate constraint: UQ_80e5f0171fb2f6ac7196005f30b
+        if (errorMessage.includes("UQ_80e5f0171fb2f6ac7196005f30b")) {
+          form.setError("email", {
+            type: "manual",
+            message: "This email is already registered. Please use a different email.",
+          });
+          toast.error("Email already exists. Please use a different email.", {
+            toastId: "employee-create-error",
+          });
+          return;
+        }
+        
+        const errorString = errorMessage.toLowerCase();
+        if (errorString.includes("email") && (errorString.includes("already") || errorString.includes("exist") || errorString.includes("duplicate"))) {
+          form.setError("email", {
+            type: "manual",
+            message: "This email is already registered. Please use a different email.",
+          });
+          toast.error("Email already exists. Please use a different email.", {
+            toastId: "employee-create-error",
+          });
+          return;
+        }
+        
+        toast.error(errorMessage, {
+          toastId: "employee-create-error",
+        });
+        return;
       }
-    } catch (error) {}
+      
+      if (res?.status || res?.success) {
+        toast.success("Employee created successfully!", {
+          toastId: "employee-create-success",
+        });
+        setTimeout(() => {
+          router.push(`/dashboard/organization/${slug}/employees`);
+        }, 1000);
+      } else {
+        toast.error(res?.message || "Failed to create employee. Please try again.", {
+          toastId: "employee-create-error",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error creating employee:", error);
+      
+      const responseData = error?.response?.data;
+      const errorMessage = 
+        responseData?.validationErrors ||
+        responseData?.error ||
+        responseData?.message || 
+        error?.message ||
+        "An error occurred while creating the employee. Please try again.";
+      
+      // Check for specific unique constraint violations using constraint IDs
+      // Employee email duplicate constraint: UQ_80e5f0171fb2f6ac7196005f30b
+      if (errorMessage.includes("UQ_80e5f0171fb2f6ac7196005f30b")) {
+        form.setError("email", {
+          type: "manual",
+          message: "This email is already registered. Please use a different email.",
+        });
+        toast.error("Email already exists. Please use a different email.", {
+          toastId: "employee-create-error",
+        });
+        return;
+      }
+      
+      const errorString = errorMessage.toLowerCase();
+      
+      // Check for duplicate email errors (generic fallback)
+      if (errorString.includes("email") && (errorString.includes("already") || errorString.includes("exist") || errorString.includes("duplicate"))) {
+        form.setError("email", {
+          type: "manual",
+          message: "This email is already registered. Please use a different email.",
+        });
+        toast.error("Email already exists. Please use a different email.", {
+          toastId: "employee-create-error",
+        });
+        return;
+      }
+      
+      toast.error(errorMessage, {
+        toastId: "employee-create-error",
+      });
+    }
   };
   return (
     <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D] mx-8">
@@ -128,8 +263,8 @@ export default function AddEmployee({ slug }: { slug: string }) {
         <h1 className="font-semibold text-xl text-black">ADD EMPLOYEE</h1>
 
         <Button
-          onClick={() => router.back()}
-          className="text-base text-[#003465] font-normal"
+          onClick={() => router.push(`/dashboard/organization/${slug}/employees`)}
+          className="font-normal text-base text-white bg-[#003465] h-[60px] px-6"
         >
           Back
         </Button>
@@ -172,6 +307,9 @@ export default function AddEmployee({ slug }: { slug: string }) {
               {...form.register("email")}
               className="w-full h-14 p-3 border border-[#737373] rounded"
             />
+            {form.formState.errors.email && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
+            )}
           </div>
 
           {/* Phone number */}
@@ -203,22 +341,14 @@ export default function AddEmployee({ slug }: { slug: string }) {
             <label className="block text-base text-black font-normal mb-2">
               Region/State
             </label>
-            <Select onValueChange={(value) => form.setValue("region", value)}>
-              <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                <SelectValue placeholder="select" />
-              </SelectTrigger>
-              <SelectContent className="z-10 bg-white">
-                {regions.map((region) => (
-                  <SelectItem
-                    key={region}
-                    value={region}
-                    className="hover:bg-gray-200"
-                  >
-                    {region}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              placeholder="Enter here"
+              {...form.register("region")}
+              className="w-full h-14 p-3 border border-[#737373] rounded"
+            />
+            {form.formState.errors.region && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.region.message}</p>
+            )}
           </div>
 
           {/* Date of Birth */}
@@ -226,14 +356,22 @@ export default function AddEmployee({ slug }: { slug: string }) {
             <label className="block text-base text-black font-normal mb-2">
               Date of Birth
             </label>
-            <div className="relative">
-              <Input
-                placeholder="DD/MM/YYYY"
-                type="date"
-                {...form.register("date_of_birth")}
-                className="w-full h-14 p-3 border border-[#737373] rounded"
-              />
-            </div>
+            <DatePicker
+              date={dateOfBirth}
+              onDateChange={(date) => {
+                setDateOfBirth(date);
+                if (date) {
+                  form.setValue("date_of_birth", date, { shouldValidate: true });
+                } else {
+                  form.setValue("date_of_birth", undefined as any, { shouldValidate: true });
+                }
+              }}
+              placeholder="Select date of birth"
+              className="w-full"
+            />
+            {form.formState.errors.date_of_birth && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.date_of_birth.message}</p>
+            )}
           </div>
 
           {/* Specialty */}
@@ -366,12 +504,22 @@ export default function AddEmployee({ slug }: { slug: string }) {
             <label className="block text-base text-black font-normal mb-2">
               Hire date
             </label>
-            <Input
-              placeholder="Enter here"
-              type="date"
-              {...form.register("hire_date")}
-              className="w-full h-14 p-3 border border-[#737373] rounded"
+            <DatePicker
+              date={hireDate}
+              onDateChange={(date) => {
+                setHireDate(date);
+                if (date) {
+                  form.setValue("hire_date", date, { shouldValidate: true });
+                } else {
+                  form.setValue("hire_date", undefined as any, { shouldValidate: true });
+                }
+              }}
+              placeholder="Select hire date"
+              className="w-full"
             />
+            {form.formState.errors.hire_date && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.hire_date.message}</p>
+            )}
           </div>
         </div>
 
@@ -393,23 +541,54 @@ export default function AddEmployee({ slug }: { slug: string }) {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="active"
-                checked={!form.watch("status")}
-                onCheckedChange={() => form.setValue("status", false)}
+                id="inactive"
+                checked={form.watch("status") === "inactive"}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    // When inactive checkbox is checked, set status to "inactive"
+                    form.setValue("status", "inactive", { shouldValidate: true });
+                  }
+                }}
                 className="accent-green-600 w-6 h-6 rounded"
               />
-              <label htmlFor="active">Inactive</label>
+              <label 
+                htmlFor="inactive" 
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  form.setValue("status", "inactive", { shouldValidate: true });
+                }}
+              >
+                Inactive
+              </label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="inactive"
-                checked={form.watch("status")}
-                onCheckedChange={() => form.setValue("status", true)}
+                id="active"
+                checked={form.watch("status") === "active"}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    // When active checkbox is checked, set status to "active"
+                    form.setValue("status", "active", { shouldValidate: true });
+                  }
+                }}
                 className="accent-green-600 w-6 h-6 rounded"
               />
-              <label htmlFor="inactive">Active</label>
+              <label 
+                htmlFor="active" 
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  form.setValue("status", "active", { shouldValidate: true });
+                }}
+              >
+                Active
+              </label>
             </div>
           </div>
+          {form.formState.errors.status && (
+            <p className="text-red-500 text-sm mt-2">{form.formState.errors.status.message}</p>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -417,7 +596,7 @@ export default function AddEmployee({ slug }: { slug: string }) {
           <Button
             type="button"
             className=" border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
-            onClick={() => router.back()}
+            onClick={() => router.push(`/dashboard/organization/${slug}/employees`)}
           >
             Cancel
           </Button>

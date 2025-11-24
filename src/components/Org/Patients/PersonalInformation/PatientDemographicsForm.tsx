@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,15 +111,28 @@ export default function PatientInfoForm() {
   const {
     register,
     formState: { errors },
-    control
+    control,
+    watch,
+    setValue
   } = useFormContext<Pick<FormDataStepper, 'demographic'>>(); // retrieve all hook methods
 
-  const [fileName, setFileName] = useState("");
+  // Get current image value from form
+  const currentImage = watch("demographic.patientImage");
+  const [fileName, setFileName] = useState(currentImage || "");
 
+  // Sync fileName with form value when it changes (e.g., from localStorage)
+  useEffect(() => {
+    if (currentImage && currentImage !== fileName) {
+      setFileName(currentImage);
+    }
+  }, [currentImage]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFileName(e.target.files[0].name);
+      const file = e.target.files[0];
+      setFileName(file.name);
+      // Store file name in form state so it persists
+      setValue("demographic.patientImage", file.name);
     }
   };
 
@@ -252,13 +265,13 @@ export default function PatientInfoForm() {
                     >
                       {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                     </label>
-                    <Select value={field.value} onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select value={field.value || ""} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                         <SelectValue placeholder={`Select ${key}`} />
                       </SelectTrigger>
                       <SelectContent className="z-10 bg-white">
                         {dropdownOptions[key].map((option) => (
-                          <SelectItem key={option} value={option} defaultValue={field.value}>
+                          <SelectItem key={option} value={option}>
                             {option}
                           </SelectItem>
                         ))}

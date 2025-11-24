@@ -1,7 +1,7 @@
 "use client";
 
 import { AllOrgTableData } from "@/components/shared/table/data";
-import OrgCardStatus from "./OrgStatCard";
+import StatCard from "@/components/dashboard/StatCard";
 import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 
 import DataTable from "@/components/shared/table/DataTable";
@@ -9,29 +9,37 @@ import DataTableFilter, {
   ListView,
 } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { ChartNoAxesColumn, Hospital, Plus } from "lucide-react";
+import { Plus, Building2, UserRoundPlus, UserRound, UserRoundX } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import NewOrg from "./NewOrg";
 import OrgManagement from "./OrgManagement";
 import Link from "next/link";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
-import { cn, formatDateFn } from "@/lib/utils";
+import { formatDateFn } from "@/lib/utils";
 import { useDashboardData, useTenantsData } from "@/hooks/swr";
 import { Tenant } from "@/lib/types";
-import { AllOrgChart } from "@/components/icons/icon";
-import { chartList } from "@/components/icons/chart";
+import { useSearchParams } from "next/navigation";
 
 
 export default function Page() {
+  const searchParams = useSearchParams();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("");
   const [status, setStatus] = useState("");
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
+
+  // Read search query from URL params
+  useEffect(() => {
+    const urlSearch = searchParams?.get("search") || "";
+    if (urlSearch) {
+      setSearch(urlSearch);
+    }
+  }, [searchParams]);
 
   // Fetch dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData();
@@ -43,17 +51,32 @@ export default function Page() {
     Status: "status",
   };
   const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : undefined;
-  const mappedStatus = status ? status.toUpperCase() : undefined;
-  // Fetch tenants list with filters
-  const { data: tenantsData, meta, isLoading: tenantsLoading, error: tenantsError } = useTenantsData({
+  // Fetch all tenants (without status filter - we'll filter on frontend)
+  const { data: allTenantsData, meta, isLoading: tenantsLoading, error: tenantsError } = useTenantsData({
     search,
     sort: mappedSort,
-    status: mappedStatus,
+    // Don't pass status to API - filter on frontend instead
     page,
     limit: pageSize,
   });
 
-  console.log(tenantsData, "tenants data");
+  // Filter organizations by status on the frontend
+  const tenantsData = useMemo(() => {
+    if (!Array.isArray(allTenantsData)) return [];
+    
+    if (!status) {
+      // No filter - return all
+      return allTenantsData;
+    }
+    
+    // Filter by status (case-insensitive)
+    // Check if organization status matches the selected filter
+    const statusLower = status.toLowerCase();
+    return allTenantsData.filter((org: any) => {
+      const orgStatus = org?.status?.toLowerCase() || '';
+      return orgStatus === statusLower;
+    });
+  }, [allTenantsData, status]);
 
   const prevFilters = useRef({ search, sortBy, status, pageSize });
   useEffect(() => {
@@ -68,45 +91,57 @@ export default function Page() {
     prevFilters.current = { search, sortBy, status, pageSize };
   }, [search, sortBy, status, pageSize]);
 
-  const keyToCardTypeMap: Record<
-    "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants",
-    "all" | "active" | "inactive" | "deactivated"
-  > = {
-    totalTenants: "all",
-    activeTenants: "active",
-    inactiveTenants: "inactive",
-    deactivatedTenants: "deactivated",
-  };
-  const datas = (
-    Object.keys(dashboardData || {}) as Array<
-      "totalTenants" | "activeTenants" | "inactiveTenants" | "deactivatedTenants"
-    >
-  ).map((key) => {
-    const value = dashboardData?.[key] || 0;
-    const cardType = keyToCardTypeMap[key];
+  // Map dashboard data to StatCard format
+  const statsCards = [
+    {
+      key: "totalTenants" as const,
+      title: "All Organizations",
+      value: dashboardData?.totalTenants || 0,
+      growth: null as number | null,
+      color: "blue" as const,
+      icon: <Building2 className="text-white size-5" />,
+    },
+    {
+      key: "activeTenants" as const,
+      title: "Active Organizations",
+      value: dashboardData?.activeTenants || 0,
+      growth: dashboardData?.totalTenants
+        ? parseFloat(
+            ((dashboardData.activeTenants * 100) / dashboardData.totalTenants).toFixed(2)
+          )
+        : null,
+      color: "green" as const,
+      icon: <UserRoundPlus className="text-white size-5" />,
+    },
+    {
+      key: "inactiveTenants" as const,
+      title: "Inactive Organizations",
+      value: dashboardData?.inactiveTenants || 0,
+      growth: dashboardData?.totalTenants
+        ? parseFloat(
+            ((dashboardData.inactiveTenants * 100) / dashboardData.totalTenants).toFixed(2)
+          )
+        : null,
+      color: "yellow" as const,
+      icon: <UserRound className="text-white size-5" />,
+    },
+    {
+      key: "deactivatedTenants" as const,
+      title: "Deactivated Organizations",
+      value: dashboardData?.deactivatedTenants || 0,
+      growth: dashboardData?.totalTenants
+        ? parseFloat(
+            ((dashboardData.deactivatedTenants * 100) / dashboardData.totalTenants).toFixed(2)
+          )
+        : null,
+      color: "red" as const,
+      icon: <UserRoundX className="text-white size-5" />,
+    },
+  ];
 
-    return {
-      cardType: cardType as "active" | "inactive" | "deactivated" | "all",
-      title: cardType.charAt(0).toUpperCase() + cardType.slice(1) + " Organizations",
-      statNum: value,
-      orgIcon: <Hospital className={cn("text-white size-5")} />,
-      chart: chartList[key as keyof typeof chartList] || (
-        <AllOrgChart className="w-full h-full object-fit" />
-      ),
-      barChartIcon: <ChartNoAxesColumn />,
-      OrgPercentChanges: parseFloat(
-        (key !== "totalTenants" && dashboardData?.totalTenants
-          ? (value * 100) / dashboardData.totalTenants
-          : 0
-        ).toFixed(2)
-      ),
-    };
-  });
-
-  console.log(datas);
-
-  // Handle error states
-  if (dashboardError || tenantsError) {
+  // Handle error states - only show error page for critical dashboard errors
+  // For tenants data, empty results should show empty state in table, not error page
+  if (dashboardError) {
     return (
       <section className="px-[30px] mb-10">
         <div className="flex flex-col items-center justify-center gap-4 py-12">
@@ -144,25 +179,21 @@ export default function Page() {
 
           {dashboardLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              <SkeletonBox className="h-[250px] w-full" />
-              <SkeletonBox className="h-[250px] w-full" />
-              <SkeletonBox className="h-[250px] w-full" />
-              <SkeletonBox className="h-[250px] w-full" />
+              <SkeletonBox className="h-[300px] w-full" />
+              <SkeletonBox className="h-[300px] w-full" />
+              <SkeletonBox className="h-[300px] w-full" />
+              <SkeletonBox className="h-[300px] w-full" />
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-[19px] mb-[48px]">
-              {datas.map((org) => (
-                <OrgCardStatus
-                  key={org.cardType}
-                  title={org.title}
-                  statNum={org.statNum}
-                  cardType={org.cardType}
-                  chart={org.chart}
-                  orgIcon={org.orgIcon}
-                  barChartIcon={org.barChartIcon}
-                  OrgPercentChanges={
-                    org.OrgPercentChanges ? org.OrgPercentChanges : undefined
-                  }
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-[48px]">
+              {statsCards.map((stat) => (
+                <StatCard
+                  key={stat.key}
+                  title={stat.title}
+                  value={stat.value}
+                  growth={stat.growth}
+                  color={stat.color}
+                  icon={stat.icon}
                 />
               ))}
             </div>
@@ -199,23 +230,37 @@ export default function Page() {
                     <TableCell><SkeletonBox className="h-4 w-12" /></TableCell>
                   </TableRow>
                 ))
+              ) : tenantsError ? (
+                // Show error message
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-red-600 font-medium">Failed to load organizations</p>
+                      <p className="text-gray-500 text-sm">
+                        {tenantsError?.message || "Please try again or refresh the page"}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : Array.isArray(tenantsData) && tenantsData.length > 0 ? (
-                tenantsData.map((data: any) => (
+                tenantsData.map((data: any, index: number) => (
                   <TableRow key={data.id} className="px-3 relative">
-                    <TableCell>{data.id}</TableCell>
+                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="py-[21px] ">
                       <Link
                         href={`/dashboard/organization/${data.id}`}
                         className="absolute cursor-pointer inset-0"
                       />
                       <div className="flex items-center gap-[10px]">
-                        <span className="w-[42px] h-42px rounded-full overflow-hidden">
+                        <span className="w-[42px] h-[42px] rounded-full overflow-hidden">
                           <Image
                             src={
                               data?.logo ||
                               orgPlaceholder
                             }
                             alt="organization image"
+                            width={42}
+                            height={42}
                             className="object-cover aspect-square w-full h-full"
                           />
                         </span>
@@ -225,25 +270,32 @@ export default function Page() {
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {formatDateFn(data?.created_at)}
+                      {formatDateFn(data?.created_at || data?.createdAt)}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {data?.address}{" "}
                     </TableCell>
                     <TableCell
-                      className={`font-semibold text-xs ${data?.status?.toLowerCase() === "active"
+                      className={`font-semibold text-xs ${
+                        data?.status?.toLowerCase() === "active"
                           ? "text-[#3FA907]"
-                          : "text-[#EC0909]"
-                        }`}
+                          : data?.status?.toLowerCase() === "inactive"
+                          ? "text-[#EC0909]"
+                          : data?.status?.toLowerCase() === "deactivated"
+                          ? "text-[#999999]"
+                          : "text-[#737373]"
+                      }`}
                     >
-                      {data?.status?.toUpperCase()}
+                      {data?.status?.toUpperCase() || "N/A"}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    No organizations found
+                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                    {status 
+                      ? `No ${status.toLowerCase()} organizations found` 
+                      : "No organizations found"}
                   </TableCell>
                 </TableRow>
               )}

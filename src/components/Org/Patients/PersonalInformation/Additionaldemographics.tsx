@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormDataStepper } from "../PatientStepper";
+import { Country, State, City } from "country-state-city";
+import { useMemo, useEffect } from "react";
 
 // Validation schema
 export const addionalDemoSchema = z.object({
@@ -20,8 +22,14 @@ export const addionalDemoSchema = z.object({
   postal: z.string().optional(),
   email: z.string().email("Invalid email address").optional(),
   workEmail: z.string().email("Invalid work email address").optional(),
-  homePhone: z.string().optional(),
-  mobilePhone: z.string().optional(),
+  homePhone: z.string().optional().refine(
+    (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
+    { message: "Invalid phone number format" }
+  ),
+  mobilePhone: z.string().optional().refine(
+    (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
+    { message: "Invalid phone number format" }
+  ),
   address: z.string().optional(),
   addressFrom: z.string().optional(),
   addressTo: z.string().optional(),
@@ -36,88 +44,7 @@ export const addionalDemoSchema = z.object({
 });
 
 
-const countryOptions = [
-  "United States",
-  "Canada",
-  "Mexico",
-  "United Kingdom",
-  "Australia",
-  "Other",
-];
-const stateOptions = [
-  "Alabama",
-  "Alaska",
-  "Arizona",
-  "Arkansas",
-  "California",
-  "Colorado",
-  "Connecticut",
-  "Delaware",
-  "Florida",
-  "Georgia",
-  "Hawaii",
-  "Idaho",
-  "Illinois",
-  "Indiana",
-  "Iowa",
-  "Kansas",
-  "Kentucky",
-  "Louisiana",
-  "Maine",
-  "Maryland",
-  "Massachusetts",
-  "Michigan",
-  "Minnesota",
-  "Mississippi",
-  "Missouri",
-  "Montana",
-  "Nebraska",
-  "Nevada",
-  "New Hampshire",
-  "New Jersey",
-  "New Mexico",
-  "New York",
-  "North Carolina",
-  "North Dakota",
-  "Ohio",
-  "Oklahoma",
-  "Oregon",
-  "Pennsylvania",
-  "Rhode Island",
-  "South Carolina",
-  "South Dakota",
-  "Tennessee",
-  "Texas",
-  "Utah",
-  "Vermont",
-  "Virginia",
-  "Washington",
-  "West Virginia",
-  "Wisconsin",
-  "Wyoming",
-];
-const cityOptions = [
-  "New York",
-  "Los Angeles",
-  "Chicago",
-  "Houston",
-  "Phoenix",
-  "Philadelphia",
-  "San Antonio",
-  "San Diego",
-  "Dallas",
-  "San Jose",
-  "Austin",
-  "Jacksonville",
-  "Fort Worth",
-  "Columbus",
-  "Indianapolis",
-  "Charlotte",
-  "San Francisco",
-  "Seattle",
-  "Denver",
-  "Washington DC",
-];
+// Using country-state-city library - options will be generated dynamically
 const postalOptions = [
   "10001",
   "90001",
@@ -186,7 +113,80 @@ export default function ContactDemographicForm() {
     register,
     control,
     formState: { errors },
+    watch,
+    setValue,
   } = useFormContext<Pick<FormDataStepper, 'addDemographic'>>();
+
+  // Watch country and state for dependent dropdowns
+  const selectedCountry = watch("addDemographic.country");
+  const selectedState = watch("addDemographic.state");
+
+  // Get country code from country name
+  const selectedCountryCode = useMemo(() => {
+    if (!selectedCountry) return null;
+    const country = Country.getAllCountries().find(
+      (c) => c.name === selectedCountry
+    );
+    return country?.isoCode || null;
+  }, [selectedCountry]);
+
+  // Get state code from state name
+  const selectedStateCode = useMemo(() => {
+    if (!selectedState || !selectedCountryCode) return null;
+    const state = State.getStatesOfCountry(selectedCountryCode).find(
+      (s) => s.name === selectedState
+    );
+    return state?.isoCode || null;
+  }, [selectedState, selectedCountryCode]);
+
+  // Generate options from country-state-city library
+  const countryOptions = useMemo(() => {
+    return Country.getAllCountries()
+      .map((country) => country.name)
+      .sort((a, b) => a.localeCompare(b));
+  }, []);
+
+  const stateOptions = useMemo(() => {
+    if (!selectedCountryCode) return [];
+    return State.getStatesOfCountry(selectedCountryCode)
+      .map((state) => state.name)
+      .sort((a, b) => a.localeCompare(b));
+  }, [selectedCountryCode]);
+
+  const cityOptions = useMemo(() => {
+    if (!selectedCountryCode || !selectedStateCode) return [];
+    return City.getCitiesOfState(selectedCountryCode, selectedStateCode)
+      .map((city) => city.name)
+      .sort((a, b) => a.localeCompare(b));
+  }, [selectedCountryCode, selectedStateCode]);
+
+  // Reset state and city when country changes
+  useEffect(() => {
+    if (selectedCountry) {
+      const countryCode = Country.getAllCountries().find(
+        (c) => c.name === selectedCountry
+      )?.isoCode;
+      if (countryCode) {
+        const availableStates = State.getStatesOfCountry(countryCode);
+        const stateExists = availableStates.some((s) => s.name === selectedState);
+        if (!stateExists && selectedState) {
+          setValue("addDemographic.state", "");
+          setValue("addDemographic.city", "");
+        }
+      }
+    } else {
+      if (selectedState) setValue("addDemographic.state", "");
+      if (watch("addDemographic.city")) setValue("addDemographic.city", "");
+    }
+  }, [selectedCountry, selectedState, setValue, watch]);
+
+  // Reset city when state changes
+  useEffect(() => {
+    if (!selectedState) {
+      const currentCity = watch("addDemographic.city");
+      if (currentCity) setValue("addDemographic.city", "");
+    }
+  }, [selectedState, setValue, watch]);
 
   return (
     <div className=" mx-auto p-6">
@@ -202,14 +202,14 @@ export default function ContactDemographicForm() {
               >
                 Country
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder={`Select Country`} />
+                  <SelectValue placeholder="Select Country" />
                 </SelectTrigger>
                 <SelectContent className="z-10 bg-white">
-                  {countryOptions.map((option, index) => (
+                  {countryOptions.map((option) => (
                     <SelectItem
-                      key={index}
+                      key={option}
                       value={option}
                       className="hover:bg-gray-200"
                     >
@@ -238,14 +238,18 @@ export default function ContactDemographicForm() {
               >
                 State
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select 
+                value={field.value || ""} 
+                onValueChange={field.onChange}
+                disabled={!selectedCountry}
+              >
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder={`Select State`} />
+                  <SelectValue placeholder={selectedCountry ? "Select State" : "Select Country first"} />
                 </SelectTrigger>
                 <SelectContent className="z-10 bg-white">
-                  {stateOptions.map((option, index) => (
+                  {stateOptions.map((option) => (
                     <SelectItem
-                      key={index}
+                      key={option}
                       value={option}
                       className="hover:bg-gray-200"
                     >
@@ -274,14 +278,18 @@ export default function ContactDemographicForm() {
               >
                 City
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select 
+                value={field.value || ""} 
+                onValueChange={field.onChange}
+                disabled={!selectedState}
+              >
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder={`Select City`} />
+                  <SelectValue placeholder={selectedState ? "Select City" : "Select State first"} />
                 </SelectTrigger>
                 <SelectContent className="z-10 bg-white">
-                  {cityOptions.map((option, index) => (
+                  {cityOptions.map((option) => (
                     <SelectItem
-                      key={index}
+                      key={option}
                       value={option}
                       className="hover:bg-gray-200"
                     >

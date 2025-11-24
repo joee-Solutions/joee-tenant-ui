@@ -50,6 +50,7 @@ export const API_ENDPOINTS = {
   
   // Notifications
   GET_NOTIFICATIONS: "/notifications",
+  CREATE_NOTIFICATION: "/notifications",
   GET_USER_NOTIFICATIONS: (userId: number) => `/notifications/user/${userId}`,
   GET_TENANT_NOTIFICATIONS: (tenantId: number) => `/notifications/tenant/${tenantId}`,
   MARK_NOTIFICATION_READ: (id: number) => `/notifications/${id}/read`,

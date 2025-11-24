@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Textarea } from "@/components/ui/Textarea";
+import { usePathname } from "next/navigation";
 
 // Define types for symptoms and form state
 type Symptom = {
@@ -65,6 +66,24 @@ const SymptomCategory = ({
 };
 
 export default function MedicalSymptomsForm() {
+  const pathname = usePathname();
+  const slug = pathname?.split('/organization/')[1]?.split('/')[0] || '';
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`additional-review-${slug}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setFormState(parsed);
+        }
+      } catch (e) {
+        console.error("Error loading additional review from localStorage:", e);
+      }
+    }
+  }, [slug]);
+
   const [formState, setFormState] = useState<FormState>({
     psychiatric: {
       symptoms: [
@@ -96,6 +115,22 @@ export default function MedicalSymptomsForm() {
       details: "",
     },
   });
+
+  // Auto-save to localStorage
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(`additional-review-${slug}`, JSON.stringify(formState));
+    }, 1000);
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formState, slug]);
 
   const handleSymptomChange = (category: keyof FormState, symptomId: string) => {
     setFormState((prev) => {
@@ -166,14 +201,7 @@ export default function MedicalSymptomsForm() {
         onDetailsChange={(value) => handleDetailsChange("allergic", value)}
       />
 
-      <div className="mt-6">
-      <button
-            type="submit"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Save
-          </button>
-      </div>
+      {/* Save button removed - form saves automatically */}
     </form>
   );
 }

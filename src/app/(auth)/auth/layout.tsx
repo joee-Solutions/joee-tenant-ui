@@ -45,7 +45,7 @@ export default function AuthLayout({
         </div>
         {children}
         <ToastContainer />
-        <p className="footer fixed left-40 text-gray-400 bottom-40">
+        <p className="fixed left-5 md:left-8 bottom-5 md:bottom-8 text-gray-400 text-xs md:text-sm z-50">
           Copywright © 2025 JOEE Solutions. All Rights Reserved
         </p>
       </div>

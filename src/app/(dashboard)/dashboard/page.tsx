@@ -17,6 +17,7 @@ import { useTenantsData } from "@/hooks/swr";
 import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { useTenantStore } from "@/contexts/AuthProvider";
+import { Building2, UserRoundPlus, UserRound, UserRoundX } from "lucide-react";
 
 // import { Organization, Employee, Patient } from '@/lib/types';
 
@@ -125,22 +126,22 @@ const DashboardPage: NextPage = () => {
     allOrganizations: {
       count: data?.totalTenants || 0,
       growth: growth.allOrganizations,
-      icon: <></>,
+      icon: <Building2 className="text-white size-5" />,
     },
     activeOrganizations: {
       count: data?.activeTenants || 0,
       growth: growth.activeOrganizations,
-      icon: <></>,
+      icon: <UserRoundPlus className="text-white size-5" />,
     },
     inactiveOrganizations: {
       count: data?.inactiveTenants || 0,
       growth: growth.inactiveOrganizations,
-      icon: <></>,
+      icon: <UserRound className="text-white size-5" />,
     },
     deactivatedOrganizations: {
       count: data?.deactivatedTenants || 0,
       growth: growth.deactivatedOrganizations,
-      icon: <></>,
+      icon: <UserRoundX className="text-white size-5" />,
     },
     networkTab: { icon: <></> },
   };

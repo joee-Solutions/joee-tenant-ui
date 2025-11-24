@@ -48,14 +48,25 @@ export async function POST(req: NextRequest) {
   console.log("req-->", apiUrl);
   const requestPath = new URL(req.url).pathname;
   const pathName = requestPath.split("/api")[1];
+  
+  try {
   const clientInfo = await getRequestInfo(req);
   const authorization =
     req.headers.get("authorization") || req.headers.get("Authorization");
-  const body = await req.json();
+    
+    let body;
+    try {
+      body = await req.json();
+    } catch (jsonError) {
+      // If JSON parsing fails, body might be empty or invalid
+      body = {};
+    }
+    
   const query = req.nextUrl.searchParams;
   const queryString = query.toString();
   const path = `${apiUrl}${pathName}${queryString ? "?" + queryString : ""}`;
-  try {
+    console.log("POST pathUrl-->", path);
+    
     const res = await axios.post(path, body, {
       headers: {
         "Content-Type": "application/json",
@@ -65,12 +76,19 @@ export async function POST(req: NextRequest) {
     const response = processResponse(res);
     return Response.json({ ...response });
   } catch (error: any) {
+    console.error("POST error:", error);
     if (error && error.response) {
       return NextResponse.json(error.response.data, {
         status: error.response.status,
       });
     } else if (error) {
-      return NextResponse.json(error, { status: 500 });
+      return NextResponse.json(
+        { 
+          error: error.message || "An error occurred",
+          details: error.toString() 
+        }, 
+        { status: 500 }
+      );
     } else {
       return NextResponse.json("An error occurred", { status: 500 });
     }

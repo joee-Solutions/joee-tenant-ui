@@ -84,14 +84,19 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.RESEND_OTP, {
         token,
       });
-      if (rt.status === true) {
-        toast.success(rt.message, {
+      if (rt.status === true || rt.success === true) {
+        toast.success("OTP resend successful", {
+          toastId: "success",
+          delay: 2000,
+        });
+      } else {
+        toast.success("OTP resend successful", {
           toastId: "success",
           delay: 2000,
         });
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.error, {
+      toast.error(error?.response?.data?.error || "Failed to resend OTP", {
         toastId: "error",
         delay: 2000,
       });

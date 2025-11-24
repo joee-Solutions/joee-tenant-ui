@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { usePathname } from "next/navigation";
 
 // Define the type for form data
 type FormData = {
@@ -8,6 +9,24 @@ type FormData = {
 };
 
 export default function MedicalSymptomForm() {
+  const pathname = usePathname();
+  const slug = pathname?.split('/organization/')[1]?.split('/')[0] || '';
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`review-system-${slug}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setFormData(parsed);
+        }
+      } catch (e) {
+        console.error("Error loading review system from localStorage:", e);
+      }
+    }
+  }, [slug]);
+
   const [formData, setFormData] = useState<FormData>({
     // Genitourinary
     urinaryFrequency: false,
@@ -50,6 +69,22 @@ export default function MedicalSymptomForm() {
     allergicDetails: "",
   });
 
+  // Auto-save to localStorage
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(`review-system-${slug}`, JSON.stringify(formData));
+    }, 1000);
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formData, slug]);
+
   const handleCheckboxChange = (name: string, checked: boolean) => {
     setFormData({ ...formData, [name]: checked });
   };
@@ -89,7 +124,8 @@ export default function MedicalSymptomForm() {
           name={detailsName}
           value={formData[detailsName] as string}
           onChange={(e) => handleTextChange(detailsName, e.target.value)}
-          className="w-full border border-[#737373] rounded p-2 h-32"
+          className="w-full border border-[#737373] rounded p-2 h-32 focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+          autoFocus={false}
         />
       </div>
     </div>
@@ -172,14 +208,7 @@ export default function MedicalSymptomForm() {
           detailsName="allergicDetails"
         />
 
-        <div className="mt-8">
-        <button
-            type="submit"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Save
-          </button>
-        </div>
+        {/* Save button removed - form saves automatically */}
       </form>
     </div>
   );

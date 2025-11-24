@@ -56,14 +56,17 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
       {/* Status */}
       <div>
         <Select
-          value={status}
-          onValueChange={setStatus}
+          value={status || ""}
+          onValueChange={(value) => setStatus(value === "all" ? "" : value)}
         >
           <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
-            <SelectValue placeholder={status ? status : "Status"} />
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            {["Active", "Inactive"].map((currSortVal) => (
+            <SelectItem value="all" className="cursor-pointer">
+              All
+            </SelectItem>
+            {["Active", "Inactive", "Deactivated"].map((currSortVal) => (
               <SelectItem
                 key={currSortVal}
                 value={`${currSortVal}`}

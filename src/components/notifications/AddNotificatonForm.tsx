@@ -12,11 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import Link from "next/link";
-import { useState } from "react";
-import { useTenantsData } from "@/hooks/swr";
+import React, { useState } from "react";
+import { useTenantsData, useAdminProfile } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import { Spinner } from "@/components/icons/Spinner";
 
 // Notification types enum (matching backend)
 enum NotificationType {
@@ -66,9 +67,25 @@ type NotificationSchemaType = z.infer<typeof notificationSchema>;
 export default function AddNotification() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
   
   // Fetch tenants data for dropdown
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenantsData();
+  const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError } = useTenantsData();
+  
+  // Fetch admin profile to get userId
+  const { data: adminData } = useAdminProfile();
+  const admin = Array.isArray(adminData) ? adminData[0] : adminData;
+  const userId = admin?.id;
+
+  // Debug: Log tenants data structure
+  React.useEffect(() => {
+    console.log("Tenants data:", tenantsData);
+    console.log("Tenants data type:", typeof tenantsData);
+    console.log("Is array:", Array.isArray(tenantsData));
+    if (tenantsError) {
+      console.error("Error fetching tenants:", tenantsError);
+    }
+  }, [tenantsData, tenantsError]);
 
   const form = useForm<NotificationSchemaType>({
     resolver: zodResolver(notificationSchema),
@@ -85,31 +102,121 @@ export default function AddNotification() {
   const sendToAllTenants = form.watch("sendToAllTenants");
 
   const onSubmit = async (data: NotificationSchemaType) => {
+    // Validate tenant selection if not sending to all
+    if (!data.sendToAllTenants && !data.tenantId) {
+      toast.error("Please select an organization or check 'Send to all organizations'");
+      form.setError("tenantId", {
+        type: "manual",
+        message: "Organization selection is required",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      // Prepare the notification data
-      const notificationData = {
+      // Get the expiry date from the separate state (source of truth from DatePicker)
+      // The expiryDate state is managed by DatePicker and is the most reliable
+      const expiresAtValue = expiryDate;
+      
+      // Prepare the notification data - matching Swagger format
+      const notificationData: any = {
         title: data.title,
         message: data.message,
         type: data.type,
         priority: data.priority,
-        ...(data.expiresAt && data.expiresAt instanceof Date && { expiresAt: data.expiresAt.toISOString() }),
-        ...(data.tenantId && !data.sendToAllTenants && { tenantId: data.tenantId }),
+        userId: userId || 1, // Use admin user ID, fallback to 1 if not available
+        metadata: {}, // Empty metadata object as required by backend
       };
 
-      console.log('Sending notification data:', notificationData);
-
-      // Send notification
-      const response = await processRequestAuth("post", API_ENDPOINTS.GET_NOTIFICATIONS, notificationData);
-      
-      if (response) {
-        toast.success("Notification sent successfully!");
-        router.push("/dashboard/notifications");
+      // Handle expiresAt - backend expects ISO string format: "2025-11-24T14:39:11.676Z"
+      // If a valid date is selected, send it as ISO string
+      // If no date is selected, we'll omit it (backend should handle as optional)
+      if (expiresAtValue && expiresAtValue instanceof Date && !isNaN(expiresAtValue.getTime())) {
+        // Format as ISO string - backend expects this exact format
+        notificationData.expiresAt = expiresAtValue.toISOString();
       }
-    } catch (error) {
+      // If expiresAt is not set, we omit it from the payload (backend should handle as optional)
+      // Some backends might expect null, but based on Swagger, it seems optional fields can be omitted
+
+      // Include tenantId - matching Swagger format
+      // If sending to specific tenant, include the tenantId
+      // If sending to all tenants, we might omit it or backend handles it differently
+      // Based on Swagger example, tenantId is always included when specified
+      if (!data.sendToAllTenants && data.tenantId) {
+        notificationData.tenantId = data.tenantId;
+      }
+      // Note: When sending to all tenants, we don't include tenantId
+      // The backend will handle broadcasting to all tenants
+
+      // Debug logging
+      console.log('Sending notification data:', JSON.stringify(notificationData, null, 2));
+      console.log('ExpiryDate state:', expiryDate);
+      console.log('ExpiryDate type:', typeof expiryDate);
+      console.log('ExpiryDate is Date:', expiryDate instanceof Date);
+      if (notificationData.expiresAt) {
+        console.log('ExpiresAt ISO string being sent:', notificationData.expiresAt);
+      } else {
+        console.log('ExpiresAt not included in payload (optional field)');
+      }
+
+      // Send notification - using POST to /notifications endpoint
+      const response = await processRequestAuth("post", API_ENDPOINTS.CREATE_NOTIFICATION, notificationData);
+      
+      // Check for success indicators
+      if (response?.status || response?.success || (response && !response.error)) {
+        toast.success("Notification sent successfully!");
+        setTimeout(() => {
+        router.push("/dashboard/notifications");
+        }, 1000);
+      } else {
+        const errorMessage = response?.message || response?.error || "Failed to send notification. Please try again.";
+        toast.error(errorMessage);
+      }
+    } catch (error: any) {
       console.error("Error sending notification:", error);
-      toast.error("Failed to send notification. Please try again.");
+      console.error("Error response:", error?.response);
+      console.error("Error response data:", error?.response?.data);
+      
+      let errorMessage = "Failed to send notification. Please try again.";
+      let isDatabaseError = false;
+      
+      // Handle specific error cases
+      if (error?.response?.data) {
+        const responseData = error.response.data;
+        const errorText = responseData.error || "";
+        const errorString = errorText.toLowerCase();
+        
+        // Database table doesn't exist error (500)
+        if (
+          responseData.statusCode === 500 &&
+          (errorString.includes("does not exist") || 
+           errorString.includes("relation") ||
+           errorString.includes("table") ||
+           errorString.includes("database"))
+        ) {
+          errorMessage = "The notification system is currently unavailable. The database table has not been set up. Please contact your system administrator to set up the notifications table.";
+          isDatabaseError = true;
+        }
+        // Validation errors (400)
+        else if (responseData.validationErrors && Array.isArray(responseData.validationErrors)) {
+          errorMessage = responseData.validationErrors.join(", ");
+        }
+        // Other error messages
+        else if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (responseData.error) {
+          errorMessage = responseData.error;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Show error with appropriate styling
+      toast.error(errorMessage, {
+        toastId: "notification-error",
+        autoClose: isDatabaseError ? 8000 : 5000, // Longer timeout for database errors
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -119,11 +226,10 @@ export default function AddNotification() {
     <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
       <div className="flex justify-between items-center border-b-2 py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">Send Notification</h1>
-        <Link
-          className="text-base text-[#003465] font-normal"
-          href={"/dashboard/notifications"}
-        >
+        <Link href={"/dashboard/notifications"}>
+          <Button className="font-normal text-base text-white bg-[#003465] h-[60px] px-6">
           Notification List
+          </Button>
         </Link>
       </div>
 
@@ -192,10 +298,26 @@ export default function AddNotification() {
               Expiry Date (Optional)
             </Label>
             <DatePicker
-              date={form.watch("expiresAt")}
-              onDateChange={(date) => form.setValue("expiresAt", date)}
+              date={expiryDate}
+              onDateChange={(date) => {
+                // Only set if it's a valid Date instance
+                if (date && date instanceof Date && !isNaN(date.getTime())) {
+                  setExpiryDate(date);
+                  // Also update form state for validation, but we'll use expiryDate state for submission
+                  form.setValue("expiresAt", date, { shouldValidate: false });
+                  form.clearErrors("expiresAt");
+                } else {
+                  // Clear both states when date is removed
+                  setExpiryDate(undefined);
+                  form.setValue("expiresAt", undefined, { shouldValidate: false });
+                  form.clearErrors("expiresAt");
+                }
+              }}
               placeholder="Select expiry date"
             />
+            {form.formState.errors.expiresAt && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.expiresAt.message}</p>
+            )}
           </div>
         </div>
 
@@ -226,28 +348,29 @@ export default function AddNotification() {
             </Label>
             <Select
               value={form.watch("tenantId")?.toString() || ""}
-              onValueChange={(value) => form.setValue("tenantId", parseInt(value))}
+              onValueChange={(value) => {
+                form.setValue("tenantId", parseInt(value));
+                form.clearErrors("tenantId");
+              }}
             >
               <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                <SelectValue placeholder={tenantsLoading ? "Loading organizations..." : "Select an organization"} />
+                <SelectValue placeholder={tenantsLoading ? "Loading organizations..." : tenantsError ? "Error loading organizations" : "Select an organization"} />
               </SelectTrigger>
               <SelectContent>
                 {(() => {
-                  // Handle both possible response structures
-                  let tenantsArray = [];
-                  if (tenantsData?.data) {
-                    // If data.data exists, it could be either the direct array or wrapped in another data object
-                    if (Array.isArray(tenantsData.data)) {
-                      tenantsArray = tenantsData.data;
-                    } else if (tenantsData.data.tenants && Array.isArray(tenantsData.data.tenants)) {
-                      tenantsArray = tenantsData.data.tenants;
-                    }
-                  } else if (tenantsData?.tenants && Array.isArray(tenantsData.tenants)) {
-                    tenantsArray = tenantsData.tenants;
+                  // useTenantsData returns data directly as an array (extracted via extractData)
+                  const tenantsArray = Array.isArray(tenantsData) ? tenantsData : [];
+
+                  if (tenantsError) {
+                    return (
+                      <SelectItem value="error" disabled>
+                        Error loading organizations
+                      </SelectItem>
+                    );
                   }
 
                   return tenantsArray.length > 0 ? (
-                    tenantsArray.map((tenant: Tenant) => (
+                    tenantsArray.map((tenant: any) => (
                       <SelectItem key={tenant.id} value={tenant.id.toString()}>
                         {tenant.name}
                       </SelectItem>
@@ -260,7 +383,10 @@ export default function AddNotification() {
                 })()}
               </SelectContent>
             </Select>
-            {!sendToAllTenants && !form.watch("tenantId") && (
+            {tenantsError && (
+              <p className="text-red-500 text-sm mt-1">Failed to load organizations. Please refresh the page.</p>
+            )}
+            {!sendToAllTenants && !form.watch("tenantId") && form.formState.isSubmitted && (
               <p className="text-red-500 text-sm mt-1">Please select an organization or check &quot;Send to all organizations&quot;</p>
             )}
           </div>
@@ -288,7 +414,7 @@ export default function AddNotification() {
             disabled={isSubmitting}
             className="bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded disabled:opacity-50"
           >
-            {isSubmitting ? "Sending..." : "Send Notification"}
+            {isSubmitting ? <Spinner /> : "Send Notification"}
           </Button>
           <Button
             type="button"

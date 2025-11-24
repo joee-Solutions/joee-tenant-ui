@@ -1,6 +1,6 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -25,6 +25,22 @@ interface AppointmentsChartProps {
 }
 
 const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
+  // Ensure all 7 days of the week are shown, even if missing from API data
+  const allDaysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  const chartData = useMemo(() => {
+    // Create a map of existing data by day
+    const dataMap = new Map(
+      data.appointmentsByDay?.map(item => [item.day, item]) || []
+    );
+    
+    // Ensure all 7 days are present, filling missing ones with 0
+    return allDaysOfWeek.map(day => {
+      const existingData = dataMap.get(day);
+      return existingData || { day, male: 0, female: 0 };
+    });
+  }, [data.appointmentsByDay]);
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md h-fit">
       <div className="flex justify-between items-center mb-4">
@@ -58,12 +74,16 @@ const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data.appointmentsByDay}
+            data={chartData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
             {/* <YAxis /> */}
             <Tooltip />
-            <XAxis dataKey="day" />
+            <XAxis 
+              dataKey="day" 
+              tick={{ fill: '#737373', fontSize: 12 }}
+              interval={0}
+            />
             <Legend />
             <Bar dataKey="male" fill="#0A3161" radius={[4, 4, 0, 0]} />
             <Bar dataKey="female" fill="#FFD700" radius={[4, 4, 0, 0]} />

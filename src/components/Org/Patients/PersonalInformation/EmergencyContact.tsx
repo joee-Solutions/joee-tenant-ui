@@ -15,7 +15,10 @@ import { FormDataStepper } from "../PatientStepper";
 // Validation schema
 export const emergencySchema = z.object({
   name: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().refine(
+    (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
+    { message: "Invalid phone number format" }
+  ),
   email: z.string().email("Invalid email address").optional(),
   relationship: z.string().optional(),
   permission: z.enum(["Yes", "No"]).optional(),
