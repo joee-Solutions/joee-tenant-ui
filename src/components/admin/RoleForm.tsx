@@ -185,7 +185,7 @@ export default function RoleForm({
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.back()}
+              onClick={() => router.push("/dashboard/roles")}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />

@@ -165,10 +165,10 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
             aria-label="Upload profile image"
           />
         </div>
-        <div className="w-[178px] h-[158px] bg-[#D9EDFF] flex items-center justify-center font-medium text-[#999999]">
+        {/* <div className="w-[178px] h-[158px] bg-[#D9EDFF] flex items-center justify-center font-medium text-[#999999]">
           {" "}
           <span>300x300</span>
-        </div>
+        </div> */}
       </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}

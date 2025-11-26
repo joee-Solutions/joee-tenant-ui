@@ -14,7 +14,7 @@ function TenantLoginLayout({ children }: { children: React.ReactNode }) {
       className=""
     >
       <div className="auth-container w-full place-items-center">
-      <NextTopLoader color="#000" showSpinner={false} />
+      {/* <NextTopLoader color="#000" showSpinner={false} /> */}
       {children}
     </div>
     </main>

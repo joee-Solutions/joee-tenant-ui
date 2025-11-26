@@ -15,9 +15,11 @@ interface DataTableFilterProps {
   setSortBy: (val: string) => void;
   status: string;
   setStatus: (val: string) => void;
+  searchPlaceholder?: string;
+  sortOptions?: string[];
 }
 
-export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, status, setStatus }: DataTableFilterProps) {
+export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, status, setStatus, searchPlaceholder = "Search...", sortOptions = ["Name", "Date", "Location", "Status"] }: DataTableFilterProps) {
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-[34px] mt-6">
       <div>
@@ -25,7 +27,7 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search Organizations"
+          placeholder={searchPlaceholder}
           className="py-[10px] pr-[10px] pl-5 bg-[#EDF0F6] w-full font-normal text-xs text-[#999999] h-full outline-none"
         />
       </div>
@@ -40,7 +42,7 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
             <SelectValue placeholder={sortBy ? sortBy : "Sort by"} />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            {["Name", "Date", "Location", "Status"].map((currSortVal) => (
+            {sortOptions.map((currSortVal) => (
               <SelectItem
                 key={currSortVal}
                 value={`${currSortVal}`}

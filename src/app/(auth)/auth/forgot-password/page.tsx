@@ -10,6 +10,7 @@ import { Spinner } from "@/components/icons/Spinner";
 import { processRequestNoAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 type ForgetPasswordProps = z.infer<typeof schema>;
 
@@ -35,10 +36,12 @@ const ForgetPassword = () => {
         data
       );
       if (res) {
+        toast.success("Email has been sent successfully! Please check your inbox for the 6-digit code.");
         router.push(`/auth/forgot-password/${res.data.token}`);
       }
     } catch (error) {
       console.log(error);
+      toast.error("Failed to send email. Please try again.");
     }
   };
   return (

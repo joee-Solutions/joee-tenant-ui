@@ -43,13 +43,40 @@ const ResetPasswordOtpClient = ({ token }: { token: string }) => {
         otp: data.otp,
         token,
       });
-      if (res.status === "success" && res.token) {
-        router.push(`/auth/reset-password?token=${res.token}`);
-      }
       console.log("res-->", res);
-    } catch (error:any) {
+      
+      // Handle the response structure: { success: true, message: "...", data: { status: "success", token: "..." } }
+      if (res && res.success && res.data) {
+        if (res.data.status === "success" && res.data.token) {
+          toast.success("OTP verified successfully!");
+          router.push(`/auth/reset-password?token=${res.data.token}`);
+        } else {
+          toast.error(res.data.message || "OTP verification failed");
+        }
+      } else if (res && res.status === "success" && res.token) {
+        // Fallback for legacy response format
+        toast.success("OTP verified successfully!");
+        router.push(`/auth/reset-password?token=${res.token}`);
+      } else {
+        toast.error(res?.message || "OTP verification failed");
+      }
+    } catch (error: any) {
       console.log(error, "ekekek");
-      toast.error(error?.response?.data.error);
+      // Check if error response contains success data (backend might return 401 with success body)
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.success && errorData.data) {
+          // Backend returned success data but with error status code
+          if (errorData.data.status === "success" && errorData.data.token) {
+            toast.success("OTP verified successfully!");
+            router.push(`/auth/reset-password?token=${errorData.data.token}`);
+            return;
+          }
+        }
+        toast.error(errorData.error || errorData.message || "Failed to verify OTP");
+      } else {
+        toast.error(error?.message || "Failed to verify OTP. Please try again.");
+      }
     }
   };
   return (

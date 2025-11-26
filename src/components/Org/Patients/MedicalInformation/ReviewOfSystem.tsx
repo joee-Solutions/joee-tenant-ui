@@ -70,7 +70,7 @@ export default function MedicalSymptomForm() {
   });
 
   // Auto-save to localStorage
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -122,10 +122,9 @@ export default function MedicalSymptomForm() {
         <p className="text-gray-700 mb-2">Details</p>
         <Textarea
           name={detailsName}
-          value={formData[detailsName] as string}
+          value={String(formData[detailsName] || "")}
           onChange={(e) => handleTextChange(detailsName, e.target.value)}
           className="w-full border border-[#737373] rounded p-2 h-32 focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
-          autoFocus={false}
         />
       </div>
     </div>

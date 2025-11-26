@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
-import { ListView } from "@/components/shared/table/DataTableFilter";
+import DataTableFilter, { ListView } from "@/components/shared/table/DataTableFilter";
 import DataTable from "@/components/shared/table/DataTable";
 import Pagination from "@/components/shared/table/pagination";
 import { useAdminUsersData } from "@/hooks/swr";
@@ -28,9 +28,80 @@ const adminTableData = [
 export default function AdminListPage() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [status, setStatus] = useState("");
 
   // Fetch admin users
   const { data: adminsData, isLoading, error } = useAdminUsersData();
+
+  // Filter and sort admins based on search and filters
+  const filteredAdmins = useMemo(() => {
+    if (!Array.isArray(adminsData)) return [];
+    
+    let filtered = [...adminsData];
+    
+    // Search filter
+    if (search.trim()) {
+      const searchLower = search.toLowerCase().trim();
+      filtered = filtered.filter((admin: AdminUser) => {
+        const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
+        const email = admin.email?.toLowerCase() || '';
+        const phone = admin.phone_number?.toLowerCase() || '';
+        const role = admin.roles?.[0]?.toLowerCase() || '';
+        
+        return fullName.includes(searchLower) ||
+               email.includes(searchLower) ||
+               phone.includes(searchLower) ||
+               role.includes(searchLower);
+      });
+    }
+    
+    // Status filter (if needed in the future)
+    // Currently all admins are shown as "Active", but we can add status filtering later
+    
+    // Sort
+    if (sortBy) {
+      filtered.sort((a: AdminUser, b: AdminUser) => {
+        switch (sortBy) {
+          case "Name":
+            const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+            const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
+            return nameA.localeCompare(nameB);
+          case "Email":
+            return (a.email || '').localeCompare(b.email || '');
+          case "Role":
+            const roleA = a.roles?.[0] || '';
+            const roleB = b.roles?.[0] || '';
+            return roleA.localeCompare(roleB);
+          default:
+            return 0;
+        }
+      });
+    }
+    
+    return filtered;
+  }, [adminsData, search, sortBy, status]);
+
+  // Paginate filtered data
+  const paginatedAdmins = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredAdmins.slice(startIndex, endIndex);
+  }, [filteredAdmins, currentPage, pageSize]);
+
+  // Reset to page 1 when search or filters change
+  const prevFilters = useRef({ search, sortBy, status });
+  useEffect(() => {
+    if (
+      prevFilters.current.search !== search ||
+      prevFilters.current.sortBy !== sortBy ||
+      prevFilters.current.status !== status
+    ) {
+      setCurrentPage(1);
+    }
+    prevFilters.current = { search, sortBy, status };
+  }, [search, sortBy, status]);
 
   // Handle error state
   if (error) {
@@ -51,22 +122,28 @@ export default function AdminListPage() {
   }
 
   return (
-    <div className="px-10 pt-[32px] pb-[56px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md h-fit max-w-6xl mx-auto w-full">
-      <h2 className="font-bold text-base text-black mb-[30px]">
-        Admin Users
-      </h2>
-      
+    <div className="px-10 pt-[32px] pb-[56px] h-fit max-w-6xl mx-auto w-full">
       <section className="shadow-[0px_0px_4px_1px_#0000004D]">
         <header className="flex items-center justify-between gap-5 py-5 border-b px-4">
           <h2 className="font-medium text-lg text-black">
             Admin List
           </h2>
+          <ListView pageSize={pageSize} setPageSize={setPageSize} />
         </header>
         
         <div className="px-6 py-8">
-          <header className="flex items-center justify-between gap-5 py-6">
-            <ListView pageSize={pageSize} setPageSize={setPageSize} />
-          </header>
+          
+          {/* Add search and filter */}
+          <DataTableFilter
+            search={search}
+            setSearch={setSearch}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            status={status}
+            setStatus={setStatus}
+            searchPlaceholder="Search admins by name, email, phone, or role..."
+            sortOptions={["Name", "Email", "Role"]}
+          />
           
           <DataTable tableDataObj={adminTableData[0]}>
             {isLoading ? (
@@ -92,10 +169,13 @@ export default function AdminListPage() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : adminsData && adminsData.length > 0 ? (
-              (adminsData as AdminUser[]).map((admin) => (
+            ) : paginatedAdmins && paginatedAdmins.length > 0 ? (
+              paginatedAdmins.map((admin, index) => {
+                // Calculate sequential number based on current page and index
+                const sequentialNumber = (currentPage - 1) * pageSize + index + 1;
+                return (
                 <TableRow key={admin.id} className="px-3 hover:bg-gray-50">
-                  <TableCell className="font-medium">{admin.id}</TableCell>
+                  <TableCell className="font-medium">{sequentialNumber}</TableCell>
                   <TableCell className="py-[21px]">
                     <div className="flex items-center gap-[10px]">
                       <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
@@ -157,19 +237,20 @@ export default function AdminListPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                  No admin users found
+                  {search ? "No admin users found matching your search" : "No admin users found"}
                 </TableCell>
               </TableRow>
             )}
           </DataTable>
           
           <Pagination
-            dataLength={adminsData?.length || 0}
-            numOfPages={Math.max(1, Math.ceil((adminsData?.length || 0) / pageSize))}
+            dataLength={filteredAdmins.length}
+            numOfPages={Math.max(1, Math.ceil(filteredAdmins.length / pageSize))}
             pageSize={pageSize}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}

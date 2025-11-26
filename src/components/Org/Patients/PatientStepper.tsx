@@ -354,37 +354,59 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       sexual_orientation: demographic?.sexualOrientation,
       image: demographic?.patientImage,
 
-      // Contact info - only include phone numbers if they have valid values
-      contact_info: {
-        country: addDemographic?.country || "",
-        state: addDemographic?.state || "",
-        city: addDemographic?.city || "",
-        zip_code: addDemographic?.postal || "",
-        email: addDemographic?.email || "",
-        email_work: addDemographic?.workEmail || "",
-        ...(addDemographic?.mobilePhone && addDemographic.mobilePhone.trim() ? { phone_number_mobile: addDemographic.mobilePhone.trim() } : {}),
-        ...(addDemographic?.homePhone && addDemographic.homePhone.trim() ? { phone_number_home: addDemographic.homePhone.trim() } : {}),
-        address: addDemographic?.address || "",
-        current_address: addDemographic?.currentAddress || "",
-        method_of_contact: addDemographic?.contactMethod || "",
-        lived_address_from: addDemographic?.addressFrom || "",
-        lived_address_to: addDemographic?.addressTo || "",
-        current_living_situation: addDemographic?.livingSituation || "",
-        referral_source: addDemographic?.referralSource || "",
-        occupational_status: addDemographic?.occupationStatus || "",
-        industry: addDemographic?.industry || "",
-        household_size: addDemographic?.householdSize || 0,
-        notes: addDemographic?.notes || "",
-      },
+      // Contact info - build object without phone numbers first, then conditionally add them
+      contact_info: (() => {
+        const contactInfo: any = {
+          country: addDemographic?.country || "",
+          state: addDemographic?.state || "",
+          city: addDemographic?.city || "",
+          zip_code: addDemographic?.postal || "",
+          email: addDemographic?.email || "",
+          email_work: addDemographic?.workEmail || "",
+          address: addDemographic?.address || "",
+          current_address: addDemographic?.currentAddress || "",
+          method_of_contact: addDemographic?.contactMethod || "",
+          lived_address_from: addDemographic?.addressFrom || "",
+          lived_address_to: addDemographic?.addressTo || "",
+          current_living_situation: addDemographic?.livingSituation || "",
+          referral_source: addDemographic?.referralSource || "",
+          occupational_status: addDemographic?.occupationStatus || "",
+          industry: addDemographic?.industry || "",
+          household_size: addDemographic?.householdSize || 0,
+          notes: addDemographic?.notes || "",
+        };
+        
+        // Only add phone numbers if they have valid, non-empty values
+        const mobilePhone = addDemographic?.mobilePhone?.trim();
+        if (mobilePhone && mobilePhone.length > 0) {
+          contactInfo.phone_number_mobile = mobilePhone;
+        }
+        
+        const homePhone = addDemographic?.homePhone?.trim();
+        if (homePhone && homePhone.length > 0) {
+          contactInfo.phone_number_home = homePhone;
+        }
+        
+        return contactInfo;
+      })(),
 
-      // Emergency info - only include phone number if it has a valid value
-      emergencyInfo: {
-        emergency_contact_name: emergency?.name || "",
-        ...(emergency?.phone && emergency.phone.trim() ? { emergency_contact_phone_number: emergency.phone.trim() } : {}),
-        emergency_contact_relationship: emergency?.relationship || "",
-        emergency_contact_email: emergency?.email || "",
-        contact_emergency_contact: emergency?.permission === "Yes",
-      },
+      // Emergency info - build object without phone number first, then conditionally add it
+      emergencyInfo: (() => {
+        const emergencyInfo: any = {
+          emergency_contact_name: emergency?.name || "",
+          emergency_contact_relationship: emergency?.relationship || "",
+          emergency_contact_email: emergency?.email || "",
+          contact_emergency_contact: emergency?.permission === "Yes",
+        };
+        
+        // Only add phone number if it has a valid, non-empty value
+        const phone = emergency?.phone?.trim();
+        if (phone && phone.length > 0) {
+          emergencyInfo.emergency_contact_phone_number = phone;
+        }
+        
+        return emergencyInfo;
+      })(),
 
       // Guardian info
       guardian_info: {

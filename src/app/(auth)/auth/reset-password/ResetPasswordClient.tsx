@@ -58,6 +58,7 @@ const ResetPasswordClient = () => {
     }
     if (!token) {
       toast.error("Please request for a new Otp");
+      return;
     }
     try {
       const res = await processRequestNoAuth(
@@ -68,11 +69,41 @@ const ResetPasswordClient = () => {
           password: data.password,
         }
       );
-      if (res.status) {
-        router.push("/auth/login");
+      console.log("Reset password response:", res);
+      
+      // Handle the response structure: { success: true, message: "...", data: { ... } }
+      if (res && res.success) {
+        toast.success(res.message || "Password reset successfully! Redirecting to login...");
+        // Add a small delay to show the success message before redirecting
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 1500);
+      } else if (res && res.status) {
+        // Fallback for legacy response format
+        toast.success("Password reset successfully! Redirecting to login...");
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 1500);
+      } else {
+        toast.error(res?.message || "Password reset failed. Please try again.");
       }
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      console.log("Reset password error:", error);
+      // Check if error response contains success data (backend might return error status with success body)
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.success) {
+          // Backend returned success data but with error status code
+          toast.success(errorData.message || "Password reset successfully! Redirecting to login...");
+          setTimeout(() => {
+            router.push("/auth/login");
+          }, 1500);
+          return;
+        }
+        toast.error(errorData.error || errorData.message || "Failed to reset password. Please try again.");
+      } else {
+        toast.error(error?.message || "Failed to reset password. Please try again.");
+      }
     }
   };
   const handleShowPassword = () => {

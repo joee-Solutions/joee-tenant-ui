@@ -1,27 +1,85 @@
-name: Version Bump
+name: Auto Version Bump
+
 on:
   push:
     branches:
       - main
-    paths:
-      - 'Dockerfile'
-      - '.github/workflows/**'
-      - '.github/k8/**'
-      - 'src/**'
-      - 'package.json'
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'README.md'
+      - '.github/workflows/version-bump.yml'
 
 jobs:
-  bump_version_number:
-    name: Bump Version Number
+  bump_version:
+    name: Auto Bump Version
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@main
-      - name: 'Automated Version Bump'
-        uses: 'phips28/gh-action-bump-version@master'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          version-type: 'patch'
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "current=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          # Determine version bump type from commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          VERSION_TYPE="patch"
+          
+          if echo "$COMMIT_MSG" | grep -qiE "^(feat|feature):"; then
+            VERSION_TYPE="minor"
+          elif echo "$COMMIT_MSG" | grep -qiE "^(breaking|major):"; then
+            VERSION_TYPE="major"
+          fi
+          
+          echo "Version bump type: $VERSION_TYPE"
+          echo "type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+          
+          # Bump version using npm
+          npm version $VERSION_TYPE --no-git-tag-version
+          
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet package.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No version change needed"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed, will commit"
+          fi
+
+      - name: Commit version bump
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json
+          git commit -m "ci: version bump to ${{ steps.bump_version.outputs.new }}"
+          git push
+          
+      - name: Create Git Tag
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git tag -a "v${{ steps.bump_version.outputs.new }}" -m "Release version ${{ steps.bump_version.outputs.new }}"
+          git push origin "v${{ steps.bump_version.outputs.new }}"

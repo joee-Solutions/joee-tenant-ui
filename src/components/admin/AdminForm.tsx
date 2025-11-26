@@ -35,6 +35,7 @@ import { tr } from "date-fns/locale";
 import { Input } from "../ui/input";
 import { Spinner } from "../icons/Spinner";
 import { toast } from "react-toastify";
+import { useAdminProfile } from "@/hooks/swr";
 
 const AdminFormSchema = z.object({
   first_name: z.string().min(1, "This field is required"),
@@ -57,6 +58,7 @@ type AdminFormSchemaType = z.infer<typeof AdminFormSchema>;
 const orgStatus = ["Admin", "Super_Admin", "User"];
 
 export default function AdminForm() {
+  const { data: adminData, isLoading: isAdminLoading } = useAdminProfile();
   const form = useForm<AdminFormSchemaType>({
     resolver: zodResolver(AdminFormSchema),
     mode: "onChange",
@@ -64,9 +66,9 @@ export default function AdminForm() {
       first_name: "",
       last_name: "",
       email: "",
-      phone_number: "0818888888",
+      phone_number: "",
       role: "",
-      company: "Joee Solution",
+      company: "",
       password: "",
       address: "",
     },
@@ -76,21 +78,121 @@ export default function AdminForm() {
   const onSubmit = async (payload: AdminFormSchemaType) => {
     console.log('Submitting payload:', payload);
     try {
-      await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, payload);
+      const response = await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, payload);
+      
+      // Check if admin creation was successful
+      // Handle both success response format and error response format
+      const hasError = response?.error || response?.validationErrors || (response?.statusCode && response.statusCode >= 400);
+      const isSuccess = (response?.success || response?.status) && !hasError;
+      
+      if (!isSuccess || hasError) {
+        // Extract error message from various possible locations
+        const errorMessage = response?.error || 
+                            response?.validationErrors || 
+                            response?.message || 
+                            "Failed to create admin";
+
+                            
+        // Check if it's a duplicate user error
+        const isDuplicateError = errorMessage.toLowerCase().includes("user already exists") || 
+                                 errorMessage.toLowerCase().includes("already exists") ||
+                                 errorMessage.toLowerCase().includes("duplicate");
+        
+        if (isDuplicateError) {
+          // Clear any previous errors first
+          form.clearErrors();
+          // Set error on email field (will display in red text under the field)
+          form.setError("email", {
+            type: "manual",
+            message: errorMessage,
+          });
+        } else {
+          // For other errors, show toast
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
+        return;
+      }
+
+      // Send notification after successful admin creation
+      try {
+        const adminFullName = `${payload.first_name} ${payload.last_name}`;
+        // Extract admin ID from the data (handle both single object and array)
+        const currentAdminId = Array.isArray(adminData) 
+          ? (adminData[0]?.id || 1)
+          : (adminData?.id || 1);
+        
+        const notificationData = {
+          title: "New Admin Created",
+          message: `A new admin account has been created for ${adminFullName} (${payload.email}) with role: ${payload.role}`,
+          type: "system",
+          priority: "medium",
+          userId: currentAdminId,
+          metadata: {},
+        };
+
+        await processRequestAuth("post", API_ENDPOINTS.CREATE_NOTIFICATION, notificationData);
+        console.log("Notification sent successfully for new admin creation");
+      } catch (notificationError) {
+        // Log notification error but don't fail the admin creation
+        console.error("Error sending notification:", notificationError);
+        // Optionally show a warning toast
+        toast.warning("Admin created successfully, but notification could not be sent");
+      }
 
       form.reset();
-      router.push("/dashboard/admin/list");
       toast.success("Admin created successfully");
-    } catch (error) {
+      router.push("/dashboard/admin/list");
+    } catch (error: any) {
       console.error("Error creating admin:", error);
-      toast.error("Failed to create admin", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      
+      // Extract error message from various possible locations in the error response
+      let errorMessage = "Failed to create admin";
+      
+      if (error?.response?.data) {
+        // Check for error in response.data
+        errorMessage = error.response.data.error || 
+                     error.response.data.validationErrors || 
+                     error.response.data.message || 
+                     errorMessage;
+      } else if (error?.error) {
+        // Direct error property
+        errorMessage = error.error;
+      } else if (error?.message) {
+        // Error message property
+        errorMessage = error.message;
+      }
+      
+      // Check if it's a duplicate user error
+      const isDuplicateError = errorMessage.toLowerCase().includes("user already exists") || 
+                               errorMessage.toLowerCase().includes("already exists") ||
+                               errorMessage.toLowerCase().includes("duplicate");
+      
+      if (isDuplicateError) {
+        // Clear any previous errors first
+        form.clearErrors();
+        // Set error on email field (will display in red text under the field)
+        form.setError("email", {
+          type: "manual",
+          message: errorMessage,
+        });
+      } else {
+        // For other errors, show toast
+        toast.error(errorMessage, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
     }
   };
   const [showPassword, setShowPassword] = React.useState(false);
