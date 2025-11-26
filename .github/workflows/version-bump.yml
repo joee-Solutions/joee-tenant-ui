@@ -28,7 +28,20 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Check if commit is version bump
+        id: check_version_bump
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qiE "^ci: version bump"; then
+            echo "is_version_bump=true" >> $GITHUB_OUTPUT
+            echo "Skipping: This is already a version bump commit"
+          else
+            echo "is_version_bump=false" >> $GITHUB_OUTPUT
+            echo "Proceeding with version bump"
+          fi
+
       - name: Get current version
+        if: steps.check_version_bump.outputs.is_version_bump != 'true'
         id: current_version
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -36,6 +49,7 @@ jobs:
           echo "Current version: $VERSION"
 
       - name: Bump version
+        if: steps.check_version_bump.outputs.is_version_bump != 'true'
         id: bump_version
         run: |
           # Determine version bump type from commit message
@@ -59,6 +73,7 @@ jobs:
           echo "New version: $NEW_VERSION"
 
       - name: Check for changes
+        if: steps.check_version_bump.outputs.is_version_bump != 'true'
         id: check_changes
         run: |
           if git diff --quiet package.json; then
