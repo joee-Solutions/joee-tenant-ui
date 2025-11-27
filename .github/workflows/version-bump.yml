@@ -32,13 +32,33 @@ jobs:
         id: check_version_bump
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ' ')
+          
+          echo "Commit message: $COMMIT_MSG"
+          echo "Commit author: $COMMIT_AUTHOR"
+          echo "Changed files: $CHANGED_FILES"
+          
+          # Check if commit message indicates version bump
           if echo "$COMMIT_MSG" | grep -qiE "^ci: version bump"; then
             echo "is_version_bump=true" >> $GITHUB_OUTPUT
-            echo "Skipping: This is already a version bump commit"
-          else
-            echo "is_version_bump=false" >> $GITHUB_OUTPUT
-            echo "Proceeding with version bump"
+            echo "Skipping: Commit message indicates version bump"
+            exit 0
           fi
+          
+          # Check if commit is from GitHub Actions and only package.json changed
+          if [ "$COMMIT_AUTHOR" = "GitHub Action" ] || [ "$COMMIT_AUTHOR" = "actions-user" ]; then
+            # Check if only package.json changed (trim whitespace and check)
+            FILES_COUNT=$(echo "$CHANGED_FILES" | tr ' ' '\n' | grep -v '^$' | wc -l | tr -d ' ')
+            if [ "$FILES_COUNT" = "1" ] && echo "$CHANGED_FILES" | grep -q "package.json"; then
+              echo "is_version_bump=true" >> $GITHUB_OUTPUT
+              echo "Skipping: Only package.json changed by GitHub Action"
+              exit 0
+            fi
+          fi
+          
+          echo "is_version_bump=false" >> $GITHUB_OUTPUT
+          echo "Proceeding with version bump"
 
       - name: Get current version
         if: steps.check_version_bump.outputs.is_version_bump != 'true'

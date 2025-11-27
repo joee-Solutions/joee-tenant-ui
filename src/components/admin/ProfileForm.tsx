@@ -163,7 +163,7 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
                 className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
               >
                 <span className="flex items-center gap-2">
-                  Saveee
+                  Save
                   <Check size={20} />
                 </span>
               </Button>
