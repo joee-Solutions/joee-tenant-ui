@@ -129,15 +129,35 @@ export default function AddNotification() {
         metadata: {}, // Empty metadata object as required by backend
       };
 
-      // Handle expiresAt - backend expects ISO string format: "2025-11-24T14:39:11.676Z"
-      // If a valid date is selected, send it as ISO string
-      // If no date is selected, we'll omit it (backend should handle as optional)
-      if (expiresAtValue && expiresAtValue instanceof Date && !isNaN(expiresAtValue.getTime())) {
-        // Format as ISO string - backend expects this exact format
-        notificationData.expiresAt = expiresAtValue.toISOString();
+      // Handle expiresAt - backend expects ISO string format: "2025-11-27T13:18:35.445Z"
+      // The error "expiresAt must be a Date instance" suggests backend validation expects a valid date string
+      // We'll always include expiresAt - either as ISO string or null
+      if (expiresAtValue) {
+        try {
+          // Ensure we have a valid Date object
+          const dateObj = expiresAtValue instanceof Date 
+            ? expiresAtValue 
+            : new Date(expiresAtValue);
+          
+          // Validate the date is valid
+          if (!isNaN(dateObj.getTime())) {
+            // Format as ISO string - this is what the backend expects
+            notificationData.expiresAt = dateObj.toISOString();
+          } else {
+            console.error('Invalid date value:', expiresAtValue);
+            // Set to null if invalid (backend might need the field present)
+            notificationData.expiresAt = null;
+          }
+        } catch (error) {
+          console.error('Error processing expiresAt:', error);
+          // Set to null on error (backend might need the field present)
+          notificationData.expiresAt = null;
+        }
+      } else {
+        // Always include expiresAt field, even if not provided (set to null)
+        // Some backends require the field to be present for validation
+        notificationData.expiresAt = null;
       }
-      // If expiresAt is not set, we omit it from the payload (backend should handle as optional)
-      // Some backends might expect null, but based on Swagger, it seems optional fields can be omitted
 
       // Include tenantId - matching Swagger format
       // If sending to specific tenant, include the tenantId
@@ -154,8 +174,14 @@ export default function AddNotification() {
       console.log('ExpiryDate state:', expiryDate);
       console.log('ExpiryDate type:', typeof expiryDate);
       console.log('ExpiryDate is Date:', expiryDate instanceof Date);
+      if (expiryDate instanceof Date) {
+        console.log('ExpiryDate getTime():', expiryDate.getTime());
+        console.log('ExpiryDate isValid:', !isNaN(expiryDate.getTime()));
+        console.log('ExpiryDate toISOString():', expiryDate.toISOString());
+      }
       if (notificationData.expiresAt) {
         console.log('ExpiresAt ISO string being sent:', notificationData.expiresAt);
+        console.log('ExpiresAt type:', typeof notificationData.expiresAt);
       } else {
         console.log('ExpiresAt not included in payload (optional field)');
       }

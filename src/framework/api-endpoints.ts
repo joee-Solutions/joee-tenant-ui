@@ -59,6 +59,7 @@ export const API_ENDPOINTS = {
   GET_UNREAD_COUNT: (userId: number) => `/notifications/user/${userId}/unread-count`,
   GET_TENANT_UNREAD_COUNT: (tenantId: number) => `/notifications/tenant/${tenantId}/unread-count`,
   GET_ADMIN_PROFILE: "/management/super/admin/profile",
+  UPDATE_ADMIN_PROFILE: "/management/super/admin/profile",
   CHANGE_PASSWORD: "/auth/super/change-password",
   
   // Roles Management

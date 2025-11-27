@@ -27,7 +27,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
     );
   }
   const mainEmployee = employees[0];
-  const otherEmployees = employees.slice(1);
+  const otherEmployees = employees.slice(1, 5); // Limit to 4 employees (indices 1-4)
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">

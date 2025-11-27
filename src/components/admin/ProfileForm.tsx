@@ -8,6 +8,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
 import { AdminUser } from "@/lib/types";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { toast } from "react-toastify";
+import { mutate } from "swr";
+import { Spinner } from "../icons/Spinner";
 
 const EditOrganizationSchema = z.object({
   firstName: z.string().min(1, "This field is required"),
@@ -28,6 +33,8 @@ type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 const orgStatus = ["Admin", "Super Admin", "User"];
 
 export default function ProfileForm({ admin }: { admin?: AdminUser }) {
+  const [isLoading, setIsLoading] = React.useState(false);
+  
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
     mode: "onChange",
@@ -44,8 +51,73 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
   const [isEdit, setIsEdit] = React.useState(true);
   const [isDisabled, setIsDisabled] = React.useState(true);
 
-  const onSubmit = (payload: EditOrganizationSchemaType) => {
-    console.log(payload);
+  // Update form values when admin data changes
+  React.useEffect(() => {
+    if (admin) {
+      form.reset({
+        firstName: admin.first_name || "",
+        lastName: admin.last_name || "",
+        address: admin.address || "",
+        email: admin.email || "",
+        phoneNumber: admin.phone_number || "",
+        role: admin.roles?.[0] || "",
+        company: "Joee Solution",
+      });
+    }
+  }, [admin, form]);
+
+  const onSubmit = async (payload: EditOrganizationSchemaType) => {
+    setIsLoading(true);
+    try {
+      // Transform camelCase to snake_case for backend
+      const updatePayload = {
+        first_name: payload.firstName,
+        last_name: payload.lastName,
+        address: payload.address,
+        email: payload.email,
+        phone_number: payload.phoneNumber,
+        role: payload.role,
+        company: payload.company,
+      };
+
+      const response = await processRequestAuth("put", API_ENDPOINTS.UPDATE_ADMIN_PROFILE, updatePayload);
+      
+      // Check if update was successful
+      const hasError = response?.error || response?.validationErrors || (response?.statusCode && response.statusCode >= 400);
+      const isSuccess = (response?.success || response?.status) && !hasError;
+      
+      if (!isSuccess || hasError) {
+        const errorMessage = response?.error || 
+                            response?.validationErrors || 
+                            response?.message || 
+                            "Failed to update admin profile";
+        toast.error(errorMessage);
+        return;
+      }
+
+      // Success - show notification and re-enable disabled state
+      toast.success("Admin profile updated successfully!");
+      setIsDisabled(true);
+      
+      // Refresh the profile data
+      mutate(API_ENDPOINTS.GET_ADMIN_PROFILE);
+    } catch (error: any) {
+      console.error("Error updating admin profile:", error);
+      let errorMessage = "Failed to update admin profile";
+      
+      if (error?.response?.data) {
+        errorMessage = error.response.data.error || 
+                      error.response.data.validationErrors || 
+                      error.response.data.message || 
+                      errorMessage;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEdit = () => {
@@ -114,6 +186,7 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
             options={orgStatus}
             labelText="Role"
             placeholder="Select"
+            disabled={isDisabled}
           />
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -122,6 +195,7 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
             labelText="Company"
             type="text"
             placeholder="Enter here"
+            disabled={isDisabled}
           />
 
           <div className="flex items-center gap-7">
@@ -160,11 +234,21 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
             ) : (
               <Button
                 type="submit"
-                className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
+                disabled={isLoading}
+                className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="flex items-center gap-2">
-                  Save
-                  <Check size={20} />
+                  {isLoading ? (
+                    <>
+                      <Spinner className="w-5 h-5" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Save
+                      <Check size={20} />
+                    </>
+                  )}
                 </span>
               </Button>
             )}
