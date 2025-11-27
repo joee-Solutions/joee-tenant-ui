@@ -35,11 +35,28 @@ export default function AdminListPage() {
   // Fetch admin users
   const { data: adminsData, isLoading, error } = useAdminUsersData();
 
+  // Normalize admins data to ensure it's always an array of AdminUser objects
+  const normalizedAdmins = useMemo(() => {
+    if (!adminsData) return [];
+    
+    // If it's already an array, check if it contains arrays (nested)
+    if (Array.isArray(adminsData)) {
+      // Flatten if nested (check first item)
+      if (adminsData.length > 0 && Array.isArray(adminsData[0])) {
+        return (adminsData as AdminUser[][]).flat();
+      }
+      return adminsData as AdminUser[];
+    }
+    
+    // If it's a single object, wrap it in an array
+    return [adminsData as AdminUser];
+  }, [adminsData]);
+
   // Filter and sort admins based on search and filters
   const filteredAdmins = useMemo(() => {
-    if (!Array.isArray(adminsData)) return [];
+    if (!Array.isArray(normalizedAdmins) || normalizedAdmins.length === 0) return [];
     
-    let filtered = [...adminsData];
+    let filtered = [...normalizedAdmins];
     
     // Search filter
     if (search.trim()) {
@@ -81,7 +98,7 @@ export default function AdminListPage() {
     }
     
     return filtered;
-  }, [adminsData, search, sortBy, status]);
+  }, [normalizedAdmins, search, sortBy, status]);
 
   // Paginate filtered data
   const paginatedAdmins = useMemo(() => {
