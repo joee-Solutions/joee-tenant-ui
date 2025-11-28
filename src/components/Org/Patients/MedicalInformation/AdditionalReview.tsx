@@ -117,7 +117,7 @@ export default function MedicalSymptomsForm() {
   });
 
   // Auto-save to localStorage
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
