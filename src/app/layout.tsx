@@ -17,13 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2563eb" />
         <link rel="apple-touch-icon" href="/assets/logo/logo.png" />
       </head>
-      <body className=" font-poppins">
+      <body className="font-poppins" suppressHydrationWarning>
         <TenantStoreProvider>{children}</TenantStoreProvider>
       </body>
     </html>

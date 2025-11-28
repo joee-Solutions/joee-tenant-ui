@@ -77,7 +77,7 @@ export default function EmergencyContactForm() {
               Emergency Contact Phone
             </label>
             <Input
-              type="tel"
+              type="text"
               id="phone"
               placeholder="Enter here"
               className="w-full h-14 p-3 border border-[#737373] rounded"

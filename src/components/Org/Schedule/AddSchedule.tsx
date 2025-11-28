@@ -109,8 +109,10 @@ export default function ScheduleForm({ slug }: { slug: string }) {
     <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="text-2xl font-bold">ADD SCHEDULE</h1>
-        <Link href={`/dashboard/organization/${slug}/schedules`} className="text-blue-700 font-medium">
-          Schedule List
+        <Link href={`/dashboard/organization/${slug}/schedules`}>
+          <Button variant="outline" className="h-[60px] border border-[#003465] text-[#003465] font-medium text-base px-6 hover:bg-[#003465] hover:text-white">
+            Back
+          </Button>
         </Link>
       </div>
 

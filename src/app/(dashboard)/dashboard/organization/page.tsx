@@ -284,7 +284,7 @@ export default function Page() {
                           : data?.status?.toLowerCase() === "deactivated"
                           ? "text-[#999999]"
                           : "text-[#737373]"
-                      }`}
+                        }`}
                     >
                       {data?.status?.toUpperCase() || "N/A"}
                     </TableCell>

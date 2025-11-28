@@ -417,13 +417,13 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
             {/* Country, State, City - Reordered: Country first, then State, then City */}
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                <FieldSelect
+              <FieldSelect
                   name="country"
-                  control={form.control}
+                control={form.control}
                   options={countryOptions}
                   labelText="Country"
                   placeholder="Select Country"
-                />
+              />
                 {selectedCountryName && (
                   <button
                     type="button"
@@ -439,14 +439,14 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
                 )}
               </div>
               <div className="w-full">
-                <FieldSelect
-                  name="state"
-                  control={form.control}
+              <FieldSelect
+                name="state"
+                control={form.control}
                   options={stateOptions}
-                  labelText="State"
+                labelText="State"
                   placeholder={selectedCountryName ? "Select State" : "Select Country first"}
                   disabled={!selectedCountryName}
-                />
+              />
                 {!selectedCountryName && (
                   <p className="text-xs text-gray-500 mt-1">Please select a country first</p>
                 )}

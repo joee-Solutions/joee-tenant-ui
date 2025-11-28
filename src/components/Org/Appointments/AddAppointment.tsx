@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -51,12 +52,19 @@ export default function AddAppointment({ slug }: { slug: string }) {
 
   // Filter employees to only show doctors/medical staff
   const doctors = Array.isArray(employeesData?.data)
-    ? employeesData.data.filter((employee: any) =>
-      employee.designation?.toLowerCase().includes('doctor') ||
-      employee.designation?.toLowerCase().includes('physician') ||
-      employee.designation?.toLowerCase().includes('medical') ||
-      employee.department?.toLowerCase().includes('medical')
-    )
+    ? employeesData.data.filter((employee: any) => {
+      const designation = typeof employee.designation === 'string' 
+        ? employee.designation.toLowerCase() 
+        : '';
+      const departmentName = typeof employee.department === 'string'
+        ? employee.department.toLowerCase()
+        : (employee.department?.name || '').toLowerCase();
+      
+      return designation.includes('doctor') ||
+        designation.includes('physician') ||
+        designation.includes('medical') ||
+        departmentName.includes('medical');
+    })
     : [];
 
   const form = useForm<AppointmentSchemaType>({
@@ -94,18 +102,43 @@ export default function AddAppointment({ slug }: { slug: string }) {
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
         setSuccess(true);
-        // setTimeout(() => {
-        //   router.push(`/dashboard/organization/${slug}/appointments`);
-        // }, 1500);
+        setTimeout(() => {
+          router.push(`/dashboard/organization/${slug}/appointments`);
+        }, 1500);
       } else {
-        setError(res?.message || res?.error || "Failed to create appointment. Please try again.");
+        // Check for validation errors first
+        if (res?.validationErrors && Array.isArray(res.validationErrors)) {
+          setError(res.validationErrors.join(", "));
+        } else {
+          setError(res?.message || res?.error || "Failed to create appointment. Please try again.");
+        }
       }
     } catch (err: unknown) {
       console.error("Appointment creation error:", err);
-      const errorMessage = err instanceof Error ? err.message :
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err as { message?: string })?.message ||
-        "Failed to create appointment. Please check your connection and try again.";
+      
+      // Extract error message from response
+      let errorMessage = "Failed to create appointment. Please check your connection and try again.";
+      
+      if (err && typeof err === 'object' && 'response' in err) {
+        const errorResponse = (err as any).response;
+        if (errorResponse?.data) {
+          const errorData = errorResponse.data;
+          
+          // Check for validation errors array
+          if (errorData.validationErrors && Array.isArray(errorData.validationErrors)) {
+            errorMessage = errorData.validationErrors.join(", ");
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = (err as { message: string }).message;
+      }
+      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -117,12 +150,11 @@ export default function AddAppointment({ slug }: { slug: string }) {
       <div className="flex justify-between items-center border-b-2  py-4 mb-8">
         <h1 className="font-semibold text-xl text-black">Add Appointment</h1>
 
-        <Button
-          onClick={() => router.push(`/dashboard/organization/${slug}/appointments`)}
-          className="text-base text-[#4E66A8] font-normal"
-        >
-          Appointment List
-        </Button>
+        <Link href={`/dashboard/organization/${slug}/appointments`}>
+          <Button variant="outline" className="h-[60px] border border-[#003465] text-[#003465] font-medium text-base px-6 hover:bg-[#003465] hover:text-white">
+            Back
+          </Button>
+        </Link>
       </div>
 
       {error && (
@@ -271,7 +303,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
           <Button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-8 px-16 text-md rounded disabled:opacity-50"
+            className="bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded disabled:opacity-50"
           >
             {loading ? (
               <>

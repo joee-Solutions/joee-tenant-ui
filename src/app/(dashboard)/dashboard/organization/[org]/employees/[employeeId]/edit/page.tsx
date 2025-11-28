@@ -11,7 +11,7 @@ export default function EditEmployeePage() {
   
   console.log("Pathname:", pathname);
   console.log("Segments:", segments);
-  
+
   const orgIndex = segments.findIndex(s => s === "organization");
   const org = orgIndex !== -1 && segments[orgIndex + 1] ? segments[orgIndex + 1] : "";
   const employeesIndex = segments.findIndex(s => s === "employees");

@@ -110,7 +110,7 @@ const MainHeader = () => {
                   {unreadCount}
                 </span>
               )}
-            </span>
+        </span>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
             <div className="p-4 border-b">
@@ -182,22 +182,22 @@ const MainHeader = () => {
         <Popover open={isProfileOpen} onOpenChange={setIsProfileOpen}>
           <PopoverTrigger asChild>
             <div className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity">
-              <span className="block w-[40px] h-[40px] rounded-full overflow-hidden">
-                <Image
-                  src={profileImage}
-                  alt="profile image"
+          <span className="block w-[40px] h-[40px] rounded-full overflow-hidden">
+            <Image
+              src={profileImage}
+              alt="profile image"
                   width={40}
                   height={40}
-                  className="aspect-square w-full h-full object-cover"
-                />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-[#003465] mb-1">
-                  {isLoading ? "Loading..." : fullName || "-"}
-                </p>
-                <p className="text-xs font-medium text-[#595959]">{role}</p>
-              </div>
-            </div>
+              className="aspect-square w-full h-full object-cover"
+            />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-[#003465] mb-1">
+              {isLoading ? "Loading..." : fullName || "-"}
+            </p>
+            <p className="text-xs font-medium text-[#595959]">{role}</p>
+          </div>
+        </div>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-48 p-0">
             <div className="p-2">

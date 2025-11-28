@@ -17,6 +17,47 @@ import useSWR from "swr";
 import Link from "next/link";
 import { formatDateFn } from "@/lib/utils";
 
+// Helper function to validate and normalize image URLs
+function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): string | any {
+  if (!imageSrc) return fallback;
+  
+  // If it's already a StaticImageData or valid object, return as is
+  if (typeof imageSrc === 'object' && imageSrc !== null) {
+    return imageSrc;
+  }
+  
+  const src = String(imageSrc).trim();
+  
+  // If it's a valid URL (http:// or https://), return as is
+  if (src.startsWith('http://') || src.startsWith('https://')) {
+    return src;
+  }
+  
+  // If it's a valid path starting with /, return as is
+  if (src.startsWith('/')) {
+    return src;
+  }
+  
+  // If it's a data URL (base64), return as is
+  if (src.startsWith('data:')) {
+    return src;
+  }
+  
+  // If it's just a filename (like "1 (1).jpg"), use fallback
+  // Next.js Image component can't handle bare filenames
+  if (!src.includes('/') && !src.includes('http')) {
+    return fallback;
+  }
+  
+  // Try to construct a valid path - if it looks like a relative path, prepend /
+  if (src.includes('.') && !src.startsWith('/')) {
+    // Assume it's meant to be in public folder
+    return '/' + src;
+  }
+  
+  return fallback;
+}
+
 export default function PatientList({ org }: { org: string }) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,11 +76,10 @@ export default function PatientList({ org }: { org: string }) {
           <header className="flex justify-between items-center border-b-2  py-4 mb-8">
             <h2 className="font-semibold text-xl text-black">Patient List</h2>
 
-            <Link
-              href={`/dashboard/organization/${org}/patients/new`}
-              className="text-base text-[#4E66A8] font-normal"
-            >
-              Add Patient
+            <Link href={`/dashboard/organization/${org}/patients/new`}>
+              <Button className="h-[60px] bg-[#003465] text-white font-medium text-base px-6">
+                Add Patient
+              </Button>
             </Link>
           </header>
           <header className="flex items-center justify-between gap-5 py-6">
@@ -59,11 +99,14 @@ export default function PatientList({ org }: { org: string }) {
                     <TableCell>{data.id}</TableCell>
                     <TableCell className="py-[21px]">
                       <div className="flex items-center gap-[10px]">
-                        <span className="w-[42px] h-42px rounded-full overflow-hidden">
+                        <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                           <Image
-                            src={data?.image || PatientData[0].patient.image}
+                            src={getValidImageSrc(data?.image, PatientData[0].patient.image)}
                             alt="employee image"
+                            width={42}
+                            height={42}
                             className="object-cover aspect-square w-full h-full"
+                            unoptimized={typeof data?.image === 'string' && (data.image.startsWith('http') || data.image.startsWith('data:'))}
                           />
                         </span>
                         <p className="font-medium text-xs text-black">

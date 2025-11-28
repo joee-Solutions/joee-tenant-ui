@@ -127,7 +127,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon, chartD
 
 
     <ChartNoAxesColumn className={`${colors.text} flex items-center justify-center text-lg font-medium p-2 bg-white z-10 rounded-lg h-[43px] w-[43px] absolute bottom-4 right-6`}/>
-    <div className="absolute bottom-0 left-0 w-full h-[130px] p-0">
+    <div className={`absolute bottom-0 left-0 w-full h-[130px] p-0 ${colors.bg}`}>
       <ResponsiveContainer width="100%" height="100%" className="" >
         <AreaChart data={data} >
         {/* <Tooltip /> */}

@@ -25,14 +25,45 @@ interface AppointmentsChartProps {
 }
 
 const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
+  // Day name mapping: full name to abbreviated
+  const dayNameMap: Record<string, string> = {
+    'Sunday': 'Sun',
+    'Monday': 'Mon',
+    'Tuesday': 'Tue',
+    'Wednesday': 'Wed',
+    'Thursday': 'Thu',
+    'Friday': 'Fri',
+    'Saturday': 'Sat',
+  };
+  
+  // Abbreviated to full name mapping (for display)
+  const abbreviatedToFull: Record<string, string> = {
+    'Sun': 'Sunday',
+    'Mon': 'Monday',
+    'Tue': 'Tuesday',
+    'Wed': 'Wednesday',
+    'Thu': 'Thursday',
+    'Fri': 'Friday',
+    'Sat': 'Saturday',
+  };
+  
   // Ensure all 7 days of the week are shown, even if missing from API data
   const allDaysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   
   const chartData = useMemo(() => {
-    // Create a map of existing data by day
-    const dataMap = new Map(
-      data.appointmentsByDay?.map(item => [item.day, item]) || []
-    );
+    // Create a map of existing data by day (convert full names to abbreviated)
+    const dataMap = new Map<string, AppointmentsByDay>();
+    
+    if (data.appointmentsByDay) {
+      data.appointmentsByDay.forEach(item => {
+        // Convert full day name to abbreviated format
+        const abbreviatedDay = dayNameMap[item.day] || item.day;
+        dataMap.set(abbreviatedDay, {
+          ...item,
+          day: abbreviatedDay, // Store abbreviated for consistency
+        });
+      });
+    }
     
     // Ensure all 7 days are present, filling missing ones with 0
     return allDaysOfWeek.map(day => {

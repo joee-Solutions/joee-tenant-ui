@@ -62,11 +62,10 @@ export default function Page({ slug }: { slug: string }) {
             Schedule List
           </h2>
 
-          <Link
-            href={`/dashboard/organization/${slug}/schedules/new`}
-            className="text-base text-[#4E66A8] font-normal"
-          >
-            Add Schedule
+          <Link href={`/dashboard/organization/${slug}/schedules/new`}>
+            <Button className="h-[60px] bg-[#003465] text-white font-medium text-base px-6">
+              Add Schedule
+            </Button>
           </Link>
         </header>
         <header className="flex items-center justify-between gap-5 py-6">

@@ -18,8 +18,20 @@ import { famHistorySchema } from "./MedicalInformation/FamilyHistory";
 import { lifestyleSchema } from "./MedicalInformation/SocialHistory";
 import { processRequestAuth } from "@/framework/https";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, ArrowLeft, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Import form components
 import PatientDemographicsForm from "./PersonalInformation/PatientDemographicsForm";
@@ -183,6 +195,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const router = useRouter();
 
   const methods = useForm<FormDataStepper>({
@@ -332,6 +345,63 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     return stepIndex <= lastCompletedStep + 1;
   };
 
+  // Helper function to format phone numbers for backend validation
+  // Backend expects E.164 format (e.g., +1234567890 or +2349023893815)
+  function formatPhoneNumber(phone: string | undefined): string | undefined {
+    if (!phone || !phone.trim()) return undefined;
+    
+    // Remove all spaces, dashes, parentheses, and other formatting
+    let cleaned = phone.trim().replace(/[\s\-\(\)]/g, '');
+    
+    // If already starts with +, validate and return
+    if (cleaned.startsWith('+')) {
+      // Ensure it's a valid international format (at least + and digits)
+      if (/^\+\d{10,15}$/.test(cleaned)) {
+        return cleaned;
+      }
+      // If invalid format, try to fix it
+      cleaned = cleaned.replace(/[^\d+]/g, '');
+      if (/^\+\d{10,15}$/.test(cleaned)) {
+        return cleaned;
+      }
+    }
+    
+    // If starts with 0 (Nigerian local format), convert to +234
+    if (cleaned.startsWith('0') && cleaned.length >= 10) {
+      return '+234' + cleaned.substring(1);
+    }
+    
+    // If starts with 234 (Nigerian country code without +), add +
+    if (cleaned.startsWith('234') && cleaned.length >= 13) {
+      return '+' + cleaned;
+    }
+    
+    // If it's all digits (10-15 digits), assume it needs country code
+    // For Nigerian numbers, add +234 if it's 10-11 digits
+    if (/^\d{10,11}$/.test(cleaned)) {
+      // Assume Nigerian number if it starts with 0 or is 10-11 digits
+      if (cleaned.startsWith('0')) {
+        return '+234' + cleaned.substring(1);
+      }
+      // If 10 digits and starts with 0-9, assume Nigerian
+      return '+234' + cleaned;
+    }
+    
+    // If it's already in a valid format (10-15 digits with country code), add + if missing
+    if (/^\d{10,15}$/.test(cleaned)) {
+      return '+' + cleaned;
+    }
+    
+    // If contains non-digit characters (except +), clean and try again
+    cleaned = cleaned.replace(/[^\d+]/g, '');
+    if (cleaned.startsWith('+') && /^\+\d{10,15}$/.test(cleaned)) {
+      return cleaned;
+    }
+    
+    // Last resort: return cleaned value (backend will validate)
+    return cleaned.length > 0 ? cleaned : undefined;
+  }
+
   function mapFormDataToPatientDto(formData: FormDataStepper) {
     const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle, visits, prescriptions } = formData ;
 
@@ -377,12 +447,13 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         };
         
         // Only add phone numbers if they have valid, non-empty values
-        const mobilePhone = addDemographic?.mobilePhone?.trim();
+        // Format phone numbers before adding
+        const mobilePhone = formatPhoneNumber(addDemographic?.mobilePhone);
         if (mobilePhone && mobilePhone.length > 0) {
           contactInfo.phone_number_mobile = mobilePhone;
         }
         
-        const homePhone = addDemographic?.homePhone?.trim();
+        const homePhone = formatPhoneNumber(addDemographic?.homePhone);
         if (homePhone && homePhone.length > 0) {
           contactInfo.phone_number_home = homePhone;
         }
@@ -400,7 +471,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         };
         
         // Only add phone number if it has a valid, non-empty value
-        const phone = emergency?.phone?.trim();
+        // Format phone number before adding
+        const phone = formatPhoneNumber(emergency?.phone);
         if (phone && phone.length > 0) {
           emergencyInfo.emergency_contact_phone_number = phone;
         }
@@ -432,6 +504,26 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   }
 
   console.log("data", methods.formState.errors)
+  // Reset form function
+  const handleReset = () => {
+    // Reset form to default values
+    methods.reset();
+    
+    // Clear localStorage
+    localStorage.removeItem(`patient-${slug}`);
+    
+    // Reset state
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+    setError(null);
+    setSuccess(false);
+    
+    // Close dialog
+    setShowResetDialog(false);
+    
+    toast.success("Patient form has been reset successfully");
+  };
+
   const onSubmit = async (data: FormDataStepper) => {
     setLoading(true);
     setError(null);
@@ -569,13 +661,25 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {steps[currentStep].title}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {steps[currentStep].description}
-              </p>
+            <div className="flex items-center gap-4">
+              <Link href={`/dashboard/organization/${slug}/patients`}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-[60px] border border-[#003465] text-[#003465] hover:bg-[#003465] hover:text-white font-medium text-base px-6"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {steps[currentStep].title}
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  {steps[currentStep].description}
+                </p>
+              </div>
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-500">
@@ -631,6 +735,41 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                   >
                     Previous
                   </Button>
+                  
+                  {/* Reset Button with Confirmation Dialog */}
+                  <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-[60px] border border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-medium text-base px-6"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Reset
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+                          Reset Patient Form
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-gray-600 mt-2">
+                          Are you sure you want to reset all patient data? This action will clear all form fields and cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex gap-3 mt-4">
+                        <AlertDialogCancel className="h-[50px] border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-base px-6">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleReset}
+                          className="h-[50px] bg-red-500 hover:bg-red-600 text-white font-medium text-base px-6"
+                        >
+                          Reset All Data
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
 
                 <div className="flex gap-3">

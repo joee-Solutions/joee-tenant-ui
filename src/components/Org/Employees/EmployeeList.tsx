@@ -91,7 +91,7 @@ export default function Page({ slug }: { slug: string }) {
 
             <Link href={`/dashboard/organization/${slug}/employees/new`}>
               <Button className="font-normal text-base text-white bg-[#003465] h-[60px] px-6">
-                Add Employee
+              Add Employee
               </Button>
             </Link>
           </header>

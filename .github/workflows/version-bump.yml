@@ -57,8 +57,16 @@ jobs:
             fi
           fi
           
-          echo "is_version_bump=false" >> $GITHUB_OUTPUT
-          echo "Proceeding with version bump"
+          # Check if commit message explicitly requests version bump
+          # Only bump if commit message contains [version-bump] or [bump-version]
+          if echo "$COMMIT_MSG" | grep -qiE "\[version-bump\]|\[bump-version\]"; then
+            echo "is_version_bump=false" >> $GITHUB_OUTPUT
+            echo "Proceeding with version bump (explicitly requested)"
+          else
+            echo "is_version_bump=true" >> $GITHUB_OUTPUT
+            echo "Skipping: No explicit version bump request in commit message"
+            echo "To trigger version bump, include [version-bump] or [bump-version] in your commit message"
+          fi
 
       - name: Get current version
         if: steps.check_version_bump.outputs.is_version_bump != 'true'

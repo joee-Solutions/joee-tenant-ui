@@ -271,7 +271,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
         email: data.email,
         phone_number: data.phone_number,
         designation: data.designation,
-        department: deptId,
+      department: deptId,
         status: statusToSend, // "active" or "inactive" string
       };
       

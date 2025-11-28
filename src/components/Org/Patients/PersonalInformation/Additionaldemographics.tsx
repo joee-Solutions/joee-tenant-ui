@@ -398,7 +398,7 @@ export default function ContactDemographicForm() {
             Phone (Home)
           </label>
           <Input
-            type="tel"
+            type="text"
             id="homePhone"
             placeholder="Enter here"
             className="w-full h-14 p-3 border border-[#737373] rounded"
@@ -420,7 +420,7 @@ export default function ContactDemographicForm() {
             Phone (Mobile)
           </label>
           <Input
-            type="tel"
+            type="text"
             id="mobilePhone"
             placeholder="Enter here"
             className="w-full h-14 p-3 border border-[#737373] rounded"
