@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { IoSettingsSharp } from "react-icons/io5";
 import { SearchIcon } from "lucide-react";
 import { BellIcon } from "../icons/icon";
@@ -11,7 +11,7 @@ import Cookies from "js-cookie";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "react-toastify";
 
-const MainHeader = () => {
+const MainHeaderContent = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -225,6 +225,31 @@ const MainHeader = () => {
         </Popover>
       </div>
     </header>
+  );
+};
+
+const MainHeader = () => {
+  return (
+    <Suspense fallback={
+      <header className="flex items-center justify-between gap-5 h-[150px] px-[24px] py-12 shadow-[0px_4px_25px_0px_#0000001A]">
+        <div className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] basis-[50%]">
+          <div className="px-5 h-[50px] rounded-[30px] bg-[#E4E8F2] w-full animate-pulse"></div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-[40px] h-[40px] rounded-[10px] bg-gray-200 animate-pulse"></div>
+          <div className="w-[40px] h-[40px] rounded-[10px] bg-gray-200 animate-pulse"></div>
+          <div className="flex items-center gap-[10.32px]">
+            <div className="w-[40px] h-[40px] rounded-full bg-gray-200 animate-pulse"></div>
+            <div>
+              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+    }>
+      <MainHeaderContent />
+    </Suspense>
   );
 };
 

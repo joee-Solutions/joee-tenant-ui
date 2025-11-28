@@ -22,9 +22,9 @@ import { formatDateFn } from "@/lib/utils";
 import { useDashboardData, useTenantsData } from "@/hooks/swr";
 import { Tenant } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-
-export default function Page() {
+function PageContent() {
   const searchParams = useSearchParams();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -311,5 +311,26 @@ export default function Page() {
         </>
       )}
     </section>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <section className="px-[30px] mb-10">
+        <div className="flex items-center gap-6 justify-between flex-wrap mb-[50px]">
+          <h2 className="text-2xl text-black font-normal">Organizations</h2>
+          <SkeletonBox className="h-[60px] w-[306px]" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <SkeletonBox className="h-[300px] w-full" />
+          <SkeletonBox className="h-[300px] w-full" />
+          <SkeletonBox className="h-[300px] w-full" />
+          <SkeletonBox className="h-[300px] w-full" />
+        </div>
+      </section>
+    }>
+      <PageContent />
+    </Suspense>
   );
 }

@@ -68,16 +68,16 @@ export default function MedicalVisitForm() {
     append(
       {
         visitCategory: "",
-        dateOfService: new Date().toISOString().split('T')[0],
+        dateOfService: new Date(),
         duration: "",
         chiefComplaint: "",
-        hpiOnsetDate: new Date().toISOString().split('T')[0],
+        hpiOnsetDate: new Date(),
         hpiDuration: "",
         severity: "",
         quality: "",
         aggravatingFactors: "",
         diagnosis: "",
-        diagnosisOnsetDate: new Date().toISOString().split('T')[0],
+        diagnosisOnsetDate: new Date(),
         treatmentPlan: "",
         providerName: "",
         providerSignature: "",
@@ -443,11 +443,13 @@ export default function MedicalVisitForm() {
                     <label className="block text-base text-black font-normal mb-2">
                       Provider name
                     </label>
-                    <Input
-                      {...field}
+                    <input
                       type="text"
                       className="w-full h-14 p-3 border border-[#737373] rounded focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
                       value={field.value || ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      onBlur={field.onBlur}
+                      name={field.name}
                       placeholder="Enter provider name"
                     />
                   </div>

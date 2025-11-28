@@ -55,7 +55,7 @@ export default function VitalSignsForm() {
   ]);
 
   // Auto-save to localStorage
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -362,7 +362,7 @@ export default function VitalSignsForm() {
                 <label className="block text-base text-black font-normal mb-2" htmlFor={`bmi-${entry.id}`}>
                   BMI
                 </label>
-                <Input
+                <input
                   id={`bmi-${entry.id}`}
                   type="text"
                   className="w-full h-14 p-3 border border-[#737373] rounded"

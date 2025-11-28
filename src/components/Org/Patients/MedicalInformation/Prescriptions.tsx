@@ -208,7 +208,7 @@ export default function MedicationForm() {
                     name={`prescriptions.${index}.addToMedicationList`}
                     control={control}
                     render={({ field }) => (
-                      <RadioGroup value={field.value} onValueChange={field.onChange} className="space-x-4 flex">
+                      <RadioGroup value={field.value || null} onValueChange={field.onChange} className="space-x-4 flex">
                         <RadioGroupItem value="yes" id="yes">
                           Yes
                         </RadioGroupItem>
