@@ -25,34 +25,9 @@ export default function Page({ slug }: { slug: string }) {
     authFectcher
   );
 
-  if (isLoading) {
-    return (
-      <section className="mb-10">
-        <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Loading schedules...</span>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className=" mb-10">
-        <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-red-600 text-center">
-              <p className="text-lg font-semibold">Failed to load schedules</p>
-              <p className="text-sm text-gray-600 mt-2">Please try again later</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
-  console.log(data.data.data,'data');
+  // Get schedules array safely
+  const schedules = data?.data?.data || [];
+  console.log(schedules, 'data');
 
   return (
     <section className="mb-10">
@@ -75,10 +50,22 @@ export default function Page({ slug }: { slug: string }) {
 
         </header>
         <DataTable tableDataObj={ScheduleList[0]}>
-          {Array.isArray(data?.data?.data) && data.data.data.length > 0 ? (
-            data.data.data.map((schedule: any) => {
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                Loading schedules...
+              </TableCell>
+            </TableRow>
+          ) : error ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                No schedules found
+              </TableCell>
+            </TableRow>
+          ) : Array.isArray(schedules) && schedules.length > 0 ? (
+            schedules.map((schedule: any) => {
               // Flatten the availableDays array to show each day as a separate row
-              return schedule.availableDays.map((day: any, dayIndex: number) => (
+              return schedule.availableDays?.map((day: any, dayIndex: number) => (
                 <TableRow key={`${schedule.id}-${dayIndex}`} className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100">
                   <TableCell>{schedule.id}</TableCell>
                   <TableCell className="py-[21px]">
@@ -100,11 +87,6 @@ export default function Page({ slug }: { slug: string }) {
                   <TableCell className="font-semibold text-xs text-[#737373]">
                     {day.endTime}
                   </TableCell>
-                  {/* <TableCell>
-                    <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
-                      <Ellipsis className="text-black size-5" />
-                    </button>
-                  </TableCell> */}
                 </TableRow>
               ));
             })
@@ -117,10 +99,10 @@ export default function Page({ slug }: { slug: string }) {
           )}
         </DataTable>
         <Pagination
-          dataLength={data?.data?.meta?.total}
-          numOfPages={data?.data?.meta?.totalPages}
-          pageSize={data?.data?.meta?.limit}
-          currentPage={data?.data?.meta?.page}
+          dataLength={data?.data?.meta?.total || 0}
+          numOfPages={data?.data?.meta?.totalPages || 1}
+          pageSize={data?.data?.meta?.limit || pageSize}
+          currentPage={data?.data?.meta?.page || currentPage}
           setCurrentPage={setCurrentPage}
         />
       </section>

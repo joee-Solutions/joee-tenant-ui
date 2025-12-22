@@ -184,6 +184,7 @@ const DashboardPage: NextPage = () => {
               growth={stats.allOrganizations.growth}
               color="blue"
               icon={stats.allOrganizations.icon}
+              href="/dashboard/organization"
             />
             <StatCard
               title="Active Organizations"
@@ -191,6 +192,7 @@ const DashboardPage: NextPage = () => {
               growth={stats.activeOrganizations.growth}
               color="green"
               icon={stats.activeOrganizations.icon}
+              href="/dashboard/organization/active"
             />
             <StatCard
               title="Inactive Organizations"
@@ -198,6 +200,7 @@ const DashboardPage: NextPage = () => {
               growth={stats.inactiveOrganizations.growth}
               color="yellow"
               icon={stats.inactiveOrganizations.icon}
+              href="/dashboard/organization/inactive"
             />
             <StatCard
               title="Deactived Organizations"
@@ -205,6 +208,7 @@ const DashboardPage: NextPage = () => {
               growth={stats.deactivatedOrganizations.growth}
               color="red"
               icon={stats.deactivatedOrganizations.icon}
+              href="/dashboard/organization/deactivated"
             />
           </div>
         )}

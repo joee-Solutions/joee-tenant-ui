@@ -14,6 +14,7 @@ import { Spinner } from "@/components/icons/Spinner";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { useTenantStore } from "@/contexts/AuthProvider";
 
 type LoginProps = z.infer<typeof schema>;
 
@@ -34,6 +35,7 @@ const schema = z.object({
 
 const TenantLoginPage = () => {
   const router = useRouter();
+  const { setUser } = useTenantStore(state => state.actions);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errMessage, setErrMessage] = useState<string>("");
   const {
@@ -53,13 +55,34 @@ const TenantLoginPage = () => {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
       console.log(rt);
       if (rt) {
-        Cookies.set("mfa_token", rt.data.token, { expires: 1 / 48 });
-        router.push("/auth/verify-otp");
+        // Skip OTP verification and route directly to dashboard
+        // Use the token from login response as auth_token (assuming backend allows skipping OTP)
+        if (rt.data?.token || rt.data?.auth_token) {
+          const authToken = rt.data.auth_token || rt.data.token;
+          
+          // Set auth_token cookie
+          Cookies.set("auth_token", authToken, { expires: 1 });
+          
+          // Remove mfa_token if it exists (no longer needed)
+          Cookies.remove("mfa_token");
+          
+          // Set user data if available in login response
+          if (rt.data?.user) {
+            Cookies.set("user", JSON.stringify(rt.data.user), { expires: 1 });
+            setUser(rt.data.user);
+          }
+          
+          toast.success("Login successful", { toastId: "login-success" });
+          router.push("/dashboard");
+        } else {
+          // If no token is available, show error
+          toast.error("Login failed: No authentication token received");
+        }
       }
     } catch (error: any) {
-      toast.error(error?.response?.data.error);
+      toast.error(error?.response?.data?.error || "Login failed");
       if (error?.status === 401) {
-        setErrMessage(error?.response?.data.error);
+        setErrMessage(error?.response?.data?.error);
       }
     }
   };
@@ -80,16 +103,16 @@ const TenantLoginPage = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-24  items-center justify-center font-poppins place-items-center">
       <div className="content col-span-1 text-white hidden md:flex flex-col justify-center space-y-8">
-        <h1 className="header font-bold text-4xl md:text-8xl">Welcome to LoCi Care</h1>
+        <h1 className="header font-bold text-4xl md:text-8xl">Welcome to LoCiCare</h1>
         <div className="line border-2 border-white w-40"></div>
         <div className="line border-3 border-white"></div>
         <span className="welcom md:w-3/4 text-lg leading-8">
           Empowering Missions. Strengthening Communities.
           <br />
-          Together, we connect people, data, and care—driving innovation, compassion, and operational excellence to advance community well-being
+          Together, we connect people, data, and care—driving innovation...
         </span>
       </div>
-      <div className=" col-span-1 shadow-lg rounded-2xl  border border-blue-500 text-white z-40 w-full max-w-[350px] md:max-w-[550px] md:px-8 px-8 py-20 [linear-gradient:rgb()] bg-[#5882C147]">
+      <div className="col-span-1 shadow-lg rounded-2xl  border border-blue-500 text-white z-40 w-full max-w-[350px] md:max-w-[550px] md:px-8 px-8 py-20 [linear-gradient:rgb()] bg-[#5882C147]">
         <div className="form flex flex-col px-12 md:px-20  items-center justify-center space-y-4  ">
           <div className="orgDeatails flex flex-col items-center justify-center gap-4">
             <Image
@@ -99,12 +122,11 @@ const TenantLoginPage = () => {
               height={60}
               className="logo"
             />
-            <span className=" ">
+            <span className="flex items-center gap-2 whitespace-nowrap">
               <span className="font-medium text-2xl md:text-3xl">
-                {" "}
-                LociCare{" "}
+                LociCare
               </span>
-              by Joee
+              <span className="text-lg md:text-xl whitespace-nowrap">by Solutions</span>
             </span>
           </div>
           <form

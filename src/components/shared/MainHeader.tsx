@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, Suspense } from "react";
 import { IoSettingsSharp } from "react-icons/io5";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, Menu, X } from "lucide-react";
 import { BellIcon } from "../icons/icon";
 import Image from "next/image";
 import profileImage from "./../../../public/assets/profile.png";
@@ -11,7 +11,12 @@ import Cookies from "js-cookie";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "react-toastify";
 
-const MainHeaderContent = () => {
+interface MainHeaderContentProps {
+  isMobileMenuOpen?: boolean;
+  toggleMobileMenu?: () => void;
+}
+
+const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderContentProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -81,25 +86,41 @@ const MainHeaderContent = () => {
   };
 
   return (
-    <header className="flex items-center justify-between gap-5 h-[150px] px-[24px] py-12 shadow-[0px_4px_25px_0px_#0000001A]">
-      <form onSubmit={handleSearch} className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] basis-[50%]">
-        <input
-          type="text"
-          placeholder="Search organizations, employees, departments..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-5 h-[50px] rounded-[30px] pl-5 pr-12 bg-[#E4E8F2] outline-none focus:outline-1 focus:outline-slate-400 w-full [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
-        />
-        <button 
-          type="submit" 
-          className="absolute right-10 cursor-pointer hover:opacity-70 transition-opacity"
-          aria-label="Search"
+    <header className="flex items-center justify-between gap-3 md:gap-5 h-auto md:h-[150px] px-4 md:px-[24px] py-4 md:py-12 shadow-[0px_4px_25px_0px_#0000001A]">
+      <div className="flex items-center gap-3 flex-1 md:flex-none md:basis-[50%]">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={toggleMobileMenu}
+          className="lg:hidden flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors flex-shrink-0"
+          aria-label="Toggle menu"
         >
-          <SearchIcon className="w-5 h-5" />
+          {isMobileMenuOpen ? (
+            <X className="h-5 w-5 text-[#003465]" />
+          ) : (
+            <Menu className="h-5 w-5 text-[#003465]" />
+          )}
         </button>
-      </form>
+
+        {/* Search Form */}
+        <form onSubmit={handleSearch} className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] flex-1">
+          <input
+            type="text"
+            placeholder="Search organizations, employees, departments..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-5 h-[50px] rounded-[30px] pl-5 pr-12 bg-[#E4E8F2] outline-none focus:outline-1 focus:outline-slate-400 w-full text-sm md:text-base [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+          />
+          <button 
+            type="submit" 
+            className="absolute right-4 md:right-10 cursor-pointer hover:opacity-70 transition-opacity"
+            aria-label="Search"
+          >
+            <SearchIcon className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
+        </form>
+      </div>
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
         {/* Notifications */}
         <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
           <PopoverTrigger asChild>
@@ -182,7 +203,7 @@ const MainHeaderContent = () => {
         <Popover open={isProfileOpen} onOpenChange={setIsProfileOpen}>
           <PopoverTrigger asChild>
             <div className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity">
-          <span className="block w-[40px] h-[40px] rounded-full overflow-hidden">
+          <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
             <Image
               src={profileImage}
               alt="profile image"
@@ -191,7 +212,7 @@ const MainHeaderContent = () => {
               className="aspect-square w-full h-full object-cover"
             />
           </span>
-          <div>
+          <div className="hidden sm:block">
             <p className="text-sm font-semibold text-[#003465] mb-1">
               {isLoading ? "Loading..." : fullName || "-"}
             </p>
@@ -228,19 +249,27 @@ const MainHeaderContent = () => {
   );
 };
 
-const MainHeader = () => {
+interface MainHeaderProps {
+  isMobileMenuOpen?: boolean;
+  toggleMobileMenu?: () => void;
+}
+
+const MainHeader = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderProps) => {
   return (
     <Suspense fallback={
-      <header className="flex items-center justify-between gap-5 h-[150px] px-[24px] py-12 shadow-[0px_4px_25px_0px_#0000001A]">
-        <div className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] basis-[50%]">
-          <div className="px-5 h-[50px] rounded-[30px] bg-[#E4E8F2] w-full animate-pulse"></div>
+      <header className="flex items-center justify-between gap-3 md:gap-5 h-auto md:h-[150px] px-4 md:px-[24px] py-4 md:py-12 shadow-[0px_4px_25px_0px_#0000001A]">
+        <div className="flex items-center gap-3 flex-1 md:flex-none md:basis-[50%]">
+          <div className="lg:hidden w-[40px] h-[40px] rounded-[10px] bg-gray-200 animate-pulse flex-shrink-0"></div>
+          <div className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] flex-1">
+            <div className="px-5 h-[50px] rounded-[30px] bg-[#E4E8F2] w-full animate-pulse"></div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <div className="w-[40px] h-[40px] rounded-[10px] bg-gray-200 animate-pulse"></div>
           <div className="w-[40px] h-[40px] rounded-[10px] bg-gray-200 animate-pulse"></div>
           <div className="flex items-center gap-[10.32px]">
             <div className="w-[40px] h-[40px] rounded-full bg-gray-200 animate-pulse"></div>
-            <div>
+            <div className="hidden sm:block">
               <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
               <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
             </div>
@@ -248,7 +277,7 @@ const MainHeader = () => {
         </div>
       </header>
     }>
-      <MainHeaderContent />
+      <MainHeaderContent isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
     </Suspense>
   );
 };

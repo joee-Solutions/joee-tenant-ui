@@ -56,14 +56,14 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-0">
-        <div className="border-b border-gray-200">
-          <TabsList className="h-auto bg-transparent p-0 w-full justify-start">
+        <div className="border-b border-gray-200 overflow-x-auto">
+          <TabsList className="h-auto bg-transparent p-0 w-full justify-start flex-nowrap min-w-max md:min-w-0">
             {links.map(({ href, label }) => (
               <TabsTrigger
                 key={href}
                 value={href}
                 className={cn(
-                  "relative px-10 py-3 text-sm font-medium border-b-[7px] border-transparent data-[state=active]:border-[#003465] data-[state=active]:text-[#000000] data-[state=inactive]:text-gray-500 hover:text-gray-700 bg-none !shadow-none rounded-none"
+                  "relative px-4 sm:px-6 md:px-8 lg:px-10 py-3 text-xs sm:text-sm font-medium border-b-[7px] border-transparent data-[state=active]:border-[#003465] data-[state=active]:text-[#000000] data-[state=inactive]:text-gray-500 hover:text-gray-700 bg-none !shadow-none rounded-none whitespace-nowrap flex-shrink-0"
                 )}
               >
                 {label}

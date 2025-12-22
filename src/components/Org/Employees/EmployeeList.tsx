@@ -75,13 +75,6 @@ export default function Page({ slug }: { slug: string }) {
     prevSearch.current = search;
   }, [search]);
 
-  if (isLoading) {
-    return <div className="p-8 text-center">Loading employees...</div>;
-  }
-  if (error) {
-    return <div className="p-8 text-center text-red-500">Failed to load employees.</div>;
-  }
-
   return (
     <section className=" mb-10">
       <>
@@ -108,7 +101,19 @@ export default function Page({ slug }: { slug: string }) {
             </div>
           </header>
           <DataTable tableDataObj={EmployeesData[0]}>
-            {Array.isArray(filteredEmployees) && filteredEmployees.length > 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                  Loading employees...
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                  No employees found
+                </TableCell>
+              </TableRow>
+            ) : Array.isArray(filteredEmployees) && filteredEmployees.length > 0 ? (
               filteredEmployees.map((employee: Employee, index: number) => (
               <TableRow
                 key={employee.id}

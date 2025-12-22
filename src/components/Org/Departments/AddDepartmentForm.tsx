@@ -141,7 +141,7 @@ export default function AddDepartment({ slug }: { slug: string }) {
             Department Description
           </label>
           <Textarea
-            placeholder="Your Message"
+            placeholder="Enter description"
             {...form.register("description")}
             className="w-full p-3 min-h-52 border border-[#737373] rounded"
           />

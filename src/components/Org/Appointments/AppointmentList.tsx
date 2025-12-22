@@ -69,9 +69,12 @@ export default function Page({ slug }: { slug: string }) {
     authFectcher
   );
 
+  // Get appointments array safely
+  const appointments = data?.data?.data || [];
+  
   // Filter appointments based on search query
-  const filteredAppointments = data?.data?.data && Array.isArray(data.data.data)
-    ? data.data.data.filter((appointment: any) => {
+  const filteredAppointments = Array.isArray(appointments)
+    ? appointments.filter((appointment: any) => {
         if (!search.trim()) return true;
         const searchLower = search.toLowerCase();
         const patientName = `${appointment.patient?.first_name || ''} ${appointment.patient?.last_name || ''}`.toLowerCase();
@@ -100,34 +103,6 @@ export default function Page({ slug }: { slug: string }) {
     }
     prevSearch.current = search;
   }, [search]);
-
-  if (isLoading) {
-    return (
-      <section className="mb-10">
-        <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Loading appointments...</span>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className="px-[30px] mb-10">
-        <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-red-600 text-center">
-              <p className="text-lg font-semibold">Failed to load appointments</p>
-              <p className="text-sm text-gray-600 mt-2">Please try again later</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
   return (
     <section className="mb-10">
 
@@ -151,7 +126,19 @@ export default function Page({ slug }: { slug: string }) {
 
           </header>
           <DataTable tableDataObj={AppointmentData[0]}>
-            {paginatedAppointments.length > 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  Loading appointments...
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  No appointments found
+                </TableCell>
+              </TableRow>
+            ) : paginatedAppointments.length > 0 ? (
               paginatedAppointments.map((appointment: any) => {
                 return (
                   <TableRow key={appointment.id} className="px-3 odd:bg-white even:bg-gray-50  hover:bg-gray-100">
@@ -203,11 +190,6 @@ export default function Page({ slug }: { slug: string }) {
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {appointment.startTime} - {appointment.endTime}
                     </TableCell>
-                    {/* <TableCell>
-                      <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
-                        <Ellipsis className="text-black size-5" />
-                      </button>
-                    </TableCell> */}
                   </TableRow>
                 );
               })
@@ -220,8 +202,8 @@ export default function Page({ slug }: { slug: string }) {
             )}
           </DataTable>
           <Pagination
-            dataLength={filteredAppointments.length}
-            numOfPages={Math.max(1, Math.ceil(filteredAppointments.length / pageSize))}
+            dataLength={filteredAppointments.length || 0}
+            numOfPages={Math.max(1, Math.ceil((filteredAppointments.length || 0) / pageSize))}
             pageSize={pageSize}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}

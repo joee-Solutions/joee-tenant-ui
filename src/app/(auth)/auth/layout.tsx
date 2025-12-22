@@ -9,8 +9,8 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="w-full min-h-[100vh] grid place-items-center p-5 md:p-8 relative z-[100] [background:radial-gradient(#0085FF,#003465)]">
-      <div className="auth-container w-full relative bg- px-5 md:px-8 py-8 flex flex-col place-items-center">
+    <main className="w-full min-h-[100vh] flex flex-col p-5 md:p-8 relative z-[100] [background:radial-gradient(#0085FF,#003465)]">
+      <div className="auth-container w-full flex-1 relative bg- px-5 md:px-8 py-8 flex flex-col">
         <div className=" hidden md:inline-block">
           <Image
             src={"/assets/auth/icon1.png"}
@@ -43,10 +43,12 @@ export default function AuthLayout({
             className="fixed top-0 right-40"
           ></Image>
         </div>
-        {children}
+        <div className="flex-1 flex items-center justify-center w-full">
+          {children}
+        </div>
         <ToastContainer />
-        <p className="fixed left-5 md:left-8 bottom-5 md:bottom-8 text-gray-400 text-xs md:text-sm z-50">
-          Copywright © 2025 JOEE Solutions. All Rights Reserved
+        <p className="mt-auto pt-4 pb-2 md:pb-4 text-center md:text-left w-full text-gray-400 text-xs md:text-sm z-50">
+          Copyright © 2025 JOEE Solutions. All Rights Reserved
         </p>
       </div>
     </main>

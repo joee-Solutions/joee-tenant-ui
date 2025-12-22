@@ -29,7 +29,7 @@ export const DepartmentList: {
   department: {
     department_name: string;
   };
-  no_of_empployees: number;
+  no_of_employees: number;
   date_created: string;
   status: string;
 }[] = [
@@ -38,7 +38,7 @@ export const DepartmentList: {
     department: {
       department_name: "Opthamology",
     },
-    no_of_empployees: 30,
+    no_of_employees: 30,
     date_created: "20 Jan 2024",
     status: "Active",
   },

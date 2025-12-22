@@ -6,8 +6,14 @@ import React from "react";
 import Cookies from "js-cookie";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
-const SideNavigation = () => {
+interface SideNavigationProps {
+  isMobileMenuOpen?: boolean;
+  setIsMobileMenuOpen?: (isOpen: boolean) => void;
+}
+
+const SideNavigation = ({ isMobileMenuOpen, setIsMobileMenuOpen }: SideNavigationProps) => {
   const router = useRouter();
   const handleLogout = async () => {
     try {
@@ -24,8 +30,17 @@ const SideNavigation = () => {
     return pathName === path;
   };
   return (
-    <div className="lg:fixed lg:w-72 bg-[#003465] overflow-y-scroll z-[100] min-h-screen lg:inset-y-0">
-      <div className=" text-white py-12 flex flex-col items-center justify-center gap-2">
+    <div className="fixed w-72 bg-[#003465] overflow-y-auto z-[100] min-h-screen inset-y-0">
+      {/* Close button - visible only on mobile */}
+      <button
+        onClick={() => setIsMobileMenuOpen?.(false)}
+        className="lg:hidden absolute top-4 right-4 z-[110] flex items-center justify-center bg-white/10 hover:bg-white/20 text-white w-[36px] h-[36px] rounded-lg transition-colors"
+        aria-label="Close menu"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      
+      <div className="text-white py-12 flex flex-col items-center justify-center gap-2">
         <Image
           width={200}
           height={200}
@@ -61,6 +76,7 @@ const SideNavigation = () => {
                         : ""
                     )}
                     href={item.href}
+                    onClick={() => setIsMobileMenuOpen?.(false)}
                   >
                     {item.icon && (
                       <item.icon
@@ -111,6 +127,7 @@ const SideNavigation = () => {
                                   ? "text-black  bg-white  rounded-l-full pl-8"
                                   : ""
                               )}
+                              onClick={() => setIsMobileMenuOpen?.(false)}
                             >
                               {child.icon && (
                                 <child.icon

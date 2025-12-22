@@ -62,12 +62,15 @@ export default function PatientList({ org }: { org: string }) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
-  const { data, isLoading } = useSWR(
+  const { data, isLoading, error } = useSWR(
     API_ENDPOINTS.TENANTS_PATIENTS(parseInt(org)),
     authFectcher
   );
 
   console.log(data);
+  
+  // Get patients array safely
+  const patients = data?.data?.data || [];
 
   return (
     <section className=" mb-10">
@@ -89,70 +92,74 @@ export default function PatientList({ org }: { org: string }) {
             />
           </header>
           <DataTable tableDataObj={PatientData[0]}>
-            {data?.data &&
-              data?.data.data.map((data) => {
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  Loading patients...
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  No patients found
+                </TableCell>
+              </TableRow>
+            ) : Array.isArray(patients) && patients.length > 0 ? (
+              patients.map((patient) => {
                 return (
                   <TableRow
-                    key={data.id}
+                    key={patient.id}
                     className="px-3 odd:bg-white even:bg-gray-50  hover:bg-gray-100"
                   >
-                    <TableCell>{data.id}</TableCell>
+                    <TableCell>{patient.id}</TableCell>
                     <TableCell className="py-[21px]">
                       <div className="flex items-center gap-[10px]">
                         <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                           <Image
-                            src={getValidImageSrc(data?.image, PatientData[0].patient.image)}
-                            alt="employee image"
+                            src={getValidImageSrc(patient?.image, PatientData[0].patient.image)}
+                            alt="patient image"
                             width={42}
                             height={42}
                             className="object-cover aspect-square w-full h-full"
-                            unoptimized={typeof data?.image === 'string' && (data.image.startsWith('http') || data.image.startsWith('data:'))}
+                            unoptimized={typeof patient?.image === 'string' && (patient.image.startsWith('http') || patient.image.startsWith('data:'))}
                           />
                         </span>
                         <p className="font-medium text-xs text-black">
-                          {data?.firstname} {data?.lastname}
+                          {patient?.firstname} {patient?.lastname}
                         </p>
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data?.address}
+                      {patient?.address}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data?.gender}
+                      {patient?.gender}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {formatDateFn(data?.date_of_birth)}
+                      {formatDateFn(patient?.date_of_birth)}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data?.phone_number}
+                      {patient?.phone_number}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data?.email}
+                      {patient?.email}
                     </TableCell>
-                    {/* <TableCell
-                      className={`font-semibold text-xs ${
-                        data?.status &&
-                        data?.status.toLowerCase() === "active"
-                          ? "text-[#3FA907]"
-                          : "text-[#EC0909]"
-                      }`}
-                    >
-                      {data.status}
-                    </TableCell> */}
-                    {/* <TableCell>
-                      <button className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]">
-                        <Ellipsis className="text-black size-5" />
-                      </button>
-                    </TableCell> */}
                   </TableRow>
                 );
-              })}
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  No patients found
+                </TableCell>
+              </TableRow>
+            )}
           </DataTable>
           <Pagination
-            dataLength={data?.data?.meta?.total}
-            numOfPages={data?.data?.meta?.totalPages}
-            pageSize={data?.data?.meta?.limit}
-            currentPage={data?.data?.meta?.page}
+            dataLength={data?.data?.meta?.total || 0}
+            numOfPages={data?.data?.meta?.totalPages || 1}
+            pageSize={data?.data?.meta?.limit || pageSize}
+            currentPage={data?.data?.meta?.page || currentPage}
             setCurrentPage={setCurrentPage}
           />
         </section>

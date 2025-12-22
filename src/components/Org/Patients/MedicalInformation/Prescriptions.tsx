@@ -6,6 +6,12 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormDataStepper } from "../PatientStepper";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePathname } from "next/navigation";
+import useSWR from "swr";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { authFectcher } from "@/hooks/swr";
+import { useState } from "react";
 
 // Define the validation schema
 export const prescriptionSchema = z.array(z.object({
@@ -24,11 +30,13 @@ export const prescriptionSchema = z.array(z.object({
 export type PrescriptionFormData = z.infer<typeof prescriptionSchema>;
 
 export default function MedicationForm() {
+  const pathname = usePathname();
+  const orgSlug = pathname?.split('/organization/')[1]?.split('/')[0] || '';
+  
   const {
     register,
     control,
     formState: { errors, },
-    // setValue,
     getValues,
   } = useFormContext<Pick<FormDataStepper, 'prescriptions'>>();
 
@@ -37,10 +45,14 @@ export default function MedicationForm() {
     name: "prescriptions",
   });
 
-  // const handleChange = (id: number, field: string, value: string): void => {
-  //   setValue(`prescriptions.${id}.${field as string}`, value);
-  // };
-  console.log(getValues('prescriptions'), 'getValues prese ')
+  // Fetch employees for prescriber dropdown
+  const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useSWR(
+    orgSlug ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(orgSlug)) : null,
+    authFectcher
+  );
+
+  const employees = employeesData?.data || [];
+  const useEmployeeDropdown = !employeesError && employees.length > 0;
 
 
   return (
@@ -142,15 +154,39 @@ export default function MedicationForm() {
                     <label htmlFor="prescriberName" className="block text-base text-black font-normal mb-2">
                       Prescriber Name
                     </label>
-                    <Input
-                      id="prescriptions?.prescriberName"
-                      type="text"
-                      placeholder="Enter here"
-                      key={field.id}
-                      className="w-full h-14 p-3 border border-[#737373] rounded"
-                      {...register(`prescriptions.${index}.prescriberName`)}
-                      error={errors.prescriptions?.[index]?.prescriberName?.message}
-                    />
+                    {useEmployeeDropdown ? (
+                      <Controller
+                        name={`prescriptions.${index}.prescriberName`}
+                        control={control}
+                        render={({ field }) => (
+                          <Select value={field.value || ""} onValueChange={field.onChange}>
+                            <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
+                              <SelectValue placeholder={employeesLoading ? "Loading..." : "Select prescriber"} />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white z-[1000]">
+                              {employees.map((employee: any) => (
+                                <SelectItem 
+                                  key={employee.id} 
+                                  value={`${employee.firstname} ${employee.lastname}`}
+                                >
+                                  {employee.firstname} {employee.lastname}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    ) : (
+                      <Input
+                        id="prescriptions?.prescriberName"
+                        type="text"
+                        placeholder="Enter prescriber name"
+                        key={field.id}
+                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                        {...register(`prescriptions.${index}.prescriberName`)}
+                        error={errors.prescriptions?.[index]?.prescriberName?.message}
+                      />
+                    )}
                   </div>
                 </div>
 

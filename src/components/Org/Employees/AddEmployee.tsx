@@ -34,7 +34,7 @@ const EmployeeSchema = z.object({
   region: z.string().min(1, "Region/State is required"),
   date_of_birth: z.date({ required_error: "Date of birth is required" }),
   specialty: z.string().optional(),
-  designation: z.string().min(1, "Designation is required"),
+  designation: z.string().min(1, "Title is required"),
   department: z.string().min(1, "Department is required"),
   gender: z.string().min(1, "Gender is required"),
   image_url: z.string().optional(),
@@ -386,10 +386,10 @@ export default function AddEmployee({ slug }: { slug: string }) {
             />
           </div>
 
-          {/* Designation */}
+          {/* Title */}
           <div>
             <label className="block text-base text-black font-normal mb-2">
-              Designation
+              Title
             </label>
             <Input
               placeholder="Enter here"
@@ -523,13 +523,13 @@ export default function AddEmployee({ slug }: { slug: string }) {
           </div>
         </div>
 
-        {/* Short Biography */}
+        {/* Additional Notes */}
         <div>
           <label className="block text-base text-black font-normal mb-2">
-            Short Biography
+            Additional Notes
           </label>
           <Textarea
-            placeholder="Your Message"
+            placeholder="Enter additional notes"
             {...form.register("about")}
             className="w-full p-3 min-h-52 border border-[#737373] rounded"
           />

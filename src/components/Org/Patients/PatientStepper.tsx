@@ -104,13 +104,6 @@ const steps = [
   },
   // Medical Information Steps
   {
-    id: "patient-status",
-    title: "Patient Status",
-    description: "Current patient status",
-    component: PatientStatus,
-    category: "medical",
-  },
-  {
     id: "allergies",
     title: "Allergies",
     description: "Patient allergy information",
@@ -187,6 +180,13 @@ const steps = [
     component: MedicalVisitForm,
     category: "medical",
   },
+  {
+    id: "patient-status",
+    title: "Patient Status",
+    description: "Current patient status",
+    component: PatientStatus,
+    category: "medical",
+  },
 ];
 
 export default function PatientStepper({ slug }: { slug: string }): React.ReactElement {
@@ -211,6 +211,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       },
       allergies: [{
         allergy: "",
+        otherAllergy: "",
         startDate: "",
         endDate: "",
         severity: "",
@@ -218,6 +219,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         comments: ""
       }],
       medHistory: [{
+        date: new Date().toISOString().split('T')[0],
         condition: "",
         onsetDate: "",
         endDate: "",
@@ -242,6 +244,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         additionalInfo: ""
       }],
       famhistory: [{
+        date: new Date().toISOString().split('T')[0],
         relative: "",
         conditions: "",
         ageOfDiagnosis: "",
@@ -283,6 +286,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   // Auto-save progress whenever form data changes
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let saveCount = 0;
     
     const subscription = methods.watch(() => {
       // Clear previous timeout
@@ -291,11 +295,26 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       // Debounce auto-save to avoid too frequent saves
       timeoutId = setTimeout(() => {
         const formData = methods.getValues();
-        localStorage.setItem(`patient-${slug}`, JSON.stringify({
-          currentStep,
-          completedSteps: Array.from(completedSteps),
-          data: formData
-        }));
+        try {
+          localStorage.setItem(`patient-${slug}`, JSON.stringify({
+            currentStep,
+            completedSteps: Array.from(completedSteps),
+            data: formData
+          }));
+          saveCount++;
+          // Show notification every 5 saves to avoid spam
+          if (saveCount % 5 === 0) {
+            toast.success("Patient data auto-saved", { 
+              toastId: "auto-save",
+              autoClose: 2000 
+            });
+          }
+        } catch (error) {
+          toast.error("Failed to save patient data", { 
+            toastId: "auto-save-error",
+            autoClose: 3000 
+          });
+        }
       }, 1000); // Save 1 second after last change
     });
 
@@ -340,9 +359,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   };
 
   const canProceedToStep = (stepIndex: number) => {
-    // Allow navigation to any step that is completed or is the next step after the last completed step
-    const lastCompletedStep = Math.max(...Array.from(completedSteps), -1);
-    return stepIndex <= lastCompletedStep + 1;
+    // Allow navigation to any step - no forced sequential navigation
+    return true;
   };
 
   // Helper function to format phone numbers for backend validation
@@ -783,20 +801,23 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                       <ChevronRight className="ml-2 w-4 h-4" />
                     </Button>
                   ) : (
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 disabled:opacity-50 flex items-center"
-                    >
-                      {loading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Submitting...
-                        </>
-                      ) : (
-                        "Submit Patient"
-                      )}
-                    </Button>
+                    <div className="flex flex-col items-end gap-2">
+                      <p className="text-xs text-gray-500">Data is auto-saved as you enter information</p>
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 disabled:opacity-50 flex items-center"
+                      >
+                        {loading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Submitting...
+                          </>
+                        ) : (
+                          "Submit Patient"
+                        )}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

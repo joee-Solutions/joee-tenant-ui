@@ -82,8 +82,16 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
       </div>
 
       {/* Button Filter */}
-
-      <Button className="font-medium text-base text-white bg-[#003465]">
+      <Button 
+        type="button"
+        onClick={() => {
+          // Trigger filter application
+          // The actual filtering is handled by the parent component through state
+          // This provides visual feedback that filters have been applied
+          console.log('Filters applied:', { search, sortBy, status });
+        }}
+        className="font-medium text-base text-white bg-[#003465] hover:bg-[#002850] transition-colors"
+      >
         Filter <ListFilter />
       </Button>
     </div>

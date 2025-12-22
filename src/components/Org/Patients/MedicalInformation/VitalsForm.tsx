@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 // Define the type for a vital sign entry
 type VitalSignEntry = {
   id: number;
+  date: string;
   temperature: string;
   systolic: string;
   diastolic: string;
@@ -40,6 +41,7 @@ export default function VitalSignsForm() {
   const [vitalSignEntries, setVitalSignEntries] = useState<VitalSignEntry[]>([
     {
       id: 1,
+      date: new Date().toISOString().split('T')[0],
       temperature: "",
       systolic: "",
       diastolic: "",
@@ -80,6 +82,7 @@ export default function VitalSignsForm() {
       ...vitalSignEntries,
       {
         id: newId,
+        date: new Date().toISOString().split('T')[0],
         temperature: "",
         systolic: "",
         diastolic: "",
@@ -164,6 +167,29 @@ export default function VitalSignsForm() {
                     Add Another
                   </button>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Date Field */}
+              <div>
+                <label className="block text-base text-black font-normal mb-2" htmlFor={`date-${entry.id}`}>
+                  Date *
+                </label>
+                <Input
+                  id={`date-${entry.id}`}
+                  type="date"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                  value={entry.date}
+                  onChange={(e) =>
+                    updateVitalSignEntry(entry.id, "date", e.target.value) as any
+                  }
+                  onBlur={(e) =>
+                    updateVitalSignEntry(entry.id, "date", e.target.value) as any
+                  }
+                  name="date"
+                  required
+                />
               </div>
             </div>
 

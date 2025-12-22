@@ -12,8 +12,17 @@ import React, { useMemo } from "react";
 
 const getColumnHeaders = function (data: Record<string, any>) {
   const headers = Object.keys(data).map((key) => {
+    // Handle specific column name transformations
     if (key === "id") {
-      return "S/N";
+      return "ID";
+    } else if (key === "created_at") {
+      return "Date Created";
+    } else if (key === "location") {
+      return "Address";
+    } else if (key === "no_of_empployees" || key === "no_of_employees") {
+      return "No of Employees";
+    } else if (key === "designation") {
+      return "Title";
     } else if (key.includes("_")) {
       const c = key.split("_");
       const firstC = c[0][0].toUpperCase() + c[0].slice(1);

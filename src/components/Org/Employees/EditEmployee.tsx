@@ -27,7 +27,7 @@ const EmployeeSchema = z.object({
   region: z.string().optional(),
   date_of_birth: z.date().optional(),
   specialty: z.string().optional(),
-  designation: z.string().min(1, "Designation is required"),
+  designation: z.string().min(1, "Title is required"),
   department: z.string().min(1, "Department is required"),
   gender: z.string().optional(),
   image_url: z.string().optional(),
@@ -453,7 +453,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
               )}
             </div>
             <div>
-              <label className="block text-base text-black font-normal mb-2">Designation</label>
+              <label className="block text-base text-black font-normal mb-2">Title</label>
               <Input placeholder="Enter here" {...form.register("designation")} className="w-full h-14 p-3 border border-[#737373] rounded" />
               {form.formState.errors.designation && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.designation.message}</p>
@@ -579,8 +579,8 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
           </div>
 
           <div>
-            <label className="block text-base text-black font-normal mb-2">Short Biography</label>
-            <Textarea placeholder="Your Message" {...form.register("about")} className="w-full p-3 min-h-52 border border-[#737373] rounded" />
+            <label className="block text-base text-black font-normal mb-2">Additional Notes</label>
+            <Textarea placeholder="Enter additional notes" {...form.register("about")} className="w-full p-3 min-h-52 border border-[#737373] rounded" />
           </div>
 
           <div>

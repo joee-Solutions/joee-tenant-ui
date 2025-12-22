@@ -63,6 +63,10 @@ const dropdownOptions = {
   preferredLanguage: [
     "English",
     "Spanish",
+    "Yoruba",
+    "Igbo",
+    "Hausa",
+    "Fulani",
     "French",
     "Mandarin",
     "Arabic",
