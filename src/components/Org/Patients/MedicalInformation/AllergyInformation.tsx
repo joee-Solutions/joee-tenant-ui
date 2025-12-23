@@ -90,14 +90,14 @@ export default function AllergyInformationForm() {
   };
 
   const handleAddNew = () => {
-    append({
-      allergy: "",
+                    append({
+                      allergy: "",
       otherAllergy: "",
-      startDate: "",
-      endDate: "",
-      severity: "",
-      reactions: "",
-      comments: "",
+                      startDate: "",
+                      endDate: "",
+                      severity: "",
+                      reactions: "",
+                      comments: "",
     });
     setEditingIndex(fields.length);
     setShowAddForm(true);
@@ -114,8 +114,8 @@ export default function AllergyInformationForm() {
         >
           <Plus className="w-4 h-4" />
           Add Allergy
-        </Button>
-      </div>
+                </Button>
+            </div>
 
       {/* List View */}
       {fields.length > 0 && (
@@ -127,26 +127,8 @@ export default function AllergyInformationForm() {
             if (isEditing) {
               return (
                 <div key={field.id} className="border border-gray-300 rounded-lg p-6 bg-gray-50">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="mb-4">
                     <h3 className="text-lg font-semibold">Edit Allergy</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => handleSave(index)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 h-auto"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 h-auto"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Cancel
-                </Button>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -158,18 +140,18 @@ export default function AllergyInformationForm() {
                 name={`allergies.${index}.allergy`}
                 render={({ field }) => (
                   <>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full h-14 p-3 border border-gray-400 rounded z-[1000]">
-                        <SelectValue placeholder="Select an allergy" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[1000] bg-white">
-                        {allergyOptions.map((opt) => (
-                          <SelectItem key={opt} value={opt} className="hover:bg-gray-200 py-2">
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full h-14 p-3 border border-gray-400 rounded z-[1000]">
+                      <SelectValue placeholder="Select an allergy" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1000] bg-white">
+                      {allergyOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt} className="hover:bg-gray-200 py-2">
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                     {field.value === "Other" && (
                       <div className="mt-4">
                         <label className="block mb-2">Specify Other Allergy</label>
@@ -306,6 +288,26 @@ export default function AllergyInformationForm() {
                 )
               }
             </div>
+          </div>
+
+          {/* Save and Cancel Buttons at Bottom */}
+          <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+            <Button
+              type="button"
+              onClick={handleCancelEdit}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleSave(index)}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Save
+            </Button>
           </div>
         </div>
               );

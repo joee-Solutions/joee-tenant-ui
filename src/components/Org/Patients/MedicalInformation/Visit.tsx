@@ -19,6 +19,7 @@ import { useState, useMemo } from "react";
 import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MEDICAL_CONDITIONS } from "./medicalConstants";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 // Define validation schema for a visit entry
 export const visitEntrySchema = z.array(
@@ -98,20 +99,20 @@ export default function MedicalVisitForm() {
 
   const handleAddNew = () => {
     append({
-      visitCategory: "",
+        visitCategory: "",
       dateOfService: undefined,
-      duration: "",
-      chiefComplaint: "",
+        duration: "",
+        chiefComplaint: "",
       hpiOnsetDate: undefined,
-      hpiDuration: "",
-      severity: "",
-      quality: "",
-      aggravatingFactors: "",
-      diagnosis: "",
+        hpiDuration: "",
+        severity: "",
+        quality: "",
+        aggravatingFactors: "",
+        diagnosis: "",
       diagnosisOnsetDate: undefined,
-      treatmentPlan: "",
-      providerName: "",
-      providerSignature: "",
+        treatmentPlan: "",
+        providerName: "",
+        providerSignature: "",
     });
     setEditingIndex(fields.length);
   };
@@ -137,150 +138,66 @@ export default function MedicalVisitForm() {
 
   const renderEditForm = (index: number) => (
     <div className="border border-gray-300 rounded-lg p-6 bg-gray-50">
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4">
         <h3 className="text-lg font-semibold">Edit Visit Entry</h3>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            onClick={handleSave}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 h-auto"
-          >
-            <Check className="w-4 h-4 mr-1" />
-            Save
-          </Button>
-          <Button
-            type="button"
-            onClick={handleCancelEdit}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 h-auto"
-          >
-            <X className="w-4 h-4 mr-1" />
-            Cancel
-          </Button>
-        </div>
-      </div>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Visit Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Visit Category */}
         <Controller
           name={`visits.${index}.visitCategory`}
           control={control}
           render={({ field }) => (
-            <div>
-              <label className="block text-base text-black font-normal mb-2">
-                Visit Category
-              </label>
+              <div>
+                <label className="block text-base text-black font-normal mb-2">
+                  Visit Category
+                </label>
               <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                   <SelectValue placeholder="Select visit category" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {visitCategories.map((category) => (
-                    <SelectItem key={category} value={category} className="hover:bg-gray-200">
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  </SelectTrigger>
+                  <SelectContent className="z-10 bg-white">
+                    {visitCategories.map((category) => (
+                      <SelectItem key={category} value={category} className="hover:bg-gray-200">
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
           )}
         />
 
-        {/* Date of Service */}
+              {/* Date of Service */}
         <Controller
           name={`visits.${index}.dateOfService`}
           control={control}
           render={({ field }) => (
-            <div>
-              <label className="block text-base text-black font-normal mb-2">
+              <div>
+                <label className="block text-base text-black font-normal mb-2">
                 Date of Service *
-              </label>
-              <DatePicker
+                </label>
+                <DatePicker
                 date={field.value ? new Date(field.value) : undefined}
                 onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                placeholder="Select date of service"
-              />
-            </div>
+                  placeholder="Select date of service"
+                />
+              </div>
           )}
         />
 
-        {/* Duration */}
+              {/* Duration */}
         <Controller
           name={`visits.${index}.duration`}
           control={control}
           render={({ field }) => (
-            <div>
-              <label className="block text-base text-black font-normal mb-2">
-                Duration
-              </label>
+              <div>
+                <label className="block text-base text-black font-normal mb-2">
+                  Duration
+                </label>
               <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                   <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {durations.map((duration) => (
-                    <SelectItem key={duration} value={duration} className="hover:bg-gray-200">
-                      {duration}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Chief Complaint */}
-      <div className="mt-6">
-        <h3 className="text-base font-medium mb-4">Presenting Complaint & History of Present Illness</h3>
-        <Controller
-          name={`visits.${index}.chiefComplaint`}
-          control={control}
-          render={({ field }) => (
-            <div className="mb-6">
-              <label className="block text-base text-black font-normal mb-2">
-                Chief Complaint
-              </label>
-              <Textarea
-                {...field}
-                value={field.value || ""}
-                className="w-full h-32 p-3 border border-[#737373] rounded"
-                placeholder="Enter chief complaint"
-              />
-            </div>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* HPI Onset Date */}
-          <Controller
-            name={`visits.${index}.hpiOnsetDate`}
-            control={control}
-            render={({ field }) => (
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  HPI Onset Date
-                </label>
-                <DatePicker
-                  date={field.value ? new Date(field.value) : undefined}
-                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                  placeholder="Select onset date"
-                />
-              </div>
-            )}
-          />
-
-          {/* HPI Duration */}
-          <Controller
-            name={`visits.${index}.hpiDuration`}
-            control={control}
-            render={({ field }) => (
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  HPI Duration
-                </label>
-                <Select value={field.value || ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                    <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent className="z-10 bg-white">
                     {durations.map((duration) => (
@@ -291,162 +208,225 @@ export default function MedicalVisitForm() {
                   </SelectContent>
                 </Select>
               </div>
+          )}
+        />
+            </div>
+
+      {/* Chief Complaint */}
+            <div className="mt-6">
+              <h3 className="text-base font-medium mb-4">Presenting Complaint & History of Present Illness</h3>
+        <Controller
+          name={`visits.${index}.chiefComplaint`}
+          control={control}
+          render={({ field }) => (
+              <div className="mb-6">
+                <label className="block text-base text-black font-normal mb-2">
+                  Chief Complaint
+                </label>
+                <Textarea
+                {...field}
+                value={field.value || ""}
+                  className="w-full h-32 p-3 border border-[#737373] rounded"
+                placeholder="Enter chief complaint"
+                />
+              </div>
+          )}
+        />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* HPI Onset Date */}
+          <Controller
+            name={`visits.${index}.hpiOnsetDate`}
+            control={control}
+            render={({ field }) => (
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">
+                  HPI Onset Date
+                  </label>
+                  <DatePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    placeholder="Select onset date"
+                  />
+                </div>
             )}
           />
 
-          {/* Severity */}
+                {/* HPI Duration */}
+          <Controller
+            name={`visits.${index}.hpiDuration`}
+            control={control}
+            render={({ field }) => (
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">
+                  HPI Duration
+                  </label>
+                <Select value={field.value || ""} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
+                    <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent className="z-10 bg-white">
+                      {durations.map((duration) => (
+                        <SelectItem key={duration} value={duration} className="hover:bg-gray-200">
+                          {duration}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+            )}
+          />
+
+                {/* Severity */}
           <Controller
             name={`visits.${index}.severity`}
             control={control}
             render={({ field }) => (
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  Severity
-                </label>
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">
+                    Severity
+                  </label>
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                     <SelectValue placeholder="Select severity" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {severityOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="hover:bg-gray-200">
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    </SelectTrigger>
+                    <SelectContent className="z-10 bg-white">
+                      {severityOptions.map((option) => (
+                        <SelectItem key={option} value={option} className="hover:bg-gray-200">
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
             )}
           />
 
-          {/* Quality */}
+                {/* Quality */}
           <Controller
             name={`visits.${index}.quality`}
             control={control}
             render={({ field }) => (
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  Quality
-                </label>
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">
+                    Quality
+                  </label>
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                     <SelectValue placeholder="Select quality" />
-                  </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {qualityOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="hover:bg-gray-200">
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    </SelectTrigger>
+                    <SelectContent className="z-10 bg-white">
+                      {qualityOptions.map((option) => (
+                        <SelectItem key={option} value={option} className="hover:bg-gray-200">
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
             )}
           />
-        </div>
+              </div>
 
         {/* Aggravating Factors */}
         <Controller
           name={`visits.${index}.aggravatingFactors`}
           control={control}
           render={({ field }) => (
-            <div className="mt-6">
-              <label className="block text-base text-black font-normal mb-2">
+              <div className="mt-6">
+                <label className="block text-base text-black font-normal mb-2">
                 Aggravating/Relieving Factors
-              </label>
+                </label>
               <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                   <SelectValue placeholder="Select factors" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {aggravatingFactors.map((factor) => (
-                    <SelectItem key={factor} value={factor} className="hover:bg-gray-200">
-                      {factor}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Diagnosis */}
-      <div className="mt-6">
-        <h3 className="text-base font-medium mb-4">Diagnosis</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Condition - Using comprehensive list */}
-          <Controller
-            name={`visits.${index}.diagnosis`}
-            control={control}
-            render={({ field }) => (
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
-                  Condition
-                </label>
-                <Select value={field.value || ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                    <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white max-h-[300px]">
-                    {MEDICAL_CONDITIONS.map((condition) => (
-                      <SelectItem key={condition} value={condition} className="hover:bg-gray-200">
-                        {condition}
+                  <SelectContent className="z-10 bg-white">
+                    {aggravatingFactors.map((factor) => (
+                      <SelectItem key={factor} value={factor} className="hover:bg-gray-200">
+                        {factor}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+          )}
+        />
+            </div>
+
+            {/* Diagnosis */}
+            <div className="mt-6">
+              <h3 className="text-base font-medium mb-4">Diagnosis</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Condition - Using comprehensive list with search */}
+          <Controller
+            name={`visits.${index}.diagnosis`}
+            control={control}
+            render={({ field }) => (
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">
+                    Condition
+                  </label>
+                <SearchableSelect
+                  value={field.value || ""}
+                  onValueChange={field.onChange}
+                  options={MEDICAL_CONDITIONS}
+                  placeholder="Select condition"
+                  searchPlaceholder="Search conditions..."
+                  triggerClassName="w-full p-3 border border-[#737373] h-14 rounded"
+                  contentClassName="z-10 bg-white"
+                />
+                </div>
             )}
           />
 
-          {/* Diagnosis Onset Date */}
+                {/* Diagnosis Onset Date */}
           <Controller
             name={`visits.${index}.diagnosisOnsetDate`}
             control={control}
             render={({ field }) => (
-              <div>
-                <label className="block text-base text-black font-normal mb-2">
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">
                   Diagnosis Onset Date
-                </label>
-                <DatePicker
+                  </label>
+                  <DatePicker
                   date={field.value ? new Date(field.value) : undefined}
                   onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                   placeholder="Select onset date"
-                />
-              </div>
+                  />
+                </div>
             )}
           />
-        </div>
-      </div>
+              </div>
+            </div>
 
-      {/* Treatment Plan */}
-      <div className="mt-6">
-        <h3 className="text-base font-medium mb-4">Treatment Plan</h3>
+            {/* Treatment Plan */}
+            <div className="mt-6">
+              <h3 className="text-base font-medium mb-4">Treatment Plan</h3>
         <Controller
           name={`visits.${index}.treatmentPlan`}
           control={control}
           render={({ field }) => (
-            <Textarea
+                <Textarea
               {...field}
               value={field.value || ""}
-              className="w-full h-32 p-3 border border-[#737373] rounded"
+                  className="w-full h-32 p-3 border border-[#737373] rounded"
               placeholder="Enter treatment plan"
             />
           )}
         />
-      </div>
+            </div>
 
-      {/* Provider Information */}
-      <div className="mt-6">
+            {/* Provider Information */}
+            <div className="mt-6">
         <Controller
           name={`visits.${index}.providerName`}
           control={control}
           render={({ field }) => (
-            <div className="mb-6">
-              <label className="block text-base text-black font-normal mb-2">
+              <div className="mb-6">
+                <label className="block text-base text-black font-normal mb-2">
                 Provider Name
-              </label>
+                </label>
               {useEmployeeDropdown ? (
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
@@ -472,7 +452,7 @@ export default function MedicalVisitForm() {
                   placeholder="Enter provider name"
                 />
               )}
-            </div>
+              </div>
           )}
         />
 
@@ -480,10 +460,10 @@ export default function MedicalVisitForm() {
           name={`visits.${index}.providerSignature`}
           control={control}
           render={({ field }) => (
-            <div className="mb-6">
-              <label className="block text-base text-black font-normal mb-2">
+              <div className="mb-6">
+                <label className="block text-base text-black font-normal mb-2">
                 Provider Signature with Date and Time Stamp
-              </label>
+                </label>
               <div className="flex gap-2">
                 <Textarea
                   {...field}
@@ -503,6 +483,26 @@ export default function MedicalVisitForm() {
             </div>
           )}
         />
+          </div>
+
+      {/* Save and Cancel Buttons at Bottom */}
+      <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+        <Button
+          type="button"
+          onClick={handleCancelEdit}
+          className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
+        >
+          <X className="w-4 h-4 mr-2" />
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={handleSave}
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
+        >
+          <Check className="w-4 h-4 mr-2" />
+          Save
+        </Button>
       </div>
     </div>
   );

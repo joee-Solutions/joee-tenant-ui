@@ -7,6 +7,7 @@ import { MEDICAL_CONDITIONS } from "./medicalConstants";
 import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 // Define the type for a family history entry
 type FamilyHistoryEntry = {
@@ -101,26 +102,8 @@ export default function FamilyHistoryForm() {
             if (isEditing) {
               return (
                 <div key={index} className="border border-gray-300 rounded-lg p-6 bg-gray-50">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="mb-4">
                     <h3 className="text-lg font-semibold">Edit Family History Entry</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        onClick={handleSave}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 h-auto"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 h-auto"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -157,7 +140,7 @@ export default function FamilyHistoryForm() {
                       )}
                     </div>
 
-                    {/* Conditions - Dropdown */}
+                    {/* Conditions - Dropdown with Search */}
                     <div>
                       <label className="block text-base text-black font-normal mb-2">
                         Conditions
@@ -166,18 +149,15 @@ export default function FamilyHistoryForm() {
                         name={`famhistory.${index}.conditions`}
                         control={control}
                         render={({ field }) => (
-                          <Select value={field.value || ""} onValueChange={field.onChange}>
-                            <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                              <SelectValue placeholder="Select condition" />
-                            </SelectTrigger>
-                            <SelectContent className="z-10 bg-white max-h-[300px]">
-                              {MEDICAL_CONDITIONS.map((condition) => (
-                                <SelectItem key={condition} value={condition} className="hover:bg-gray-200">
-                                  {condition}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SearchableSelect
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            options={MEDICAL_CONDITIONS}
+                            placeholder="Select condition"
+                            searchPlaceholder="Search conditions..."
+                            triggerClassName="w-full h-14 p-3 border border-[#737373] rounded"
+                            contentClassName="z-10 bg-white"
+                          />
                         )}
                       />
                       {errors.famhistory?.[index]?.conditions && (
@@ -216,6 +196,26 @@ export default function FamilyHistoryForm() {
                         <p className="text-red-500 text-sm mt-1">{errors.famhistory[index].currentAge.message}</p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Save and Cancel Buttons at Bottom */}
+                  <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+                    <Button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleSave}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Save
+                    </Button>
                   </div>
                 </div>
               );

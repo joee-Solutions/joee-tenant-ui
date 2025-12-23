@@ -12,6 +12,8 @@ import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 // Define the validation schema
 export const prescriptionSchema = z.array(z.object({
@@ -64,16 +66,17 @@ export default function MedicationForm() {
               <div className="flex flex-col justify-between mb-4">
                 <div className="flex gap-2 mb-3">
                   {fields.length > 1 && (
-                    <button
+                    <Button
                       type="button"
                       onClick={() => remove(index)}
-                      className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                      variant="outline"
+                      className="border border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 h-[60px] px-6 font-normal text-base"
                     >
                       Remove
-                    </button>
+                    </Button>
                   )}
                   {index === fields.length - 1 && (
-                    <button
+                    <Button
                       type="button"
                       onClick={() =>
                         append({
@@ -87,10 +90,11 @@ export default function MedicationForm() {
                           addToMedicationList: "no",
                         })
                       }
-                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                      className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 flex items-center gap-2"
                     >
+                      <Plus className="w-4 h-4" />
                       Add Another
-                    </button>
+                    </Button>
                   )}
                 </div>
                 <div className="flex gap-12 mb-8">

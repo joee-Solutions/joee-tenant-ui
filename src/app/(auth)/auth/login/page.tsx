@@ -126,7 +126,7 @@ const TenantLoginPage = () => {
               <span className="font-medium text-2xl md:text-3xl">
                 LociCare
               </span>
-              <span className="text-lg md:text-xl whitespace-nowrap">by Solutions</span>
+              <span className="text-lg md:text-xl whitespace-nowrap">by JOEE Solutions</span>
             </span>
           </div>
           <form

@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/select";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 // Define the type for a surgery entry
 type SurgeryEntry = {
@@ -64,22 +66,24 @@ export default function SurgeryHistoryForm() {
               <h2 className="text-lg font-semibold">Surgery Entry {index + 1}</h2>
               <div className="flex gap-2">
                 {fields.length > 1 && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => remove(index)}
-                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                    variant="outline"
+                    className="border border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 h-[60px] px-6 font-normal text-base"
                   >
                     Remove
-                  </button>
+                  </Button>
                 )}
                 {index === fields.length - 1 && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => append({ surgeryType: "", date: "", additionalInfo: "" })}
-                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                    className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 flex items-center gap-2"
                   >
+                    <Plus className="w-4 h-4" />
                     Add Another
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

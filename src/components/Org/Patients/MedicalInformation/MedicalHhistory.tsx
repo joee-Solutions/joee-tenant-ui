@@ -15,6 +15,7 @@ import { z } from "zod";
 import { MEDICAL_CONDITIONS } from "./medicalConstants";
 import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 // Define interfaces for our data structures
 interface MedicalCondition {
@@ -116,21 +117,21 @@ export default function MedicalHistoryForm() {
   }, [medHistories]);
 
   const handleAddNew = () => {
-    append({
-      id: Date.now(),
+                        append({
+                          id: Date.now(),
       date: new Date().toISOString().split('T')[0],
-      condition: "",
-      onsetDate: "",
-      endDate: "",
-      comments: "",
-      medMedication: "",
-      medStartDate: "",
-      medEndDate: "",
-      medDosage: "",
-      medFrequency: "",
-      medRoute: "",
-      medPrescribersName: "",
-      medComments: "",
+                          condition: "",
+                          onsetDate: "",
+                          endDate: "",
+                          comments: "",
+                          medMedication: "",
+                          medStartDate: "",
+                          medEndDate: "",
+                          medDosage: "",
+                          medFrequency: "",
+                          medRoute: "",
+                          medPrescribersName: "",
+                          medComments: "",
     });
     setEditingIndex(fields.length);
     setShowAddForm(true);
@@ -174,26 +175,8 @@ export default function MedicalHistoryForm() {
             if (isEditing) {
               return (
                 <div key={index} className="border border-gray-300 rounded-lg p-6 bg-gray-50">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="mb-4">
                     <h3 className="text-lg font-semibold">Edit Medical History Entry</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        onClick={handleSave}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 h-auto"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 h-auto"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -212,195 +195,212 @@ export default function MedicalHistoryForm() {
                           />
                         )}
                       />
-                    </div>
+              </div>
 
-                    {/* Medical Condition - Dropdown */}
+                    {/* Medical Condition - Dropdown with Search */}
                     <div>
-                      <label className="block text-base text-black font-normal mb-2">Medical Condition</label>
+                    <label className="block text-base text-black font-normal mb-2">Medical Condition</label>
                       <Controller
                         name={`medHistory.${index}.condition`}
                         control={control}
                         render={({ field }) => (
-                          <Select value={field.value || ""} onValueChange={field.onChange}>
-                            <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                              <SelectValue placeholder="Select condition" />
-                            </SelectTrigger>
-                            <SelectContent className="z-10 bg-white max-h-[300px]">
-                              {MEDICAL_CONDITIONS.map((condition) => (
-                                <SelectItem key={condition} value={condition} className="hover:bg-gray-200">
-                                  {condition}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SearchableSelect
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            options={MEDICAL_CONDITIONS}
+                            placeholder="Select condition"
+                            searchPlaceholder="Search conditions..."
+                            triggerClassName="w-full h-14 p-3 border border-[#737373] rounded"
+                            contentClassName="z-10 bg-white"
+                          />
                         )}
-                      />
-                      {errors.medHistory?.[index]?.condition && (
-                        <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].condition.message}</p>
-                      )}
-                    </div>
+                    />
+                    {errors.medHistory?.[index]?.condition && (
+                      <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].condition.message}</p>
+                    )}
+                  </div>
 
                     {/* Onset Date */}
                     <div>
-                      <label className="block text-base text-black font-normal mb-2">Onset Date</label>
-                      <Controller
-                        name={`medHistory.${index}.onsetDate`}
-                        control={control}
-                        render={({ field }) => (
-                          <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                            placeholder="Select onset date"
-                          />
-                        )}
-                      />
-                    </div>
+                    <label className="block text-base text-black font-normal mb-2">Onset Date</label>
+                    <Controller
+                      name={`medHistory.${index}.onsetDate`}
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          date={field.value ? new Date(field.value) : undefined}
+                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                          placeholder="Select onset date"
+                        />
+                      )}
+                    />
+                </div>
 
                     {/* End Date */}
                     <div>
-                      <label className="block text-base text-black font-normal mb-2">End Date</label>
-                      <Controller
-                        name={`medHistory.${index}.endDate`}
-                        control={control}
-                        render={({ field }) => (
-                          <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                            placeholder="Select end date"
-                          />
-                        )}
-                      />
-                    </div>
+                    <label className="block text-base text-black font-normal mb-2">End Date</label>
+                    <Controller
+                      name={`medHistory.${index}.endDate`}
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          date={field.value ? new Date(field.value) : undefined}
+                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                          placeholder="Select end date"
+                        />
+                      )}
+                    />
                   </div>
+                </div>
 
                   {/* Comments */}
                   <div className="mt-6">
-                    <label className="block text-base text-black font-normal mb-2">Comments</label>
-                    <Textarea
-                      {...register(`medHistory.${index}.comments`)}
-                      className="w-full h-32 p-3 border border-[#737373] rounded"
-                      rows={4}
-                    />
-                  </div>
+                  <label className="block text-base text-black font-normal mb-2">Comments</label>
+                  <Textarea
+                    {...register(`medHistory.${index}.comments`)}
+                    className="w-full h-32 p-3 border border-[#737373] rounded"
+                    rows={4}
+                  />
+                </div>
 
                   {/* Medication History Section */}
-                  <div className="mt-8">
+            <div className="mt-8">
                     <h3 className="text-lg font-semibold mb-4">Medication History</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-base text-black font-normal mb-2">Medication</label>
-                        <Input
-                          type="text"
+                  <label className="block text-base text-black font-normal mb-2">Medication</label>
+                  <Input
+                    type="text"
                           {...register(`medHistory.${index}.medMedication`)}
                           className="w-full h-14 p-3 border border-[#737373] rounded"
-                        />
-                      </div>
+                  />
+                </div>
 
                       <div>
-                        <label className="block text-base text-black font-normal mb-2">Start Date</label>
-                        <Controller
-                          name={`medHistory.${index}.medStartDate`}
-                          control={control}
-                          render={({ field }) => (
-                            <DatePicker
-                              date={field.value ? new Date(field.value) : undefined}
-                              onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                              placeholder="Select start date"
-                            />
-                          )}
-                        />
-                      </div>
+                  <label className="block text-base text-black font-normal mb-2">Start Date</label>
+                  <Controller
+                    name={`medHistory.${index}.medStartDate`}
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select start date"
+                      />
+                    )}
+                  />
+              </div>
 
                       <div>
-                        <label className="block text-base text-black font-normal mb-2">End Date</label>
-                        <Controller
-                          name={`medHistory.${index}.medEndDate`}
-                          control={control}
-                          render={({ field }) => (
-                            <DatePicker
-                              date={field.value ? new Date(field.value) : undefined}
-                              onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                              placeholder="Select end date"
-                            />
-                          )}
-                        />
-                      </div>
+                  <label className="block text-base text-black font-normal mb-2">End Date</label>
+                  <Controller
+                    name={`medHistory.${index}.medEndDate`}
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select end date"
+                      />
+                    )}
+                  />
+                </div>
 
                       <div>
                         <label className="block text-base text-black font-normal mb-2">Dosage</label>
-                        <Input
-                          type="text"
+                  <Input
+                    type="text"
                           {...register(`medHistory.${index}.medDosage`)}
                           className="w-full h-14 p-3 border border-[#737373] rounded"
-                        />
-                      </div>
+                  />
+                </div>
 
                       <div>
-                        <Controller
-                          control={control}
-                          name={`medHistory.${index}.medFrequency`}
-                          render={({ field }) => (
-                            <div>
-                              <label className="block text-base text-black font-normal mb-2">Frequency</label>
+                  <Controller
+                    control={control}
+                    name={`medHistory.${index}.medFrequency`}
+                    render={({ field }) => (
+                      <div>
+                        <label className="block text-base text-black font-normal mb-2">Frequency</label>
                               <Select value={field.value || ""} onValueChange={field.onChange}>
                                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                                  <SelectValue placeholder="Select frequency" />
-                                </SelectTrigger>
-                                <SelectContent className="z-10 bg-white">
-                                  {frequencyOptions.map((opt) => (
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                          <SelectContent className="z-10 bg-white">
+                            {frequencyOptions.map((opt) => (
                                     <SelectItem key={opt} value={opt} className="hover:bg-gray-200">
-                                      {opt}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        />
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+                    )}
+                  />
+                </div>
 
                       <div>
-                        <Controller
-                          control={control}
-                          name={`medHistory.${index}.medRoute`}
-                          render={({ field }) => (
-                            <div>
-                              <label className="block text-base text-black font-normal mb-2">Route</label>
+                  <Controller
+                    control={control}
+                    name={`medHistory.${index}.medRoute`}
+                    render={({ field }) => (
+                      <div>
+                        <label className="block text-base text-black font-normal mb-2">Route</label>
                               <Select value={field.value || ""} onValueChange={field.onChange}>
                                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                                  <SelectValue placeholder="Select route" />
-                                </SelectTrigger>
-                                <SelectContent className="z-10 bg-white">
-                                  {routeOptions.map((opt) => (
+                            <SelectValue placeholder="Select route" />
+                          </SelectTrigger>
+                          <SelectContent className="z-10 bg-white">
+                            {routeOptions.map((opt) => (
                                     <SelectItem key={opt} value={opt} className="hover:bg-gray-200">
-                                      {opt}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        />
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+                    )}
+                  />
+                </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-base text-black font-normal mb-2">Prescriber&apos;s Name</label>
-                        <Input
-                          type="text"
+                  <label className="block text-base text-black font-normal mb-2">Prescriber&apos;s Name</label>
+                  <Input
+                    type="text"
                           {...register(`medHistory.${index}.medPrescribersName`)}
                           className="w-full h-14 p-3 border border-[#737373] rounded"
-                        />
-                      </div>
+                  />
+                </div>
 
                       <div className="md:col-span-2">
                         <label className="block text-base text-black font-normal mb-2">Medication Comments</label>
-                        <Textarea
-                          {...register(`medHistory.${index}.medComments`)}
-                          className="w-full h-32 p-3 border border-[#737373] rounded"
-                          rows={4}
-                        />
+                  <Textarea
+                    {...register(`medHistory.${index}.medComments`)}
+                    className="w-full h-32 p-3 border border-[#737373] rounded"
+                    rows={4}
+                  />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Save and Cancel Buttons at Bottom */}
+                  <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+                    <Button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleSave}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Save
+                    </Button>
                   </div>
                 </div>
               );
@@ -476,14 +476,14 @@ export default function MedicalHistoryForm() {
               </div>
             );
           })}
-        </div>
+            </div>
       )}
 
       {sortedHistories.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg mb-2">No medical history recorded</p>
           <p className="text-sm">Click "Add Entry" to add a new medical history entry</p>
-        </div>
+          </div>
       )}
     </div>
   );
