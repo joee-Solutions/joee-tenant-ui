@@ -57,15 +57,19 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
         <p className="mt-3 text-md max-w-lg text-[#999999] px-6">
           {mainEmployee?.description}
         </p>
-        <Link href={`/dashboard/organization/${mainEmployee.orgId}/employees`} className="my-4 bg-[#003465] text-white px-12 text-lg py-2 rounded-lg shadow hover:bg-[#122a41]">
-          View
+        <Link href={`/dashboard/organization/${mainEmployee.orgId}/employees/${mainEmployee.id}`} className="my-4 bg-[#003465] text-white px-12 text-lg py-2 rounded-lg shadow hover:bg-[#122a41]">
+          View Details
         </Link>
       </div>
 
     
       <div className="border-t border-gray-200 p-8 grid grid-cols-2 gap-4">
         {otherEmployees.map((employee) => (
-          <div key={employee.id} className={`flex items-center gap-3 ${employee.role.includes("Nurse") ? "border-0 md:border-r-2" : "border-0"}`}>
+          <Link
+            key={employee.id}
+            href={`/dashboard/organization/${employee.orgId}/employees/${employee.id}`}
+            className={`flex items-center gap-3 ${employee.role.includes("Nurse") ? "border-0 md:border-r-2" : "border-0"} hover:opacity-85 transition-opacity`}
+          >
             <div
               className={`relative w-[60px] h-[60px] rounded-full border-2 overflow-hidden ${
                 employee.role.includes("Doctor") ? "border-red-500" : "border-yellow-500"
@@ -77,7 +81,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
               <h4 className="text-sm font-semibold text-gray-900">{employee?.name}</h4>
               <p className="text-xs text-gray-500">{employee?.organization}</p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

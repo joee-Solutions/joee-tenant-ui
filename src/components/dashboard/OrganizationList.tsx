@@ -65,10 +65,12 @@ const OrganizationList: FC<OrganizationListProps> = ({ organizations }) => {
                   objectFit="cover"
                 />
               </div>
-              <div>
-                <Link href={"#"} className="font-semibold text-blue-900 text-sm ">{org.name}</Link>
-                <p className="text-gray-500 text-xs">{org.location}</p>
-              </div>
+              <Link href={`/dashboard/organization/${org.id}`} className="block">
+                <div>
+                  <span className="font-semibold text-blue-900 text-sm hover:underline">{org.name}</span>
+                  <p className="text-gray-500 text-xs">{org.location}</p>
+                </div>
+              </Link>
             </div>
         
             <span className={`px-4 py-2 rounded-lg text-xs font-semibold ${getStatusStyles(org.status)}`}>

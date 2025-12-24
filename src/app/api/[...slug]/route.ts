@@ -147,6 +147,43 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-export async function DELETE(request: Request) {}
+export async function DELETE(req: NextRequest) {
+  const requestPath = new URL(req.url).pathname;
+  const pathName = requestPath.split("/api")[1];
+  const clientInfo = await getRequestInfo(req);
+  const authorization =
+    req.headers.get("authorization") || req.headers.get("Authorization");
+  const query = req.nextUrl.searchParams;
+  const queryString = query.toString();
+  const path = `${apiUrl}${pathName}${queryString ? "?" + queryString : ""}`;
+  
+  try {
+    const res = await axios.delete(path, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authorization as string | "",
+      },
+    });
+    const response = processResponse(res);
+    return Response.json({ ...response });
+  } catch (error: any) {
+    console.error("DELETE error:", error);
+    if (error && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    } else if (error) {
+      return NextResponse.json(
+        { 
+          error: error.message || "An error occurred",
+          details: error.toString() 
+        }, 
+        { status: 500 }
+      );
+    } else {
+      return NextResponse.json("An error occurred", { status: 500 });
+    }
+  }
+}
 
 export async function PATCH(request: Request) {}

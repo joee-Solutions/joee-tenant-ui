@@ -113,10 +113,14 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon, chartD
     <div className=" p-4 flex flex-col space-y-4">
       {href ? (
         <Link href={href}>
-          <h3 className="text-black text-[16px] font-medium hover:text-[#003465] hover:underline cursor-pointer transition-colors">{title}</h3>
+          <h3 className="text-black text-[16px] font-medium hover:text-[#003465] hover:underline cursor-pointer transition-colors whitespace-nowrap overflow-hidden text-ellipsis">
+            {title}
+          </h3>
         </Link>
       ) : (
-        <h3 className="text-black text-[16px] font-medium">{title}</h3>
+        <h3 className="text-black text-[16px] font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+          {title}
+        </h3>
       )}
       <div className="flex items-center justify-between">
         <p className={`text-[32px] font-medium ${colors.text}`}>{value}</p>

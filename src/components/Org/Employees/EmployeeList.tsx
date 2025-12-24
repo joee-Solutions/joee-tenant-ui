@@ -14,6 +14,10 @@ import Link from "next/link";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
+import { MoreVertical, Edit, Trash2, X } from "lucide-react";
+import { processRequestAuth } from "@/framework/https";
+import { toast } from "react-toastify";
+import EditEmployee from "./EditEmployee";
 
 // Define Employee type
 interface Employee {
@@ -34,7 +38,11 @@ export default function Page({ slug }: { slug: string }) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const { data, isLoading, error } = useSWR(
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const { data, isLoading, error, mutate } = useSWR(
     API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
     authFectcher
   );
@@ -75,6 +83,51 @@ export default function Page({ slug }: { slug: string }) {
     prevSearch.current = search;
   }, [search]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId !== null) {
+        setOpenDropdownId(null);
+      }
+    };
+    if (openDropdownId !== null) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [openDropdownId]);
+
+  const handleDelete = async (employeeId: number) => {
+    setDeletingId(employeeId);
+    try {
+      await processRequestAuth(
+        "delete",
+        API_ENDPOINTS.UPDATE_TENANT_EMPLOYEE(parseInt(slug), employeeId)
+      );
+      toast.success("Employee deleted successfully");
+      mutate();
+      setOpenDropdownId(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete employee");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEditClick = (employee: Employee) => {
+    setSelectedEmployeeId(employee.id);
+    setEditModalOpen(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleEditDone = () => {
+    setEditModalOpen(false);
+    setSelectedEmployeeId(null);
+    mutate();
+  };
+
   return (
     <section className=" mb-10">
       <>
@@ -100,16 +153,16 @@ export default function Page({ slug }: { slug: string }) {
               />
             </div>
           </header>
-          <DataTable tableDataObj={EmployeesData[0]}>
+          <DataTable tableDataObj={EmployeesData[0]} showAction>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   Loading employees...
                 </TableCell>
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   No employees found
                 </TableCell>
               </TableRow>
@@ -117,12 +170,11 @@ export default function Page({ slug }: { slug: string }) {
               filteredEmployees.map((employee: Employee, index: number) => (
               <TableRow
                 key={employee.id}
-                className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100 relative"
+                className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100"
               >
                 <TableCell>
-                <Link href={`/dashboard/organization/${slug}/employees/${employee.id}/edit`} className="absolute inset-0" />
                   {index + 1}
-                  </TableCell>
+                </TableCell>
                 <TableCell className="py-[21px]">
                   <div className="flex items-center gap-[10px]">
                     <span className="w-[42px] h-[42px] rounded-full overflow-hidden">
@@ -156,11 +208,53 @@ export default function Page({ slug }: { slug: string }) {
                 >
                   {employee?.status}
                 </TableCell>
+                <TableCell>
+                  <div className="relative">
+                    <button
+                      className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-gray-100 rounded flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenDropdownId(openDropdownId === employee.id ? null : employee.id);
+                      }}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                    {openDropdownId === employee.id && (
+                      <div 
+                        className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(employee);
+                          }}
+                          className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </div>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Are you sure you want to delete "${employee.firstname} ${employee.lastname}"? This action cannot be undone.`)) {
+                              handleDelete(employee.id);
+                            }
+                          }}
+                          className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {deletingId === employee.id ? "Deleting..." : "Delete"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   {search.trim() 
                     ? `No employees found matching "${search}"` 
                     : "No employees found"}
@@ -177,6 +271,42 @@ export default function Page({ slug }: { slug: string }) {
           />
         </section>
       </>
+
+      {/* Edit Employee Modal */}
+      {editModalOpen && selectedEmployeeId && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => {
+            setEditModalOpen(false);
+            setSelectedEmployeeId(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-black">Edit Employee</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setSelectedEmployeeId(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <EditEmployee 
+              slug={slug} 
+              employeeId={selectedEmployeeId} 
+              onDone={handleEditDone}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

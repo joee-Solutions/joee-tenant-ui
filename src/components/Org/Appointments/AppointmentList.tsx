@@ -7,7 +7,7 @@ import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
 import { useState, useEffect, useRef } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Ellipsis } from "lucide-react";
+import { MoreVertical, Edit, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search";
@@ -16,6 +16,27 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { processRequestAuth } from "@/framework/https";
+import { toast } from "react-toastify";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/Textarea";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/icons/Spinner";
+
+const AppointmentSchema = z.object({
+  patientId: z.string().min(1, "Patient is required"),
+  doctorId: z.string().min(1, "Doctor is required"),
+  date: z.string().min(1, "Appointment date is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  description: z.string().optional(),
+});
+
+type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
 // Helper function to validate and normalize image URLs
 function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): string | any {
@@ -64,10 +85,54 @@ export default function Page({ slug }: { slug: string }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
-  const { data, isLoading, error } = useSWR(
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const { data, isLoading, error, mutate } = useSWR(
     API_ENDPOINTS.TENANTS_APPOINTMENTS(parseInt(slug)),
     authFectcher
   );
+
+  // Fetch data for dropdowns
+  const { data: patientsData } = useSWR(
+    API_ENDPOINTS.TENANTS_PATIENTS(parseInt(slug)),
+    authFectcher
+  );
+
+  const { data: employeesData } = useSWR(
+    API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
+    authFectcher
+  );
+
+  const doctors = Array.isArray(employeesData?.data)
+    ? employeesData.data.filter((employee: any) => {
+      const designation = typeof employee.designation === 'string' 
+        ? employee.designation.toLowerCase() 
+        : '';
+      const departmentName = typeof employee.department === 'string'
+        ? employee.department.toLowerCase()
+        : (employee.department?.name || '').toLowerCase();
+      
+      return designation.includes('doctor') ||
+        designation.includes('physician') ||
+        designation.includes('medical') ||
+        departmentName.includes('medical');
+    })
+    : [];
+
+  const editForm = useForm<AppointmentSchemaType>({
+    resolver: zodResolver(AppointmentSchema),
+    mode: "onChange",
+    defaultValues: {
+      patientId: "",
+      doctorId: "",
+      date: "",
+      startTime: "",
+      endTime: "",
+      description: "",
+    },
+  });
 
   // Get appointments array safely
   const appointments = data?.data?.data || [];
@@ -103,6 +168,71 @@ export default function Page({ slug }: { slug: string }) {
     }
     prevSearch.current = search;
   }, [search]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId !== null) {
+        setOpenDropdownId(null);
+      }
+    };
+    if (openDropdownId !== null) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [openDropdownId]);
+
+  const handleDelete = async (appointmentId: number) => {
+    setDeletingId(appointmentId);
+    try {
+      await processRequestAuth(
+        "delete",
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(parseInt(slug))}/${appointmentId}`
+      );
+      toast.success("Appointment deleted successfully");
+      mutate();
+      setOpenDropdownId(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete appointment");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEditClick = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    editForm.reset({
+      patientId: String(appointment.patient?.id || ""),
+      doctorId: String(appointment.user?.id || ""),
+      date: appointment.date || "",
+      startTime: appointment.startTime || "",
+      endTime: appointment.endTime || "",
+      description: appointment.description || "",
+    });
+    setEditModalOpen(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleEditSubmit = async (data: AppointmentSchemaType) => {
+    if (!selectedAppointment) return;
+    try {
+      await processRequestAuth(
+        "put",
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(parseInt(slug))}/${selectedAppointment.id}`,
+        data
+      );
+      toast.success("Appointment updated successfully");
+      mutate();
+      setEditModalOpen(false);
+      setSelectedAppointment(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update appointment");
+    }
+  };
   return (
     <section className="mb-10">
 
@@ -125,16 +255,16 @@ export default function Page({ slug }: { slug: string }) {
 
 
           </header>
-          <DataTable tableDataObj={AppointmentData[0]}>
+          <DataTable tableDataObj={AppointmentData[0]} showAction>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   Loading appointments...
                 </TableCell>
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No appointments found
                 </TableCell>
               </TableRow>
@@ -190,12 +320,54 @@ export default function Page({ slug }: { slug: string }) {
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {appointment.startTime} - {appointment.endTime}
                     </TableCell>
+                    <TableCell>
+                      <div className="relative">
+                        <button
+                          className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-gray-100 rounded flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDropdownId(openDropdownId === appointment.id ? null : appointment.id);
+                          }}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {openDropdownId === appointment.id && (
+                          <div 
+                            className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(appointment);
+                              }}
+                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </div>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Are you sure you want to delete this appointment? This action cannot be undone.`)) {
+                                  handleDelete(appointment.id);
+                                }
+                              }}
+                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {deletingId === appointment.id ? "Deleting..." : "Delete"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No appointments found
                 </TableCell>
               </TableRow>
@@ -211,6 +383,169 @@ export default function Page({ slug }: { slug: string }) {
         </section>
       </>
 
+      {/* Edit Appointment Modal */}
+      {editModalOpen && selectedAppointment && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => {
+            setEditModalOpen(false);
+            setSelectedAppointment(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-black">Edit Appointment</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setSelectedAppointment(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Patient Selection */}
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">Patient</label>
+                  <Controller
+                    name="patientId"
+                    control={editForm.control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
+                          <SelectValue placeholder="Select patient" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(patientsData?.data?.data) && patientsData.data.data.map((patient: any) => (
+                            <SelectItem key={patient.id} value={String(patient.id)}>
+                              {patient.firstname} {patient.lastname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {editForm.formState.errors.patientId && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.patientId.message}</p>
+                  )}
+                </div>
+
+                {/* Doctor Selection */}
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">Doctor</label>
+                  <Controller
+                    name="doctorId"
+                    control={editForm.control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
+                          <SelectValue placeholder="Select doctor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {doctors.map((doctor: any) => (
+                            <SelectItem key={doctor.id} value={String(doctor.id)}>
+                              {doctor.firstname} {doctor.lastname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {editForm.formState.errors.doctorId && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.doctorId.message}</p>
+                  )}
+                </div>
+
+                {/* Appointment Date */}
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">Appointment Date</label>
+                  <Controller
+                    name="date"
+                    control={editForm.control}
+                    render={({ field }) => (
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Select appointment date"
+                      />
+                    )}
+                  />
+                  {editForm.formState.errors.date && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.date.message}</p>
+                  )}
+                </div>
+
+                {/* Start Time */}
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">Start Time</label>
+                  <Input
+                    placeholder="Enter start time"
+                    type="time"
+                    {...editForm.register("startTime")}
+                    className="w-full p-3 border border-[#737373] h-14 rounded"
+                  />
+                  {editForm.formState.errors.startTime && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.startTime.message}</p>
+                  )}
+                </div>
+
+                {/* End Time */}
+                <div>
+                  <label className="block text-base text-black font-normal mb-2">End Time</label>
+                  <Input
+                    placeholder="Enter end time"
+                    type="time"
+                    {...editForm.register("endTime")}
+                    className="w-full p-3 border border-[#737373] h-14 rounded"
+                  />
+                  {editForm.formState.errors.endTime && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.endTime.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-base text-black font-normal mb-2">Description</label>
+                <Textarea
+                  placeholder="Enter appointment description"
+                  {...editForm.register("description")}
+                  className="w-full p-3 border border-[#737373] min-h-32 rounded"
+                />
+              </div>
+
+              <div className="flex space-x-4 pt-4">
+                <Button
+                  type="button"
+                  className="border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-8 px-16 text-md rounded"
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    setSelectedAppointment(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-10 text-md rounded min-w-56"
+                  disabled={editForm.formState.isSubmitting}
+                >
+                  {editForm.formState.isSubmitting ? <Spinner/> : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
