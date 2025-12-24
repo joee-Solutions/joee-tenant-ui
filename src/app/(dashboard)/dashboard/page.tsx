@@ -64,7 +64,7 @@ const DashboardPage: NextPage = () => {
   const { data: tenantsData, isLoading: loadingTenants, error: errorTenants } = useTenantsData({ limit: 4 });
   const user = useTenantStore(state => state.state.user);
   const fallbackAppointmentsData: DashboardAppointmentsData = {
-    clinic: "Demo Clinic",
+    clinic: " Clinic",
     weeklyGrowth: 8,
     appointmentsByDay: [
       { day: "Monday", male: 12, female: 15 },

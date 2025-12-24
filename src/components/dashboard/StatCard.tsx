@@ -87,6 +87,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon, chartD
       for (let i = 0; i < trendPoints; i++) {
         const progress = i / (trendPoints - 1); // 0 to 1
         // Start at ~120% of current, end at 100%
+        console.log("progress-->", progress);
         const trendValue = currentValue * (1.2 - (progress * 0.2));
         trendData.push({ value: Math.max(0, Math.round(trendValue)) });
       }
@@ -108,7 +109,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, growth, color, icon, chartD
   return (
 
 
-    <div className=" rounded-lg my-8 shadow-xl hover:shadow-2xl relative overflow-hidden bg-white h-[300px] p-0">
+    <div className="rounded-lg my-8 shadow-xl hover:shadow-2xl relative overflow-hidden bg-white h-[300px] p-0">
 
     <div className=" p-4 flex flex-col space-y-4">
       {href ? (
