@@ -256,19 +256,18 @@ export default function Page({ slug }: { slug: string }) {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </div>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Are you sure you want to delete "${data.name}"? This action cannot be undone.`)) {
-                                handleDelete(data.id);
-                              }
-                            }}
-                            className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
-                            disabled={deletingId === data.id}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {deletingId === data.id ? "Deleting..." : "Delete"}
-                          </div>
+                      <button
+  type="button"
+  onClick={(e) => {
+    e.stopPropagation();
+    // ...existing click handler logic...
+  }}
+  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+  disabled={deletingId === data.id}
+>
+  <Trash2 className="mr-2 h-4 w-4" />
+  {deletingId === data.id ? "Deleting..." : "Delete"}
+</button>
                         </div>
                       )}
                     </div>
