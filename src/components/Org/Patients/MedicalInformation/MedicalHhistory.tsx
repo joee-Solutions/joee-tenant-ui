@@ -109,11 +109,16 @@ export default function MedicalHistoryForm() {
 
   // Sort by date (most recent first)
   const sortedHistories = useMemo(() => {
-    return medHistories.map((history, index) => ({ history, index })).sort((a, b) => {
-      const dateA = a.history.date ? new Date(a.history.date).getTime() : 0;
-      const dateB = b.history.date ? new Date(b.history.date).getTime() : 0;
-      return dateB - dateA;
-    });
+    // ensure we never try to read properties of null/undefined entries
+    const list = Array.isArray(medHistories) ? medHistories : [];
+
+    return list
+      .map((history: any, index: number) => ({ history: history ?? {}, index }))
+      .sort((a, b) => {
+        const dateA = a.history?.date ? new Date(a.history.date).getTime() : 0;
+        const dateB = b.history?.date ? new Date(b.history.date).getTime() : 0;
+        return dateB - dateA;
+      });
   }, [medHistories]);
 
   const handleAddNew = () => {
@@ -187,15 +192,14 @@ export default function MedicalHistoryForm() {
                         name={`medHistory.${index}.date`}
                         control={control}
                         render={({ field }) => (
-                          <Input
-                            type="date"
-                            className="w-full h-14 p-3 border border-[#737373] rounded"
-                            value={field.value || ""}
-                            onChange={field.onChange}
+                          <DatePicker
+                            date={field.value ? new Date(field.value) : undefined}
+                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                            placeholder="Select date"
                           />
                         )}
                       />
-              </div>
+                    </div>
 
                     {/* Medical Condition - Dropdown with Search */}
                     <div>

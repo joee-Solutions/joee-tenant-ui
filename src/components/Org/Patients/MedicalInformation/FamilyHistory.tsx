@@ -8,6 +8,7 @@ import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Define the type for a family history entry
 type FamilyHistoryEntry = {
@@ -111,17 +112,16 @@ export default function FamilyHistoryForm() {
                     <div>
                       <label className="block text-base text-black font-normal mb-2">Date *</label>
                       <Controller
-                        name={`famhistory.${index}.date`}
-                        control={control}
-                        render={({ field }) => (
-                          <Input
-                            type="date"
-                            className="w-full h-14 p-3 border border-[#737373] rounded"
-                            value={field.value || ""}
-                            onChange={field.onChange}
-                          />
-                        )}
-                      />
+                                             name={`famhistory.${index}.date`}
+                                             control={control}
+                                             render={({ field }) => (
+                                               <DatePicker
+                                                 date={field.value ? new Date(field.value) : undefined}
+                                                 onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                                                 placeholder="Select date"
+                                               />
+                                             )}
+                                           />
                     </div>
 
                     {/* Relative */}

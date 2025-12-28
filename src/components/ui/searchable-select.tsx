@@ -72,7 +72,7 @@ export function SearchableSelect({
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
+            <input
               type="text"
               placeholder={searchPlaceholder}
               value={searchQuery}

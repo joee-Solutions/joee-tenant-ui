@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Controller } from "react-hook-form";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Define the type for a vital sign entry
 type VitalSignEntry = {
@@ -180,20 +182,12 @@ export default function VitalSignsForm() {
                 <label className="block text-base text-black font-normal mb-2" htmlFor={`date-${entry.id}`}>
                   Date *
                 </label>
-                <Input
-                  id={`date-${entry.id}`}
-                  type="date"
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  value={entry.date}
-                  onChange={(e) =>
-                    updateVitalSignEntry(entry.id, "date", e.target.value) as any
-                  }
-                  onBlur={(e) =>
-                    updateVitalSignEntry(entry.id, "date", e.target.value) as any
-                  }
-                  name="date"
-                  required
-                />
+                <DatePicker
+    date={entry.date ? new Date(entry.date) : undefined}
+    onDateChange={(date) => updateVitalSignEntry(entry.id, "date", date ? date.toISOString().split('T')[0] : '')}
+    placeholder="Select date"
+  />
+               
               </div>
             </div>
 

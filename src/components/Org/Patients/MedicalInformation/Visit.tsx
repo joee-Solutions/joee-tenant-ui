@@ -419,42 +419,44 @@ export default function MedicalVisitForm() {
 
             {/* Provider Information */}
             <div className="mt-6">
-        <Controller
-          name={`visits.${index}.providerName`}
-          control={control}
-          render={({ field }) => (
-              <div className="mb-6">
-                <label className="block text-base text-black font-normal mb-2">
-                Provider Name
-                </label>
-              {useEmployeeDropdown ? (
-                <Select value={field.value || ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                    <SelectValue placeholder={employeesLoading ? "Loading..." : "Select provider"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-[1000]">
-                    {employees.map((employee: any) => (
-                      <SelectItem 
-                        key={employee.id} 
-                        value={`${employee.firstname} ${employee.lastname}`}
-                      >
-                        {employee.firstname} {employee.lastname}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  type="text"
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  value={field.value || ""}
-                  onChange={field.onChange}
-                  placeholder="Enter provider name"
-                />
-              )}
-              </div>
-          )}
+  <Controller
+  name={`visits.${index}.providerName`}
+  control={control}
+  render={({ field }) => (
+    <div className="mb-6">
+      <label className="block text-base text-black font-normal mb-2">
+        Provider Name
+      </label>
+      {useEmployeeDropdown ? (
+        <Select value={field.value || ""} onValueChange={field.onChange}>
+          <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
+            <SelectValue placeholder={employeesLoading ? "Loading..." : "Select provider"} />
+          </SelectTrigger>
+          <SelectContent className="bg-white z-[1000]">
+            {employees.map((employee: any) => (
+              <SelectItem 
+                key={employee.id} 
+                value={`${employee.firstname} ${employee.lastname}`}
+              >
+                {employee.firstname} {employee.lastname}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <input
+          type="text"
+          className="w-full h-14 p-3 border border-[#737373] rounded"
+          value={field.value || ""}
+          onChange={(e) => field.onChange(e.target.value)}
+          onBlur={field.onBlur}
+          ref={field.ref}
+          placeholder="Enter provider name"
         />
+      )}
+    </div>
+  )}
+/>
 
         <Controller
           name={`visits.${index}.providerSignature`}
