@@ -73,24 +73,6 @@ export default function NotificationList() {
     }
   }, [totalCount, currentPage]);
 
-  // Handle error state
-  if (error) {
-    return (
-      <section className="mb-10">
-        <div className="flex flex-col items-center justify-center gap-4 py-12">
-          <h2 className="text-2xl font-semibold text-red-600">Failed to Load Notifications</h2>
-          <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-          <button
-            onClick={() => mutate()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="mb-10">
       <section className="shadow-[0px_0px_4px_1px_#0000004D]">
@@ -148,6 +130,20 @@ export default function NotificationList() {
                   </TableCell>
                 </TableRow>
               ))
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <p className="text-gray-600">Unable to load notifications at this time.</p>
+                    <button
+                      onClick={() => mutate()}
+                      className="px-4 py-2 bg-[#003465] text-white rounded hover:bg-[#122a41] text-sm"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : notifications && notifications.length > 0 ? (
               (notifications as Notification[]).map((data: Notification, index: number) => {
                 return (

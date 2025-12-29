@@ -127,7 +127,6 @@ export const PatientData: {
   date_of_birth: Date;
   phone_number: string;
   email: string;
-  option: any;
   // status: string;
 }[] = [
   {
@@ -141,7 +140,6 @@ export const PatientData: {
     date_of_birth: new Date(),
     phone_number: "(218) 661 8316",
     email: "jenifahudson@gmail.com",
-    option: '',
     // status: "Active",
   },
 
