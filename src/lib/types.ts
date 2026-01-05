@@ -2,7 +2,7 @@ export interface Organization {
     id: number;
     name: string;
     location: string;
-    status: 'Active' | 'Inactive' | 'Deactivated';
+    status: 'Active' | 'Inactive';
     image: string;
   }
   
@@ -107,7 +107,7 @@ export interface Tenant {
   phone_number?: string;
   fax_number?: string;
   logo?: string;
-  status: 'active' | 'inactive' | 'deactivated';
+  status: 'active' | 'inactive';
   created_at: string;
   updated_at: string;
 }
@@ -152,7 +152,6 @@ export interface DashboardData {
   totalTenants: number;
   activeTenants: number;
   inactiveTenants: number;
-  deactivatedTenants: number;
 }
 
 export interface Notification {

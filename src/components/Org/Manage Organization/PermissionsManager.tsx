@@ -3,8 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
@@ -43,8 +42,6 @@ const permissionCategories = [
 ];
 
 export default function PermissionsManager({ slug }: { slug: string }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeAccountType, setActiveAccountType] = useState('admin');
   const [accountTypes, setAccountTypes] = useState<AccountType[]>([
     {
       id: 'admin',
@@ -139,75 +136,35 @@ export default function PermissionsManager({ slug }: { slug: string }) {
     toast.info("Changes cancelled");
   };
 
-  const filteredCategories = permissionCategories.filter(category =>
-    category.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="w-full max-w-6xl mx-auto">
       <Card>
         <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-semibold">Access Control</CardTitle>
-            <Button variant="ghost" size="sm">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <CardTitle className="text-xl font-semibold">Access Control</CardTitle>
         </CardHeader>
 
         <CardContent className="p-0">
-          <Tabs value={activeAccountType} onValueChange={setActiveAccountType} className="w-full">
-            {/* Account Type Navigation */}
-            <div className="px-6 pt-6 pb-4 border-b">
-              <div className="space-y-2">
-                {accountTypes.map((accountType) => (
-                  <button
-                    key={accountType.id}
-                    onClick={() => setActiveAccountType(accountType.id)}
-                    className={`text-sm font-medium transition-colors ${
-                      activeAccountType === accountType.id 
-                        ? 'text-blue-600' 
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {accountType.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Show all account types content without tabs */}
+          {accountTypes.map((accountType) => (
+            <div key={accountType.id} className="border-b last:border-b-0">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold mb-4">{accountType.name}</h3>
 
-            {/* Content for each account type */}
-            {accountTypes.map((accountType) => (
-              <TabsContent key={accountType.id} value={accountType.id} className="mt-0">
-                <div className="p-6">
-                  {/* Search */}
-                  <div className="relative mb-6">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      type="text"
-                      placeholder="Search permissions..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value) as any}
-                      onBlur={(e) => setSearchTerm(e.target.value) as any}
-                      name="seacrh-perm"
-                      className="pl-10"
-                    />
-                  </div>
-
-                  {/* Permissions Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Module</th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Read</th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">List</th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Create</th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Delete</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredCategories.map((category) => {
+                {/* Permissions Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-medium text-gray-700">Module</th>
+                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Read</th>
+                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">List</th>
+                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Create</th>
+                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Delete</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {permissionCategories.map((category) => {
                           const permissions = accountType.permissions[category.key];
                           
                           return (
@@ -264,32 +221,31 @@ export default function PermissionsManager({ slug }: { slug: string }) {
                               </td>
                             </tr>
                           );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-between gap-4 mt-8">
-                    <Button
-                      variant="outline"
-                      onClick={handleCancel}
-                      className="px-8 py-2 border-red-500 text-red-500 hover:bg-red-50"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSaveChanges}
-                      disabled={loading}
-                      className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {loading ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+              </div>
+            </div>
+          ))}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4 mt-8 p-6 border-t">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="px-8 py-2 border-red-500 text-red-500 hover:bg-red-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={loading}
+              className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

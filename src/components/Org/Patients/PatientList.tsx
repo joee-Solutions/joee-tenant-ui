@@ -69,6 +69,8 @@ export default function PatientList({ org }: { org: string }) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<any | null>(null);
   const { data, isLoading, error, mutate } = useSWR(
     API_ENDPOINTS.TENANTS_PATIENTS(parseInt(org)),
     authFectcher
@@ -94,12 +96,13 @@ export default function PatientList({ org }: { org: string }) {
     }
   }, [openDropdownId]);
 
-  const handleDelete = async (patientId: number) => {
-    setDeletingId(patientId);
+  const handleDelete = async () => {
+    if (!patientToDelete) return;
+    setDeletingId(patientToDelete.id);
     try {
       await processRequestAuth(
         "delete",
-        API_ENDPOINTS.DELETE_PATIENT(parseInt(org), patientId)
+        API_ENDPOINTS.DELETE_PATIENT(parseInt(org), patientToDelete.id)
       );
       toast.success("Patient deleted successfully");
       mutate();
@@ -109,6 +112,8 @@ export default function PatientList({ org }: { org: string }) {
       toast.error("Failed to delete patient");
     } finally {
       setDeletingId(null);
+      setShowDeleteWarning(false);
+      setPatientToDelete(null);
     }
   };
 
@@ -225,9 +230,8 @@ export default function PatientList({ org }: { org: string }) {
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(`Are you sure you want to delete "${patient.firstname} ${patient.lastname}"? This action cannot be undone.`)) {
-                                  handleDelete(patient.id);
-                                }
+                                setPatientToDelete(patient);
+                                setShowDeleteWarning(true);
                               }}
                               className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
                             >
@@ -287,22 +291,58 @@ export default function PatientList({ org }: { org: string }) {
               </Button>
             </div>
             <PatientStepper slug={org} />
-            <div className="mt-6 flex justify-end">
+            {/* PatientStepper currently handles create flow; edit PATCH support will be wired separately */}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Warning Modal */}
+      {showDeleteWarning && patientToDelete && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => {
+            setShowDeleteWarning(false);
+            setPatientToDelete(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-auto my-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-red-600">Delete Patient</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowDeleteWarning(false);
+                  setPatientToDelete(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete{" "}
+              <strong>{patientToDelete.firstname} {patientToDelete.lastname}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
                 onClick={() => {
-                  setEditModalOpen(false);
-                  setSelectedPatientId(null);
+                  setShowDeleteWarning(false);
+                  setPatientToDelete(null);
                 }}
-                className="mr-4"
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleEditDone}
-                className="bg-[#003465] text-white"
+                onClick={handleDelete}
+                disabled={deletingId !== null}
+                className="bg-red-600 text-white hover:bg-red-700"
               >
-                Save Changes
+                {deletingId !== null ? "Deleting..." : "Delete"}
               </Button>
             </div>
           </div>

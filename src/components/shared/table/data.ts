@@ -282,7 +282,7 @@ export const AppointmentData: {
 
 export const ScheduleList: {
   id: number;
-  schedule: {
+  employee: {
     doctor_name: string;
   };
   department: string;
@@ -292,7 +292,7 @@ export const ScheduleList: {
 }[] = [
   {
     id: 1,
-    schedule: {
+    employee: {
       doctor_name: "Jeremy White",
     },
     department: "Oncology",
@@ -302,7 +302,7 @@ export const ScheduleList: {
   },
   {
     id: 2,
-    schedule: {
+    employee: {
       doctor_name: "Gary Campbell",
     },
     department: "Neurology",
@@ -312,7 +312,7 @@ export const ScheduleList: {
   },
   {
     id: 3,
-    schedule: {
+    employee: {
       doctor_name: "Richard Bills",
     },
     department: "Orthopedics",
@@ -322,7 +322,7 @@ export const ScheduleList: {
   },
   {
     id: 4,
-    schedule: {
+    employee: {
       doctor_name: "Carol Tynese",
     },
     department: "Gynaecology",
@@ -332,7 +332,7 @@ export const ScheduleList: {
   },
   {
     id: 5,
-    schedule: {
+    employee: {
       doctor_name: "Dare Adeleke",
     },
     department: "Cardiology",
@@ -342,7 +342,7 @@ export const ScheduleList: {
   },
   {
     id: 6,
-    schedule: {
+    employee: {
       doctor_name: "Rose Hilary",
     },
     department: "Nephrology",

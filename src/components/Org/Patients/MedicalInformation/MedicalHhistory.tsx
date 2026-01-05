@@ -16,6 +16,10 @@ import { MEDICAL_CONDITIONS } from "./medicalConstants";
 import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { usePathname } from "next/navigation";
+import useSWR from "swr";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { authFectcher } from "@/hooks/swr";
 
 // Define interfaces for our data structures
 interface MedicalCondition {
@@ -98,12 +102,23 @@ export type MedicalHistoryFormData = z.infer<typeof medHistorySchema>;
 export default function MedicalHistoryForm() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const pathname = usePathname();
+  const orgSlug = pathname?.split('/organization/')[1]?.split('/')[0] || '';
 
   const { control, register, formState: { errors }, watch } = useFormContext<Pick<FormDataStepper, 'medHistory'>>()
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'medHistory',
   });
+
+  // Fetch employees for prescriber dropdown
+  const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useSWR(
+    orgSlug ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(orgSlug)) : null,
+    authFectcher
+  );
+
+  const employees = employeesData?.data || [];
+  const useEmployeeDropdown = !employeesError && employees.length > 0;
 
   const medHistories = watch("medHistory") || [];
 
@@ -160,7 +175,7 @@ export default function MedicalHistoryForm() {
   return (
     <div className="mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Medical and Medication History</h1>
+        <h1 className="text-2xl font-bold">Medication History</h1>
         <Button
           type="button"
           onClick={handleAddNew}
@@ -181,95 +196,11 @@ export default function MedicalHistoryForm() {
               return (
                 <div key={index} className="border border-gray-300 rounded-lg p-6 bg-gray-50">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold">Edit Medical History Entry</h3>
+                    <h3 className="text-lg font-semibold">Medication History</h3>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Date */}
-                    <div>
-                      <label className="block text-base text-black font-normal mb-2">Date *</label>
-                      <Controller
-                        name={`medHistory.${index}.date`}
-                        control={control}
-                        render={({ field }) => (
-                          <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                            placeholder="Select date"
-                          />
-                        )}
-                      />
-                    </div>
-
-                    {/* Medical Condition - Dropdown with Search */}
-                    <div>
-                    <label className="block text-base text-black font-normal mb-2">Medical Condition</label>
-                      <Controller
-                        name={`medHistory.${index}.condition`}
-                        control={control}
-                        render={({ field }) => (
-                          <SearchableSelect
-                            value={field.value || ""}
-                            onValueChange={field.onChange}
-                            options={MEDICAL_CONDITIONS}
-                            placeholder="Select condition"
-                            searchPlaceholder="Search conditions..."
-                            triggerClassName="w-full h-14 p-3 border border-[#737373] rounded"
-                            contentClassName="z-10 bg-white"
-                          />
-                        )}
-                    />
-                    {errors.medHistory?.[index]?.condition && (
-                      <p className="text-red-500 text-sm mt-1">{errors.medHistory[index].condition.message}</p>
-                    )}
-                  </div>
-
-                    {/* Onset Date */}
-                    <div>
-                    <label className="block text-base text-black font-normal mb-2">Onset Date</label>
-                    <Controller
-                      name={`medHistory.${index}.onsetDate`}
-                      control={control}
-                      render={({ field }) => (
-                        <DatePicker
-                          date={field.value ? new Date(field.value) : undefined}
-                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                          placeholder="Select onset date"
-                        />
-                      )}
-                    />
-                </div>
-
-                    {/* End Date */}
-                    <div>
-                    <label className="block text-base text-black font-normal mb-2">End Date</label>
-                    <Controller
-                      name={`medHistory.${index}.endDate`}
-                      control={control}
-                      render={({ field }) => (
-                        <DatePicker
-                          date={field.value ? new Date(field.value) : undefined}
-                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                          placeholder="Select end date"
-                        />
-                      )}
-                    />
-                  </div>
-                </div>
-
-                  {/* Comments */}
-                  <div className="mt-6">
-                  <label className="block text-base text-black font-normal mb-2">Comments</label>
-                  <Textarea
-                    {...register(`medHistory.${index}.comments`)}
-                    className="w-full h-32 p-3 border border-[#737373] rounded"
-                    rows={4}
-                  />
-                </div>
 
                   {/* Medication History Section */}
-            <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4">Medication History</h3>
+            <div className="mt-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                   <label className="block text-base text-black font-normal mb-2">Medication</label>
@@ -369,11 +300,36 @@ export default function MedicalHistoryForm() {
 
                       <div className="md:col-span-2">
                   <label className="block text-base text-black font-normal mb-2">Prescriber&apos;s Name</label>
-                  <Input
-                    type="text"
-                          {...register(`medHistory.${index}.medPrescribersName`)}
-                          className="w-full h-14 p-3 border border-[#737373] rounded"
-                  />
+                  {useEmployeeDropdown ? (
+                    <Controller
+                      name={`medHistory.${index}.medPrescribersName`}
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
+                            <SelectValue placeholder={employeesLoading ? "Loading..." : "Select prescriber"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-[1000]">
+                            {employees.map((employee: any) => (
+                              <SelectItem 
+                                key={employee.id} 
+                                value={`${employee.firstname} ${employee.lastname}`}
+                              >
+                                {employee.firstname} {employee.lastname}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  ) : (
+                    <Input
+                      type="text"
+                      placeholder="Enter prescriber name"
+                      className="w-full h-14 p-3 border border-[#737373] rounded"
+                      {...register(`medHistory.${index}.medPrescribersName`)}
+                    />
+                  )}
                 </div>
 
                       <div className="md:col-span-2">
@@ -417,31 +373,31 @@ export default function MedicalHistoryForm() {
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {history.condition || "Medical History Entry"}
+                        {history.medMedication || "Medication Entry"}
                       </h3>
-                      {history.date && (
+                      {history.medStartDate && (
                         <span className="text-sm text-gray-500">
-                          {new Date(history.date).toLocaleDateString()}
+                          Start: {new Date(history.medStartDate).toLocaleDateString()}
                         </span>
                       )}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                      {history.onsetDate && (
+                      {history.medDosage && (
                         <div>
-                          <span className="font-medium">Onset: </span>
-                          {new Date(history.onsetDate).toLocaleDateString()}
+                          <span className="font-medium">Dosage: </span>
+                          {history.medDosage}
                         </div>
                       )}
-                      {history.endDate && (
+                      {history.medFrequency && (
                         <div>
-                          <span className="font-medium">End: </span>
-                          {new Date(history.endDate).toLocaleDateString()}
+                          <span className="font-medium">Frequency: </span>
+                          {history.medFrequency}
                         </div>
                       )}
-                      {history.medMedication && (
+                      {history.medRoute && (
                         <div>
-                          <span className="font-medium">Medication: </span>
-                          {history.medMedication}
+                          <span className="font-medium">Route: </span>
+                          {history.medRoute}
                         </div>
                       )}
                       {history.medPrescribersName && (
@@ -450,10 +406,16 @@ export default function MedicalHistoryForm() {
                           {history.medPrescribersName}
                         </div>
                       )}
-                      {history.comments && (
+                      {history.medEndDate && (
+                        <div>
+                          <span className="font-medium">End Date: </span>
+                          {new Date(history.medEndDate).toLocaleDateString()}
+                        </div>
+                      )}
+                      {history.medComments && (
                         <div className="md:col-span-2">
                           <span className="font-medium">Comments: </span>
-                          {history.comments}
+                          {history.medComments}
                         </div>
                       )}
                     </div>
@@ -485,8 +447,8 @@ export default function MedicalHistoryForm() {
 
       {sortedHistories.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          <p className="text-lg mb-2">No medical history recorded</p>
-          <p className="text-sm">Click "Add Entry" to add a new medical history entry</p>
+          <p className="text-lg mb-2">No medication history recorded</p>
+          <p className="text-sm">Click "Add Entry" to add a new medication entry</p>
           </div>
       )}
     </div>

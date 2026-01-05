@@ -35,11 +35,6 @@ export const sideNavigation = [
         icon: UserRoundMinusIcon,
         href: "/dashboard/organization/inactive",
       },
-      {
-        title: "Deactivated",
-        icon: icons.UserX,
-        href: "/dashboard/organization/deactivated",
-      },
     ],
   },
   {

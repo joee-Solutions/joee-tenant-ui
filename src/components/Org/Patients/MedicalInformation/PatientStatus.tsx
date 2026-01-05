@@ -46,12 +46,12 @@ export default function PatientDischargeForm() {
   console.log(dischargeEntries, 'dischargeEntries', fields);
   return (
     <div className="mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Patient Discharge Information</h1>
+      <h1 className="text-2xl font-bold mb-6">Patient Status Information</h1>
 
       {fields.map((field, index) => (
         <div key={field.id} className="mb-8 border-b pb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Discharge Entry {index + 1}</h2>
+            <h2 className="text-lg font-semibold">Entry {index + 1}</h2>
             <div className="flex gap-2">
               {fields.length > 1 && (
                 <Button
@@ -114,10 +114,10 @@ export default function PatientDischargeForm() {
               }
             </div>
 
-            {/* Discharged Date */}
+            {/* Date */}
             <div>
               <label className="block text-base text-black font-normal mb-2">
-                Discharged Date
+                Date
               </label>
               <Controller
                 name={`patientStatus.dischargeEntries.${index}.dischargedDate`}

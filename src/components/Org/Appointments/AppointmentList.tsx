@@ -7,7 +7,7 @@ import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
 import { useState, useEffect, useRef } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { MoreVertical, Edit, Trash2, X } from "lucide-react";
+import { MoreVertical, Edit, Trash2, X, Calendar as CalendarIcon, List, Plus, Filter } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search";
@@ -26,10 +26,12 @@ import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/icons/Spinner";
+import { Calendar } from "@/components/ui/calendar";
+import { format, isSameDay, parseISO } from "date-fns";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
-  doctorId: z.string().min(1, "Doctor is required"),
+  doctorId: z.string().min(1, "Provider is required"),
   date: z.string().min(1, "Appointment date is required"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
@@ -89,6 +91,10 @@ export default function Page({ slug }: { slug: string }) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [filterProvider, setFilterProvider] = useState<string>("");
+  const [calendarAppointmentModal, setCalendarAppointmentModal] = useState<any | null>(null);
   const { data, isLoading, error, mutate } = useSWR(
     API_ENDPOINTS.TENANTS_APPOINTMENTS(parseInt(slug)),
     authFectcher
@@ -137,21 +143,56 @@ export default function Page({ slug }: { slug: string }) {
   // Get appointments array safely
   const appointments = data?.data?.data || [];
   
-  // Filter appointments based on search query
+  // Filter appointments based on search query, provider filter, and date
   const filteredAppointments = Array.isArray(appointments)
     ? appointments.filter((appointment: any) => {
-        if (!search.trim()) return true;
-        const searchLower = search.toLowerCase();
-        const patientName = `${appointment.patient?.first_name || ''} ${appointment.patient?.last_name || ''}`.toLowerCase();
-        const doctorName = `${appointment.user?.firstname || ''} ${appointment.user?.lastname || ''}`.toLowerCase();
-        const department = appointment.user?.department?.name?.toLowerCase() || '';
-        const date = appointment.date ? new Date(appointment.date).toLocaleDateString().toLowerCase() : '';
+        // Search filter
+        if (search.trim()) {
+          const searchLower = search.toLowerCase();
+          const patientName = `${appointment.patient?.first_name || ''} ${appointment.patient?.last_name || ''}`.toLowerCase();
+          const doctorName = `${appointment.user?.firstname || ''} ${appointment.user?.lastname || ''}`.toLowerCase();
+          const department = appointment.user?.department?.name?.toLowerCase() || '';
+          const date = appointment.date ? new Date(appointment.date).toLocaleDateString().toLowerCase() : '';
+          
+          if (!patientName.includes(searchLower) &&
+              !doctorName.includes(searchLower) &&
+              !department.includes(searchLower) &&
+              !date.includes(searchLower)) {
+            return false;
+          }
+        }
         
-        return patientName.includes(searchLower) ||
-               doctorName.includes(searchLower) ||
-               department.includes(searchLower) ||
-               date.includes(searchLower);
+        // Provider filter
+        if (filterProvider && appointment.user?.id !== parseInt(filterProvider)) {
+          return false;
+        }
+        
+        // Date filter (for calendar view)
+        if (viewMode === "calendar" && selectedDate && appointment.date) {
+          const appointmentDate = parseISO(appointment.date);
+          if (!isSameDay(appointmentDate, selectedDate)) {
+            return false;
+          }
+        }
+        
+        return true;
       })
+    : [];
+
+  // Get appointments for a specific date (for calendar highlighting)
+  const getAppointmentsForDate = (date: Date) => {
+    return appointments.filter((appointment: any) => {
+      if (!appointment.date) return false;
+      const appointmentDate = parseISO(appointment.date);
+      return isSameDay(appointmentDate, date);
+    });
+  };
+
+  // Get dates with appointments (for calendar highlighting)
+  const datesWithAppointments = Array.isArray(appointments)
+    ? appointments
+        .filter((app: any) => app.date)
+        .map((app: any) => parseISO(app.date))
     : [];
 
   // Paginate filtered appointments
@@ -233,28 +274,139 @@ export default function Page({ slug }: { slug: string }) {
       toast.error("Failed to update appointment");
     }
   };
+  const handleCalendarDateClick = (date: Date | undefined) => {
+    if (!date) return;
+    setSelectedDate(date);
+    const dayAppointments = getAppointmentsForDate(date);
+    if (dayAppointments.length > 0) {
+      // Show first appointment or allow selection
+      setCalendarAppointmentModal(dayAppointments[0]);
+    }
+  };
+
+  const handleAppointmentClick = (appointment: any) => {
+    setCalendarAppointmentModal(appointment);
+  };
+
   return (
-    <section className="mb-10">
+    <section className="mb-10 relative">
+      <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
+        <header className="flex justify-between items-center border-b-2 py-4 mb-8">
+          <h2 className="font-semibold text-xl text-black">
+            Appointments
+          </h2>
 
-      <>
-        <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
-          <header className="flex justify-between items-center border-b-2  py-4 mb-8">
-            <h2 className="font-semibold text-xl text-black">
-              Appointments
-            </h2>
-
+          <div className="flex gap-3">
+            <Button
+              variant={viewMode === "calendar" ? "default" : "outline"}
+              onClick={() => setViewMode("calendar")}
+              className="h-[60px] font-medium text-base px-6"
+            >
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              Calendar
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              onClick={() => setViewMode("list")}
+              className="h-[60px] font-medium text-base px-6"
+            >
+              <List className="w-4 h-4 mr-2" />
+              List
+            </Button>
             <Link href={`/dashboard/organization/${slug}/appointments/new`}>
               <Button className="h-[60px] bg-[#003465] text-white font-medium text-base px-6">
                 Add Appointment
               </Button>
             </Link>
-          </header>
-          <header className="flex items-center justify-between gap-5 py-6">
-            <ListView pageSize={pageSize} setPageSize={setPageSize} />
+          </div>
+        </header>
+
+        {/* Filters */}
+        <div className="flex items-center justify-between gap-5 py-6 mb-6 border-b">
+          <div className="flex items-center gap-4 flex-1">
+            {viewMode === "list" && (
+              <ListView pageSize={pageSize} setPageSize={setPageSize} />
+            )}
             <SearchInput onSearch={(query: string) => setSearch(query)} />
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <Select value={filterProvider} onValueChange={setFilterProvider}>
+                <SelectTrigger className="w-[200px] h-14 border border-[#737373] rounded">
+                  <SelectValue placeholder="Filter by Provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Providers</SelectItem>
+                  {doctors.map((doctor: any) => (
+                    <SelectItem key={doctor.id} value={String(doctor.id)}>
+                      {doctor.firstname} {doctor.lastname}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
 
+        {/* Calendar View */}
+        {viewMode === "calendar" && (
+          <div className="mb-8">
+            <div className="flex gap-6">
+              <div className="flex-1">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleCalendarDateClick}
+                  className="rounded-md border"
+                  modifiers={{
+                    hasAppointments: datesWithAppointments,
+                  }}
+                  modifiersClassNames={{
+                    hasAppointments: "bg-blue-100 text-blue-800 font-semibold rounded-md",
+                  }}
+                  classNames={{
+                    day: "relative",
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-4">
+                  {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : "Select a date"}
+                </h3>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {getAppointmentsForDate(selectedDate || new Date()).length > 0 ? (
+                    getAppointmentsForDate(selectedDate || new Date()).map((appointment: any) => (
+                      <div
+                        key={appointment.id}
+                        onClick={() => handleAppointmentClick(appointment)}
+                        className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-sm">
+                              {appointment.patient?.first_name} {appointment.patient?.last_name}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {appointment.user?.firstname} {appointment.user?.lastname}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {appointment.startTime} - {appointment.endTime}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No appointments for this date</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-          </header>
+        {/* List View */}
+        {viewMode === "list" && (
+          <>
           <DataTable tableDataObj={AppointmentData[0]} showAction>
             {isLoading ? (
               <TableRow>
@@ -380,8 +532,8 @@ export default function Page({ slug }: { slug: string }) {
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
           />
-        </section>
-      </>
+          </>
+        )}
 
       {/* Edit Appointment Modal */}
       {editModalOpen && selectedAppointment && (
@@ -439,16 +591,16 @@ export default function Page({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                {/* Doctor Selection */}
+                {/* Provider Selection */}
                 <div>
-                  <label className="block text-base text-black font-normal mb-2">Doctor</label>
+                  <label className="block text-base text-black font-normal mb-2">Provider</label>
                   <Controller
                     name="doctorId"
                     control={editForm.control}
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select doctor" />
+                          <SelectValue placeholder="Select provider" />
                         </SelectTrigger>
                         <SelectContent>
                           {doctors.map((doctor: any) => (
@@ -546,6 +698,87 @@ export default function Page({ slug }: { slug: string }) {
           </div>
         </div>
       )}
+
+      {/* Calendar Appointment Detail Popup */}
+      {calendarAppointmentModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setCalendarAppointmentModal(null)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-auto my-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-black">Appointment Details</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCalendarAppointmentModal(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div>
+                <p className="text-sm text-gray-600">Patient</p>
+                <p className="font-semibold">
+                  {calendarAppointmentModal.patient?.first_name} {calendarAppointmentModal.patient?.last_name}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Provider</p>
+                <p className="font-semibold">
+                  {calendarAppointmentModal.user?.firstname} {calendarAppointmentModal.user?.lastname}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Date</p>
+                <p className="font-semibold">
+                  {calendarAppointmentModal.date ? format(parseISO(calendarAppointmentModal.date), "PPP") : "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Time</p>
+                <p className="font-semibold">
+                  {calendarAppointmentModal.startTime} - {calendarAppointmentModal.endTime}
+                </p>
+              </div>
+              {calendarAppointmentModal.description && (
+                <div>
+                  <p className="text-sm text-gray-600">Description</p>
+                  <p className="font-semibold">{calendarAppointmentModal.description}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                type="button"
+                className="flex-1 border border-[#EC0909] text-[#EC0909] hover:bg-[#ec090922] py-6 text-md rounded"
+                onClick={() => {
+                  setCalendarAppointmentModal(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-[#003465] hover:bg-[#0d2337] text-white py-6 text-md rounded"
+                onClick={() => {
+                  handleEditClick(calendarAppointmentModal);
+                  setCalendarAppointmentModal(null);
+                }}
+              >
+                Edit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      </section>
     </section>
   );
 }

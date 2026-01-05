@@ -45,11 +45,12 @@ import SurgeryHistoryForm from "./MedicalInformation/SurgeryInformation";
 import ImmunizationForm from "./MedicalInformation/ImmunizationHistory";
 import FamilyHistoryForm from "./MedicalInformation/FamilyHistory";
 import LifestyleForm from "./MedicalInformation/SocialHistory";
-import VitalSignsForm from "./MedicalInformation/VitalsForm";
+import VitalSignsForm, { vitalSignsSchema } from "./MedicalInformation/VitalsForm";
 import MedicalSymptomForm from "./MedicalInformation/ReviewOfSystem";
 import MedicalSymptomsForm from "./MedicalInformation/AdditionalReview";
 import MedicationForm, { prescriptionSchema } from "./MedicalInformation/Prescriptions";
 import MedicalVisitForm, { visitEntrySchema } from "./MedicalInformation/Visit";
+import DiagnosisHistoryForm, { diagnosisHistorySchema } from "./MedicalInformation/DiagnosisHistory";
 import { toast } from "react-toastify";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 
@@ -62,12 +63,14 @@ export const formSchema = z.object({
   patientStatus: patientStatusSchema,
   allergies: allergySchema,
   medHistory: medHistorySchema,
+  diagnosisHistory: diagnosisHistorySchema,
   surgeryHistory: surgeryHistorySchema,
   immunizationHistory: immunizationHistorySchema,
   famhistory: famHistorySchema,
   lifeStyle: lifestyleSchema,
   visits: visitEntrySchema,
   prescriptions: prescriptionSchema,
+  vitalSigns: vitalSignsSchema,
 }).partial();
 
 export type FormDataStepper = z.infer<typeof formSchema>;
@@ -112,9 +115,16 @@ const steps = [
   },
   {
     id: "medical-history",
-    title: "Medical History",
-    description: "Medical and medication history",
+    title: "Medication History",
+    description: "Medication history",
     component: MedicalHistoryForm,
+    category: "medical",
+  },
+  {
+    id: "diagnosis-history",
+    title: "Diagnosis History",
+    description: "Diagnosis and medical conditions",
+    component: DiagnosisHistoryForm,
     category: "medical",
   },
   {
@@ -233,6 +243,13 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         medRoute: "",
         medStartDate: "",
       }],
+      diagnosisHistory: [{
+        date: new Date().toISOString().split('T')[0],
+        condition: "",
+        onsetDate: "",
+        endDate: "",
+        comments: "",
+      }],
       surgeryHistory: [{
         surgeryType: "",
         date: "",
@@ -275,6 +292,20 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
         directions: "",
         notes: "",
         addToMedicationList: "yes",
+      }],
+      vitalSigns: [{
+        date: new Date().toISOString().split('T')[0],
+        temperature: "",
+        systolic: "",
+        diastolic: "",
+        heartRate: "",
+        respiratoryRate: "",
+        oxygenSaturation: "",
+        glucose: "",
+        height: "",
+        weight: "",
+        bmi: "",
+        painScore: "",
       }],
     }
   });
@@ -324,16 +355,25 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     };
   }, [methods, currentStep, completedSteps, slug]);
 
+  // Only load from localStorage if editing existing patient, not for new patient
   useEffect(() => {
-    const patientData = localStorage.getItem(`patient-${slug}`);
-    if (patientData) {
-      const parsedData = JSON.parse(patientData);
-      console.log(parsedData, "parsedData")
-      methods.reset(parsedData.data);
-      setCurrentStep(parsedData.currentStep);
-      setCompletedSteps(new Set(parsedData.completedSteps));
-      // toast success
-      toast.success("Patient data loaded successfully");
+    // Check if we're in edit mode (patient ID in URL or props)
+    const isEditMode = false; // TODO: Add logic to detect edit mode
+    if (isEditMode) {
+      const patientData = localStorage.getItem(`patient-${slug}`);
+      if (patientData) {
+        const parsedData = JSON.parse(patientData);
+        methods.reset(parsedData.data);
+        setCurrentStep(parsedData.currentStep);
+        setCompletedSteps(new Set(parsedData.completedSteps));
+        toast.success("Patient data loaded successfully");
+      }
+    } else {
+      // For new patient, clear localStorage and start fresh
+      localStorage.removeItem(`patient-${slug}`);
+      setCurrentStep(0);
+      setCompletedSteps(new Set());
+      methods.reset();
     }
   }, [slug, methods]);
 
@@ -421,7 +461,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   }
 
   function mapFormDataToPatientDto(formData: FormDataStepper) {
-    const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle, visits, prescriptions } = formData ;
+    const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, diagnosisHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle, visits, prescriptions, vitalSigns } = formData ;
 
     // Map to match backend CreatePatientDto structure
     return {
@@ -510,6 +550,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       // Medical data arrays
       allergies: allergies || [],
       medicalHistories: medHistory || [],
+      diagnosisHistory: diagnosisHistory || [],
       surgeries: surgeryHistory || [],
       immunizations: immunizationHistory || [],
       familyHistory: famhistory || [],
@@ -518,6 +559,7 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       socialHistory: lifeStyle || {},
       visits: visits || [],
       prescriptions: prescriptions || [],
+      vitalSigns: vitalSigns || [],
     };
   }
 
@@ -675,8 +717,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
       </div>
 
       {/* Right Content Area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-8">
+      <div className="flex-1 overflow-y-auto min-h-screen">
+        <div className="p-8 max-w-full">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-4">
@@ -700,11 +742,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-500">
-                Step {currentStep + 1} of {steps.length}
-              </div>
               <div className="text-xs text-gray-400 mt-1">
-                {completedSteps.size} of {steps.length} steps completed
+                {completedSteps.size} of {steps.length} forms completed
               </div>
             </div>
           </div>

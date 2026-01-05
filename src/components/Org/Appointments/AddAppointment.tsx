@@ -24,7 +24,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
-  doctorId: z.string().min(1, "Doctor is required"),
+  doctorId: z.string().min(1, "Provider is required"),
   date: z.string().min(1, "Appointment date is required"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
@@ -197,16 +197,16 @@ export default function AddAppointment({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* Doctor Selection */}
+          {/* Provider Selection */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">Doctor</label>
+            <label className="block text-base text-black font-normal mb-2">Provider</label>
             <Controller
               name="doctorId"
               control={form.control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select doctor" />
+                    <SelectValue placeholder="Select provider" />
                   </SelectTrigger>
                   <SelectContent className="z-10 bg-white">
                     {doctors.length > 0 ? (
@@ -218,7 +218,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
                       ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-gray-500">
-                        No doctors available
+                        No providers available
                       </div>
                     )}
                   </SelectContent>

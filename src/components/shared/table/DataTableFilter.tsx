@@ -68,7 +68,7 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
             <SelectItem value="all" className="cursor-pointer">
               All
             </SelectItem>
-            {["Active", "Inactive", "Deactivated"].map((currSortVal) => (
+            {["Active", "Inactive"].map((currSortVal) => (
               <SelectItem
                 key={currSortVal}
                 value={`${currSortVal}`}
@@ -81,19 +81,6 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
         </Select>
       </div>
 
-      {/* Button Filter */}
-      <Button 
-        type="button"
-        onClick={() => {
-          // Trigger filter application
-          // The actual filtering is handled by the parent component through state
-          // This provides visual feedback that filters have been applied
-          console.log('Filters applied:', { search, sortBy, status });
-        }}
-        className="font-medium text-base text-white bg-[#003465] hover:bg-[#002850] transition-colors"
-      >
-        Filter <ListFilter />
-      </Button>
     </div>
   );
 }

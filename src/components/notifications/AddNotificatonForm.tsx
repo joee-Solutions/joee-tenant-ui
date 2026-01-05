@@ -68,6 +68,7 @@ export default function AddNotification() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+  const [success, setSuccess] = useState(false);
   
   // Fetch tenants data for dropdown
   const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError } = useTenantsData();
@@ -191,10 +192,11 @@ export default function AddNotification() {
       
       // Check for success indicators
       if (response?.status || response?.success || (response && !response.error)) {
+        setSuccess(true);
         toast.success("Notification sent successfully!");
         setTimeout(() => {
-        router.push("/dashboard/notifications");
-        }, 1000);
+          router.push("/dashboard/notifications");
+        }, 2000);
       } else {
         const errorMessage = response?.message || response?.error || "Failed to send notification. Please try again.";
         toast.error(errorMessage);
@@ -258,6 +260,18 @@ export default function AddNotification() {
           </Button>
         </Link>
       </div>
+
+      {success && (
+        <div className="bg-green-50 border-2 border-green-200 text-green-800 px-6 py-4 rounded-lg mb-6 flex items-center gap-3">
+          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="font-semibold text-base">Notification sent successfully!</p>
+            <p className="text-sm mt-1">Redirecting to notification list...</p>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Title and Type */}

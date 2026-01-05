@@ -87,9 +87,17 @@ export default function ScheduleForm({ slug }: { slug: string }) {
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
         setSuccess(true);
-        // setTimeout(() => {
-        //   router.push(`/dashboard/organization/${slug}/schedules`);
-        // }, 1500);
+        form.reset({
+          employeeId: "",
+          availableDays: [{
+            day: "",
+            startTime: "",
+            endTime: "",
+          }],
+        });
+        setTimeout(() => {
+          router.push(`/dashboard/organization/${slug}/schedules`);
+        }, 1500);
       } else {
         setError(res?.message || res?.error || "Failed to create schedule. Please try again.");
       }
@@ -106,9 +114,12 @@ export default function ScheduleForm({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D]">
-      <div className="flex justify-between items-center border-b-2  py-4 mb-8">
-        <h1 className="text-2xl font-bold">ADD SCHEDULE</h1>
+    <div className="py-8 px-6 my-8 shadow-[0px_0px_4px_1px_#0000004D] rounded-lg bg-white">
+      <div className="flex justify-between items-center border-b-2 border-gray-200 py-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Add Schedule</h1>
+          <p className="text-sm text-gray-600 mt-1">Create a new schedule for an employee</p>
+        </div>
         <Link href={`/dashboard/organization/${slug}/schedules`}>
           <Button variant="outline" className="h-[60px] border border-[#003465] text-[#003465] font-medium text-base px-6 hover:bg-[#003465] hover:text-white">
             Back
@@ -128,15 +139,22 @@ export default function ScheduleForm({ slug }: { slug: string }) {
         </div>
       )}
 
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Employee Section */}
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-medium mb-2">Employee</h2>
-          <p className="text-gray-600 mb-4">Select employee to create schedule</p>
+        <div className="p-6 border border-gray-200 rounded-lg bg-gray-50">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#003465] flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Employee Information</h2>
+              <p className="text-sm text-gray-600">Select the employee for this schedule</p>
+            </div>
+          </div>
 
-          <div className="my-8">
-            <label className="block text-base text-black font-normal mb-2">
-              Employee name
+          <div className="mt-6">
+            <label className="block text-base text-gray-900 font-medium mb-2">
+              Employee Name <span className="text-red-500">*</span>
             </label>
             <Controller
               name="employeeId"
@@ -164,30 +182,38 @@ export default function ScheduleForm({ slug }: { slug: string }) {
         </div>
 
         {/* Schedule Days Section */}
-        <div className="p-6">
-          <h2 className="text-xl font-medium mb-2">Schedule Days and Times</h2>
-          <p className="text-gray-600 mb-4">
-            Add the days and times when the employee is available
-          </p>
+        <div className="p-6 border border-gray-200 rounded-lg bg-gray-50">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-[#003465] flex items-center justify-center">
+              <Clock className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Schedule Days and Times</h2>
+              <p className="text-sm text-gray-600">
+                Add the days and times when the employee is available
+              </p>
+            </div>
+          </div>
 
-          {fields.map((field, index) => (
-            <div key={field.id} className="border border-gray-200 rounded-lg p-4 mb-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Schedule Day {index + 1}</h3>
+          <div className="space-y-4">
+            {fields.map((field, index) => (
+              <div key={field.id} className="border border-gray-300 rounded-lg p-5 bg-white shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Schedule Day {index + 1}</h3>
                 {fields.length > 1 && (
                   <Button
                     type="button"
                     variant="destructive"
                     size="sm"
                     onClick={() => remove(index)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {/* Day Selection */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
@@ -309,19 +335,20 @@ export default function ScheduleForm({ slug }: { slug: string }) {
                 </div>
               </div>
             </div>
-          ))}
+            ))}
 
-          {/* Add Another Day Button */}
-          <div className="my-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => append({ day: "", startTime: "", endTime: "" })}
-              className="text-blue-600 border-blue-600 hover:bg-blue-50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Another Day
-            </Button>
+            {/* Add Another Day Button */}
+            <div className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => append({ day: "", startTime: "", endTime: "" })}
+                className="w-full md:w-auto text-[#003465] border-[#003465] hover:bg-[#003465] hover:text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Another Day
+              </Button>
+            </div>
           </div>
         </div>
 

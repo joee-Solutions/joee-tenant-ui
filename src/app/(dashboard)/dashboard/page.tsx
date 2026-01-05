@@ -212,14 +212,13 @@ const DashboardPage: NextPage = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <SkeletonBox className="h-[250px] w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
             <SkeletonBox className="h-[250px] w-full" />
             <SkeletonBox className="h-[250px] w-full" />
             <SkeletonBox className="h-[250px] w-full" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
             <StatCard
               title="All Organizations"
               value={stats.allOrganizations.count}
@@ -243,14 +242,6 @@ const DashboardPage: NextPage = () => {
               color="yellow"
               icon={stats.inactiveOrganizations.icon}
               href="/dashboard/organization/inactive"
-            />
-            <StatCard
-              title="Deactived Organizations"
-              value={stats.deactivatedOrganizations.count}
-              growth={stats.deactivatedOrganizations.growth}
-              color="red"
-              icon={stats.deactivatedOrganizations.icon}
-              href="/dashboard/organization/deactivated"
             />
           </div>
         )}

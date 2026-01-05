@@ -113,7 +113,8 @@ const processRequestNoAuth = async (
     } else if (method === "put") {
       rt = await httpNoAuth.put(`/api${path}`, data);
     } else if (method === "delete") {
-      rt = await httpNoAuth.delete(path);
+      // Keep DELETE consistent with other verbs – backend expects /api-prefixed paths
+      rt = await httpNoAuth.delete(`/api${path}`);
     } else {
       throw new Error(`Invalid method, method:${method} path:${path}`);
     }
@@ -159,7 +160,8 @@ const processRequestAuth = async (
     } else if (method === "put") {
       rt = await httpAuth.put(`/api${path}`, data);
     } else if (method === "delete") {
-      rt = await httpAuth.delete(path);
+      // Keep DELETE consistent with other verbs – backend expects /api-prefixed paths
+      rt = await httpAuth.delete(`/api${path}`);
     } else {
       throw new Error(`Invalid method, method:${method} path:${path}`);
     }

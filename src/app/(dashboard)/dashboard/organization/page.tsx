@@ -55,6 +55,7 @@ function PageContent() {
   const [selectedOrg, setSelectedOrg] = useState<any | null>(null);
   const [defaults, setDefaults] = useState<any>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [localTenants, setLocalTenants] = useState<any[] | null>(null);
 
   const EditOrganizationSchema = z.object({
     name: z.string().min(1, "This field is required"),
@@ -65,7 +66,8 @@ function PageContent() {
   });
 
   type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
-  const orgStatus = ["active", "inactive", "deactivated"];
+  // Only Active / Inactive are supported – Deactivated has been removed
+  const orgStatus = ["active", "inactive"];
 
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
@@ -138,6 +140,24 @@ function PageContent() {
     });
   }, [allTenantsData, status]);
 
+  // Keep a local copy we can update after edits without forcing a full reload
+  useEffect(() => {
+    if (Array.isArray(tenantsData)) {
+      setLocalTenants(tenantsData);
+    }
+  }, [tenantsData]);
+
+  // Keep organizations ordered by creation date so edited items don't jump to the end
+  const sortedTenantsData = useMemo(() => {
+    const source = localTenants ?? tenantsData;
+    if (!Array.isArray(source)) return [];
+    return [...source].sort((a: any, b: any) => {
+      const aDate = new Date(a?.created_at || a?.createdAt || "").getTime();
+      const bDate = new Date(b?.created_at || b?.createdAt || "").getTime();
+      return aDate - bDate;
+    });
+  }, [localTenants, tenantsData]);
+
   const prevFilters = useRef({ search, sortBy, status, pageSize });
   useEffect(() => {
     if (
@@ -191,7 +211,11 @@ function PageContent() {
 
       const updatePayload: any = {};
       if (changedFields.name) updatePayload.name = changedFields.name;
-      if (changedFields.status) updatePayload.status = changedFields.status.toUpperCase();
+      if (changedFields.status) {
+        // Backend expects boolean is_active; also keep string status for compatibility
+        updatePayload.status = changedFields.status.toUpperCase();
+        updatePayload.is_active = changedFields.status.toLowerCase() === "active";
+      }
       if (changedFields.phoneNumber) updatePayload.phone_number = changedFields.phoneNumber;
       if (changedFields.organizationEmail) updatePayload.email = changedFields.organizationEmail;
       if (changedFields.address) updatePayload.address = changedFields.address;
@@ -202,10 +226,25 @@ function PageContent() {
         updatePayload
       );
       toast.success("Organization updated successfully");
+
+      // Optimistically update local list so the table reflects changes without reload
+      setLocalTenants((prev) =>
+        Array.isArray(prev)
+          ? prev.map((org) =>
+              org.id === selectedOrg.id
+                ? {
+                    ...org,
+                    ...updatePayload,
+                    status: changedFields.status || org.status,
+                  }
+                : org
+            )
+          : prev
+      );
+
       setEditModalOpen(false);
       setSelectedOrg(null);
       setDefaults(null);
-      window.location.reload();
     } catch (error) {
       console.error(error);
       toast.error("Failed to update organization");
@@ -270,18 +309,6 @@ function PageContent() {
       color: "yellow" as const,
       icon: <UserRound className="text-white size-5" />,
     },
-    {
-      key: "deactivatedTenants" as const,
-      title: "Deactivated Organizations",
-      value: dashboardData?.deactivatedTenants || 0,
-      growth: dashboardData?.totalTenants
-        ? parseFloat(
-            ((dashboardData.deactivatedTenants * 100) / dashboardData.totalTenants).toFixed(2)
-          )
-        : null,
-      color: "red" as const,
-      icon: <UserRoundX className="text-white size-5" />,
-    },
   ];
 
   // Handle error states - only show error page for critical dashboard errors
@@ -323,14 +350,13 @@ function PageContent() {
           </header>
 
           {dashboardLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              <SkeletonBox className="h-[300px] w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               <SkeletonBox className="h-[300px] w-full" />
               <SkeletonBox className="h-[300px] w-full" />
               <SkeletonBox className="h-[300px] w-full" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-[48px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-[48px]">
               {statsCards.map((stat) => (
                 <StatCard
                   key={stat.key}
@@ -339,6 +365,12 @@ function PageContent() {
                   growth={stat.growth}
                   color={stat.color}
                   icon={stat.icon}
+                  href={
+                    stat.key === "totalTenants" ? "/dashboard/organization" :
+                    stat.key === "activeTenants" ? "/dashboard/organization/active" :
+                    stat.key === "inactiveTenants" ? "/dashboard/organization/inactive" :
+                    undefined
+                  }
                 />
               ))}
             </div>
@@ -388,8 +420,8 @@ function PageContent() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : Array.isArray(tenantsData) && tenantsData.length > 0 ? (
-                tenantsData.map((data: any, index: number) => (
+              ) : Array.isArray(sortedTenantsData) && sortedTenantsData.length > 0 ? (
+                sortedTenantsData.map((data: any, index: number) => (
                   <TableRow key={data.id} className="px-3 relative">
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="py-[21px] ">
@@ -423,11 +455,7 @@ function PageContent() {
                       className={`font-semibold text-xs ${
                         data?.status?.toLowerCase() === "active"
                           ? "text-[#3FA907]"
-                          : data?.status?.toLowerCase() === "inactive"
-                          ? "text-[#EC0909]"
-                          : data?.status?.toLowerCase() === "deactivated"
-                          ? "text-[#999999]"
-                          : "text-[#737373]"
+                          : "text-[#EC0909]"
                         }`}
                     >
                       {data?.status?.toUpperCase() || "N/A"}
