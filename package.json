@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3600",
-    "build": "next build --webpack",
-    "start": "next start --webpack",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
