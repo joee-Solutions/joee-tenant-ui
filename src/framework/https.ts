@@ -154,13 +154,12 @@ const processRequestAuth = async (
     if (method === "post") {
       rt = await httpAuth.post(`/api${path}`, data);
     } else if (method === "get") {
-      rt = await httpAuth.get(`/api${path}`, {
-        signal: controller.signal,
-      });
+      rt = await httpAuth.get(`/api${path}`, { signal: controller.signal });
     } else if (method === "put") {
       rt = await httpAuth.put(`/api${path}`, data);
+    } else if (method === "patch") {
+      rt = await httpAuth.patch(`/api${path}`, data);
     } else if (method === "delete") {
-      // Keep DELETE consistent with other verbs – backend expects /api-prefixed paths
       rt = await httpAuth.delete(`/api${path}`);
     } else {
       throw new Error(`Invalid method, method:${method} path:${path}`);

@@ -186,4 +186,54 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-export async function PATCH(request: Request) {}
+export async function PATCH(req: NextRequest) {
+  const requestPath = new URL(req.url).pathname;
+  const pathName = requestPath.split("/api")[1];
+  const clientInfo = await getRequestInfo(req);
+
+  const authorization =
+    req.headers.get("authorization") || req.headers.get("Authorization");
+
+  const contentType = req.headers.get("Content-Type");
+  const isMultipart = contentType?.includes("multipart/form-data");
+
+  const body = isMultipart
+    ? await req.formData()
+    : contentType?.includes("application/json")
+    ? await req.json()
+    : await req.json();
+
+  const query = req.nextUrl.searchParams;
+  const queryString = query.toString();
+  const path = `${apiUrl}${pathName}${queryString ? "?" + queryString : ""}`;
+
+  try {
+    const res = await axios.patch(
+      path,
+      isMultipart ? body : JSON.stringify(body),
+      {
+        headers: {
+          "Content-Type": contentType || "application/json",
+          Authorization: authorization as string | "",
+          "x-client-info": JSON.stringify(clientInfo),
+          "x-client-host": clientInfo["host"],
+          "x-client-protocol": clientInfo["protocol"],
+        },
+      }
+    );
+
+    const response = processResponse(res);
+    return Response.json({ ...response });
+  } catch (error: any) {
+    if (error && error.response) {
+      return NextResponse.json(error.response.data, {
+        status: error.response.status,
+      });
+    } else if (error) {
+      return NextResponse.json(error, { status: 500 });
+    } else {
+      return NextResponse.json("An error occurred", { status: 500 });
+    }
+  }
+}
+
