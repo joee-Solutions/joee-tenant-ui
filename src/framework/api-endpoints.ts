@@ -49,13 +49,14 @@ export const API_ENDPOINTS = {
   GET_TRAINING_GUIDE_CATEGORIES: "/management/super/training-guides/categories",
   
   // Notifications
-  GET_NOTIFICATIONS: "/notifications",
-  CREATE_NOTIFICATION: "/notifications",
+  GET_NOTIFICATIONS: "/management/super/notifications",
+  CREATE_NOTIFICATION: "/super/tenants/notification/all",
+  CREATE_TENANT_NOTIFICATION: (tenantId: number) => `/super/tenants/${tenantId}/notification`,
   GET_USER_NOTIFICATIONS: (userId: number) => `/notifications/user/${userId}`,
   GET_TENANT_NOTIFICATIONS: (tenantId: number) => `/notifications/tenant/${tenantId}`,
   MARK_NOTIFICATION_READ: (id: number) => `/notifications/${id}/read`,
   MARK_ALL_NOTIFICATIONS_READ: (userId: number) => `/notifications/user/${userId}/read-all`,
-  DELETE_NOTIFICATION: (id: number) => `/notifications/${id}`,
+  DELETE_NOTIFICATION: (id: number) => `/super/tenants/notification/${id}`,
   GET_UNREAD_COUNT: (userId: number) => `/notifications/user/${userId}/unread-count`,
   GET_TENANT_UNREAD_COUNT: (tenantId: number) => `/notifications/tenant/${tenantId}/unread-count`,
   GET_ADMIN_PROFILE: "/management/super/admin/profile",

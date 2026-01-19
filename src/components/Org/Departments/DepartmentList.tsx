@@ -174,7 +174,6 @@ export default function Page({ slug }: { slug: string }) {
     }
   };
 
-
   return (
     <section className="max-sm:px-5 mb-10">
       {/* Remove all references to isAddOrg and setIsAddOrg */}
@@ -254,7 +253,7 @@ export default function Page({ slug }: { slug: string }) {
                     </button>
                       {openDropdownId === data.id && (
                         <div 
-                          className="absolute right-0 bottom-0 z-[9999] min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                          className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div
@@ -333,7 +332,7 @@ export default function Page({ slug }: { slug: string }) {
 
             <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6">
               <div className="mb-4 flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6">
-                <div className="flex-1 basis-1/2">
+                <div className="flex-1">
                   <label className="block text-base text-black font-normal mb-2">
                     Department name
                   </label>
@@ -347,12 +346,12 @@ export default function Page({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                <div className="flex-1 basis-1/2">
+                <div className="flex-1">
                   <label className="block text-base text-black font-normal mb-2">
                     Upload Department Image
                   </label>
                   <div className="flex">
-                    <div className="flex-1 border h-14 border-[#737373] rounded flex items-center px-4 overflow-hidden">
+                    <div className="flex-1 border h-14 border-[#737373] rounded flex items-center px-4">
                       <span className="mr-2">
                         <svg
                           width="16"
@@ -367,7 +366,7 @@ export default function Page({ slug }: { slug: string }) {
                           />
                         </svg>
                       </span>
-                      <span className="text-gray-500 truncate">
+                      <span className="text-gray-500">
                         {fileSelected || "Choose File"}
                       </span>
                     </div>
