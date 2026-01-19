@@ -223,11 +223,11 @@ export default function VitalSignsForm() {
                             type="text"
                             placeholder="Height"
                             className="w-full h-14 p-3 border border-[#737373] rounded"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              calculateBMI(originalIndex, 'height', e.target.value);
-                            }}
+                            {...register(`vitalSigns.${originalIndex}.height`, {
+                              onChange: (e) => {
+                                calculateBMI(originalIndex, "height", e.target.value);
+                              },
+                            })}
                           />
                         )}
                       />
@@ -242,11 +242,11 @@ export default function VitalSignsForm() {
                             type="text"
                             placeholder="Weight"
                             className="w-full h-14 p-3 border border-[#737373] rounded"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              calculateBMI(originalIndex, 'weight', e.target.value);
-                            }}
+                            {...register(`vitalSigns.${originalIndex}.weight`, {
+                              onChange: (e) => {
+                                calculateBMI(originalIndex, "weight", e.target.value);
+                              },
+                            })}
                           />
                         )}
                       />
