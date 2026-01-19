@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { DatePicker } from "@/components/ui/date-picker";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useTenantsData, useAdminProfile } from "@/hooks/swr";
@@ -19,23 +18,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Spinner } from "@/components/icons/Spinner";
 
-// Notification types enum (matching backend)
-enum NotificationType {
-  APPOINTMENT = "appointment",
-  MEDICAL_RECORD = "medical_record",
-  PATIENT = "patient",
-  SYSTEM = "system",
-  REMINDER = "reminder",
-  ALERT = "alert",
-}
-
-// Notification priority enum (matching backend)
-enum NotificationPriority {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  URGENT = "urgent",
-}
+// Removed NotificationType and NotificationPriority enums as they are no longer needed
 
 // Tenant interface
 interface Tenant {
@@ -55,11 +38,9 @@ interface Tenant {
 const notificationSchema = z.object({
   title: z.string().min(1, "Title is required"),
   message: z.string().min(1, "Message is required"),
-  type: z.nativeEnum(NotificationType).default(NotificationType.SYSTEM),
-  priority: z.nativeEnum(NotificationPriority).default(NotificationPriority.MEDIUM),
+  sender: z.string().min(1, "Sender is required"),
   sendToAllTenants: z.boolean().default(false),
   tenantId: z.number().optional(),
-  expiresAt: z.date().optional(),
 });
 
 type NotificationSchemaType = z.infer<typeof notificationSchema>;
@@ -67,7 +48,6 @@ type NotificationSchemaType = z.infer<typeof notificationSchema>;
 export default function AddNotification() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
   const [success, setSuccess] = useState(false);
   
   // Fetch tenants data for dropdown
@@ -94,9 +74,10 @@ export default function AddNotification() {
     defaultValues: {
       title: "",
       message: "",
-      type: NotificationType.SYSTEM,
-      priority: NotificationPriority.MEDIUM,
       sendToAllTenants: false,
+      sender: admin?.first_name && admin?.last_name
+  ? `${admin.first_name} ${admin.last_name}`
+  : "Admin",
     },
   });
 
@@ -116,79 +97,37 @@ export default function AddNotification() {
     setIsSubmitting(true);
     
     try {
-      // Get the expiry date from the separate state (source of truth from DatePicker)
-      // The expiryDate state is managed by DatePicker and is the most reliable
-      const expiresAtValue = expiryDate;
-      
-      // Prepare the notification data - matching Swagger format
+      // Prepare the notification data
       const notificationData: any = {
         title: data.title,
         message: data.message,
-        type: data.type,
-        priority: data.priority,
+        sender: admin?.first_name && admin?.last_name
+  ? `${admin.first_name} ${admin.last_name}`
+  : "Admin",
         userId: userId || 1, // Use admin user ID, fallback to 1 if not available
-        metadata: {}, // Empty metadata object as required by backend
       };
 
-      // Handle expiresAt - backend expects ISO string format: "2025-11-27T13:18:35.445Z"
-      // The error "expiresAt must be a Date instance" suggests backend validation expects a valid date string
-      // We'll always include expiresAt - either as ISO string or null
-      if (expiresAtValue) {
-        try {
-          // Ensure we have a valid Date object
-          const dateObj = expiresAtValue instanceof Date 
-            ? expiresAtValue 
-            : new Date(expiresAtValue);
-          
-          // Validate the date is valid
-          if (!isNaN(dateObj.getTime())) {
-            // Format as ISO string - this is what the backend expects
-            notificationData.expiresAt = dateObj.toISOString();
-          } else {
-            console.error('Invalid date value:', expiresAtValue);
-            // Set to null if invalid (backend might need the field present)
-            notificationData.expiresAt = null;
-          }
-        } catch (error) {
-          console.error('Error processing expiresAt:', error);
-          // Set to null on error (backend might need the field present)
-          notificationData.expiresAt = null;
+      // Determine which endpoint to use based on sendToAllTenants
+      let endpoint: string;
+      if (data.sendToAllTenants) {
+        // Send to all tenants
+        endpoint = API_ENDPOINTS.CREATE_NOTIFICATION;
+      } else {
+        // Send to specific tenant
+        if (!data.tenantId) {
+          toast.error("Please select an organization");
+          form.setError("tenantId", {
+            type: "manual",
+            message: "Organization selection is required",
+          });
+          setIsSubmitting(false);
+          return;
         }
-      } else {
-        // Always include expiresAt field, even if not provided (set to null)
-        // Some backends require the field to be present for validation
-        notificationData.expiresAt = null;
+        endpoint = API_ENDPOINTS.CREATE_TENANT_NOTIFICATION(data.tenantId);
       }
 
-      // Include tenantId - matching Swagger format
-      // If sending to specific tenant, include the tenantId
-      // If sending to all tenants, we might omit it or backend handles it differently
-      // Based on Swagger example, tenantId is always included when specified
-      if (!data.sendToAllTenants && data.tenantId) {
-        notificationData.tenantId = data.tenantId;
-      }
-      // Note: When sending to all tenants, we don't include tenantId
-      // The backend will handle broadcasting to all tenants
-
-      // Debug logging
-      console.log('Sending notification data:', JSON.stringify(notificationData, null, 2));
-      console.log('ExpiryDate state:', expiryDate);
-      console.log('ExpiryDate type:', typeof expiryDate);
-      console.log('ExpiryDate is Date:', expiryDate instanceof Date);
-      if (expiryDate instanceof Date) {
-        console.log('ExpiryDate getTime():', expiryDate.getTime());
-        console.log('ExpiryDate isValid:', !isNaN(expiryDate.getTime()));
-        console.log('ExpiryDate toISOString():', expiryDate.toISOString());
-      }
-      if (notificationData.expiresAt) {
-        console.log('ExpiresAt ISO string being sent:', notificationData.expiresAt);
-        console.log('ExpiresAt type:', typeof notificationData.expiresAt);
-      } else {
-        console.log('ExpiresAt not included in payload (optional field)');
-      }
-
-      // Send notification - using POST to /notifications endpoint
-      const response = await processRequestAuth("post", API_ENDPOINTS.CREATE_NOTIFICATION, notificationData);
+      // Send notification
+      const response = await processRequestAuth("post", endpoint, notificationData);
       
       // Check for success indicators
       if (response?.status || response?.success || (response && !response.error)) {
@@ -274,91 +213,19 @@ export default function AddNotification() {
       )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Title and Type */}
-        <div className="mb-4 flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6">
-          <div className="flex-1">
-            <Label className="block text-base text-black font-normal mb-2">
-              Title *
-            </Label>
-            <Input
-              placeholder="Enter notification title"
-              {...form.register("title")}
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-            />
-            {form.formState.errors.title && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
-            )}
-          </div>
-          <div className="flex-1">
-            <Label className="block text-base text-black font-normal mb-2">
-              Type
-            </Label>
-            <Select
-              value={form.watch("type")}
-              onValueChange={(value) => form.setValue("type", value as NotificationType)}
-            >
-              <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                <SelectValue placeholder="Select notification type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NotificationType.SYSTEM}>System</SelectItem>
-                <SelectItem value={NotificationType.ALERT}>Alert</SelectItem>
-                <SelectItem value={NotificationType.APPOINTMENT}>Appointment</SelectItem>
-                <SelectItem value={NotificationType.MEDICAL_RECORD}>Medical Record</SelectItem>
-                <SelectItem value={NotificationType.PATIENT}>Patient</SelectItem>
-                <SelectItem value={NotificationType.REMINDER}>Reminder</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Priority and Expiry Date */}
-        <div className="mb-4 flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6">
-          <div className="flex-1">
-            <Label className="block text-base text-black font-normal mb-2">
-              Priority
-            </Label>
-            <Select
-              value={form.watch("priority")}
-              onValueChange={(value) => form.setValue("priority", value as NotificationPriority)}
-            >
-              <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NotificationPriority.LOW}>Low</SelectItem>
-                <SelectItem value={NotificationPriority.MEDIUM}>Medium</SelectItem>
-                <SelectItem value={NotificationPriority.HIGH}>High</SelectItem>
-                <SelectItem value={NotificationPriority.URGENT}>Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <Label className="block text-base text-black font-normal mb-2">
-              Expiry Date (Optional)
-            </Label>
-            <DatePicker
-              date={expiryDate}
-              onDateChange={(date) => {
-                // Only set if it's a valid Date instance
-                if (date && date instanceof Date && !isNaN(date.getTime())) {
-                  setExpiryDate(date);
-                  // Also update form state for validation, but we'll use expiryDate state for submission
-                  form.setValue("expiresAt", date, { shouldValidate: false });
-                  form.clearErrors("expiresAt");
-                } else {
-                  // Clear both states when date is removed
-                  setExpiryDate(undefined);
-                  form.setValue("expiresAt", undefined, { shouldValidate: false });
-                  form.clearErrors("expiresAt");
-                }
-              }}
-              placeholder="Select expiry date"
-            />
-            {form.formState.errors.expiresAt && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.expiresAt.message}</p>
-            )}
-          </div>
+        {/* Title */}
+        <div className="mb-4">
+          <Label className="block text-base text-black font-normal mb-2">
+            Title *
+          </Label>
+          <Input
+            placeholder="Enter notification title"
+            {...form.register("title")}
+            className="w-full h-14 p-3 border border-[#737373] rounded"
+          />
+          {form.formState.errors.title && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+          )}
         </div>
 
         {/* Send to All Tenants Checkbox */}

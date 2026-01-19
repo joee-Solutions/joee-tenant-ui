@@ -50,13 +50,13 @@ export const API_ENDPOINTS = {
   
   // Notifications
   GET_NOTIFICATIONS: "/management/super/notifications",
-  CREATE_NOTIFICATION: "/super/tenants/notification/all",
-  CREATE_TENANT_NOTIFICATION: (tenantId: number) => `/super/tenants/${tenantId}/notification`,
+  CREATE_NOTIFICATION: "/management/super/notification/all",
+  CREATE_TENANT_NOTIFICATION: (tenantId: number) => `/management/super/${tenantId}/notification`,
   GET_USER_NOTIFICATIONS: (userId: number) => `/notifications/user/${userId}`,
-  GET_TENANT_NOTIFICATIONS: (tenantId: number) => `/notifications/tenant/${tenantId}`,
+  GET_TENANT_NOTIFICATIONS: (tenantId: number) => `/management/super/notification/${tenantId}`,
   MARK_NOTIFICATION_READ: (id: number) => `/notifications/${id}/read`,
   MARK_ALL_NOTIFICATIONS_READ: (userId: number) => `/notifications/user/${userId}/read-all`,
-  DELETE_NOTIFICATION: (id: number) => `/super/tenants/notification/${id}`,
+  DELETE_NOTIFICATION: (id: number) => `/management/super/notification/${id}`,
   GET_UNREAD_COUNT: (userId: number) => `/notifications/user/${userId}/unread-count`,
   GET_TENANT_UNREAD_COUNT: (tenantId: number) => `/notifications/tenant/${tenantId}/unread-count`,
   GET_ADMIN_PROFILE: "/management/super/admin/profile",

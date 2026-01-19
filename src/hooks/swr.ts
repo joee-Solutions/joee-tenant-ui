@@ -384,10 +384,10 @@ export const useNotificationsData = () => {
 
 // Custom hook for tab-based notifications filtering
 export const useNotificationsByTab = (activeTab: string) => {
-  const endpoint = `/notifications?tab=${activeTab}`;
+  const endpoint = `${API_ENDPOINTS.GET_NOTIFICATIONS}${activeTab !== "all" ? `?tab=${activeTab}` : ""}`;
   const { data, error, isLoading, mutate } = useSWR(
     endpoint,
-    (url) => processRequestAuth("get", url),
+    authFectcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,

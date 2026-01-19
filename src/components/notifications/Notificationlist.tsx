@@ -5,12 +5,15 @@ import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
 import { useState, useEffect } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { useNotificationsByTab } from "@/hooks/swr";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { toast } from "react-toastify";
 
 export type TabType = "all" | "sent" | "received";
 const tabs: Record<TabType, string> = {
@@ -54,6 +57,9 @@ export default function NotificationList() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState<TabType>("all");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null);
 
   // Fetch notifications data with tab filtering
   const { data: notificationsData, meta, isLoading, error, mutate } = useNotificationsByTab(activeTab);
@@ -72,6 +78,31 @@ export default function NotificationList() {
       setCurrentPage(1);
     }
   }, [totalCount, currentPage]);
+
+  const handleDeleteClick = (notification: Notification) => {
+    setNotificationToDelete(notification);
+    setShowDeleteWarning(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!notificationToDelete) return;
+    setDeletingId(notificationToDelete.id);
+    try {
+      await processRequestAuth(
+        "delete",
+        API_ENDPOINTS.DELETE_NOTIFICATION(notificationToDelete.id)
+      );
+      toast.success("Notification deleted successfully");
+      mutate();
+      setShowDeleteWarning(false);
+      setNotificationToDelete(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete notification");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <section className="mb-10">
@@ -181,12 +212,17 @@ export default function NotificationList() {
                     </TableCell>
 
                     <TableCell>
-                      <Link
-                        href={`/dashboard/notifications/${data.id}`}
-                        className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6]"
+                      <button
+                        onClick={() => handleDeleteClick(data)}
+                        className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6] hover:bg-red-50 hover:border-red-300"
+                        disabled={deletingId === data.id}
                       >
-                        <Ellipsis className="text-black size-5" />
-                      </Link>
+                        {deletingId === data.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                        ) : (
+                          <Trash2 className="text-black size-4" />
+                        )}
+                      </button>
                     </TableCell>
                   </TableRow>
                 );
@@ -211,6 +247,58 @@ export default function NotificationList() {
           />
         </div>
       </section>
+
+      {/* Delete Warning Modal */}
+      {showDeleteWarning && notificationToDelete && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => {
+            setShowDeleteWarning(false);
+            setNotificationToDelete(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-auto my-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-red-600">Delete Notification</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowDeleteWarning(false);
+                  setNotificationToDelete(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete the notification <strong>"{notificationToDelete.title}"</strong>? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteWarning(false);
+                  setNotificationToDelete(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteConfirm}
+                disabled={deletingId !== null}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                {deletingId !== null ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
