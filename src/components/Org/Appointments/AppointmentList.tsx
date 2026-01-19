@@ -335,7 +335,7 @@ export default function Page({ slug }: { slug: string }) {
                   <SelectValue placeholder="Filter by Provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Providers</SelectItem>
+                  <SelectItem value="all">All Providers</SelectItem>
                   {doctors.map((doctor: any) => (
                     <SelectItem key={doctor.id} value={String(doctor.id)}>
                       {doctor.firstname} {doctor.lastname}
