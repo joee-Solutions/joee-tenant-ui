@@ -175,25 +175,25 @@ export default function OrgDetails({ slug }: { slug: string }) {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-gray-50">
                 <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                  <div>
+                <div>
                     <h4 className="font-medium text-sm text-gray-600">Organization Status</h4>
                     <Badge variant="default" className="bg-green-100 text-green-800 mt-1">
-                      Active
-                    </Badge>
-                  </div>
+                  Active
+                </Badge>
+              </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
                   <div>
                     <h4 className="font-medium text-sm text-gray-600">Organization ID</h4>
                     <code className="px-2 py-1 bg-gray-100 rounded text-sm mt-1 block">{slug}</code>
-                  </div>
+              </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
                   <div>
                     <h4 className="font-medium text-sm text-gray-600">Total Users</h4>
                     <Badge variant="outline" className="text-lg font-semibold mt-1">
-                      {organizationUsers.length}
-                    </Badge>
+                  {organizationUsers.length}
+                </Badge>
                   </div>
                 </div>
               </div>

@@ -45,6 +45,7 @@ const notificationSchema = z.object({
 
 type NotificationSchemaType = z.infer<typeof notificationSchema>;
 
+
 export default function AddNotification() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,16 +58,6 @@ export default function AddNotification() {
   const { data: adminData } = useAdminProfile();
   const admin = Array.isArray(adminData) ? adminData[0] : adminData;
   const userId = admin?.id;
-
-  // Debug: Log tenants data structure
-  React.useEffect(() => {
-    console.log("Tenants data:", tenantsData);
-    console.log("Tenants data type:", typeof tenantsData);
-    console.log("Is array:", Array.isArray(tenantsData));
-    if (tenantsError) {
-      console.error("Error fetching tenants:", tenantsError);
-    }
-  }, [tenantsData, tenantsError]);
 
   const form = useForm<NotificationSchemaType>({
     resolver: zodResolver(notificationSchema),

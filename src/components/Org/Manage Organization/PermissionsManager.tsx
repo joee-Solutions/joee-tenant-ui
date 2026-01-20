@@ -141,29 +141,29 @@ export default function PermissionsManager({ slug }: { slug: string }) {
     <div className="w-full max-w-6xl mx-auto">
       <Card>
         <CardHeader className="border-b">
-          <CardTitle className="text-xl font-semibold">Access Control</CardTitle>
+            <CardTitle className="text-xl font-semibold">Access Control</CardTitle>
         </CardHeader>
 
         <CardContent className="p-0">
           {/* Show all account types content without tabs */}
-          {accountTypes.map((accountType) => (
+                {accountTypes.map((accountType) => (
             <div key={accountType.id} className="border-b last:border-b-0">
-              <div className="p-6">
+                <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4">{accountType.name}</h3>
 
-                {/* Permissions Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Module</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Read</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">List</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Create</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Delete</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  {/* Permissions Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">Module</th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Read</th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">List</th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Create</th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-700 w-20">Delete</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                       {permissionCategories.map((category) => {
                           const permissions = accountType.permissions[category.key];
                           
@@ -221,31 +221,31 @@ export default function PermissionsManager({ slug }: { slug: string }) {
                               </td>
                             </tr>
                           );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
               </div>
             </div>
           ))}
 
-          {/* Action Buttons */}
+                  {/* Action Buttons */}
           <div className="flex justify-end gap-4 mt-8 p-6 border-t">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="px-8 py-2 border-red-500 text-red-500 hover:bg-red-50"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveChanges}
-              disabled={loading}
-              className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
+                    <Button
+                      variant="outline"
+                      onClick={handleCancel}
+                      className="px-8 py-2 border-red-500 text-red-500 hover:bg-red-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={loading}
+                      className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {loading ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
         </CardContent>
       </Card>
     </div>

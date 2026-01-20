@@ -10,6 +10,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "react-toastify";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
 
 interface MainHeaderContentProps {
   isMobileMenuOpen?: boolean;
@@ -23,6 +25,8 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   const [searchQuery, setSearchQuery] = useState("");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]); 
+  const [loadingNotifications, setLoadingNotifications] = useState(false); 
   
   // Sync search query with URL params if on organization page
   useEffect(() => {
@@ -36,15 +40,30 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   const adminData = Array.isArray(admin) ? admin[0] : admin;
   const fullName = adminData ? `${adminData.first_name || ""} ${adminData.last_name || ""}`.trim() : "";
   const role = adminData?.roles?.[0]?.split("_").join(" ") || "Admin";
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoadingNotifications(true);
+      try {
+        const response = await processRequestAuth("get", API_ENDPOINTS.GET_NOTIFICATIONS);
+        if (response?.data) {
+          setNotifications(response.data);
+        } else {
+          toast.error("Failed to fetch notifications");
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+        toast.error("Error fetching notifications");
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
 
-  // Mock notifications data - replace with actual API call
-  const notifications = [
-    { id: 1, title: "New employee added", message: "John Doe has been added to the system", time: "2 hours ago", read: false },
-    { id: 2, title: "Organization updated", message: "ABC Hospital details have been updated", time: "5 hours ago", read: false },
-    { id: 3, title: "System maintenance", message: "Scheduled maintenance on Dec 25, 2024", time: "1 day ago", read: true },
-  ];
+    fetchNotifications();
+  }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

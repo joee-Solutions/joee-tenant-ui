@@ -36,7 +36,7 @@ export default function VitalSignsForm() {
   });
 
   const vitalSigns = watch("vitalSigns") || [];
-
+  
   // Sort by date (most recent first) - keep original index for form operations
   const sortedVitalSigns = useMemo(() => {
     const list = Array.isArray(vitalSigns) ? vitalSigns : [];
@@ -79,7 +79,7 @@ export default function VitalSignsForm() {
     setEditingIndex(null);
   };
 
-  // Auto-calculate BMI when height or weight changes
+          // Auto-calculate BMI when height or weight changes
   const calculateBMI = (index: number, field: 'height' | 'weight', value: string) => {
     const currentVital = vitalSigns[index];
     if (!currentVital) return;
@@ -87,13 +87,13 @@ export default function VitalSignsForm() {
     const height = field === 'height' ? parseFloat(value) : parseFloat(currentVital.height || '0');
     const weight = field === 'weight' ? parseFloat(value) : parseFloat(currentVital.weight || '0');
 
-    if (height > 0 && weight > 0) {
-      // BMI = weight (kg) / (height (m))^2
-      // Assuming height is in cm, convert to meters
-      const heightInMeters = height / 100;
-      const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(2);
+            if (height > 0 && weight > 0) {
+              // BMI = weight (kg) / (height (m))^2
+              // Assuming height is in cm, convert to meters
+              const heightInMeters = height / 100;
+              const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(2);
       setValue(`vitalSigns.${index}.bmi`, bmi);
-    } else {
+            } else {
       setValue(`vitalSigns.${index}.bmi`, "");
     }
   };
@@ -102,15 +102,15 @@ export default function VitalSignsForm() {
     <div className="mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Vital Signs</h1>
-        <Button
-          type="button"
+                  <Button
+                    type="button"
           onClick={handleAddNew}
-          className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
+                    className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
           Add Entry
-        </Button>
-      </div>
+                  </Button>
+              </div>
 
       {/* List View */}
       {sortedVitalSigns.length > 0 && (
@@ -123,157 +123,157 @@ export default function VitalSignsForm() {
                 <div key={originalIndex} className="border border-gray-300 rounded-lg p-6 bg-gray-50">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold">Edit Vital Signs Entry</h3>
-                  </div>
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    {/* Date Field */}
-                    <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Date Field */}
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Date *</label>
                       <Controller
                         name={`vitalSigns.${originalIndex}.date`}
                         control={control}
                         render={({ field }) => (
-                          <DatePicker
+                <DatePicker
                             date={field.value ? new Date(field.value) : undefined}
                             onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-                            placeholder="Select date"
-                          />
+    placeholder="Select date"
+  />
                         )}
                       />
-                    </div>
-                  </div>
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Temperature (°F/°C)</label>
-                      <Input
-                        type="text"
-                        placeholder="Temperature"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Temperature"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.temperature`)}
-                      />
-                    </div>
-                    <div>
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Systolic (mmHg)</label>
-                      <Input
-                        type="text"
-                        placeholder="Systolic"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Systolic"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.systolic`)}
-                      />
-                    </div>
-                    <div>
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Diastolic (mmHg)</label>
-                      <Input
-                        type="text"
-                        placeholder="Diastolic"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Diastolic"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.diastolic`)}
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Heart Rate (bpm)</label>
-                      <Input
-                        type="text"
-                        placeholder="Heart Rate"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Heart Rate"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.heartRate`)}
-                      />
-                    </div>
-                    <div>
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Respiratory Rate (breaths/min)</label>
-                      <Input
-                        type="text"
-                        placeholder="Respiratory Rate"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Respiratory Rate"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.respiratoryRate`)}
-                      />
-                    </div>
-                    <div>
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Oxygen Saturation (%)</label>
-                      <Input
-                        type="text"
-                        placeholder="Oxygen Saturation"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Oxygen Saturation"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.oxygenSaturation`)}
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Glucose</label>
-                      <Input
-                        type="text"
-                        placeholder="Glucose"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
+                <Input
+                  type="text"
+                  placeholder="Glucose"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
                         {...register(`vitalSigns.${originalIndex}.glucose`)}
-                      />
-                    </div>
-                    <div>
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Height (cm/in)</label>
                       <Controller
                         name={`vitalSigns.${originalIndex}.height`}
                         control={control}
                         render={({ field }) => (
-                          <Input
-                            type="text"
-                            placeholder="Height"
-                            className="w-full h-14 p-3 border border-[#737373] rounded"
-                            {...register(`vitalSigns.${originalIndex}.height`, {
-                              onChange: (e) => {
-                                calculateBMI(originalIndex, "height", e.target.value);
-                              },
-                            })}
+                <Input
+                  type="text"
+                  placeholder="Height"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              calculateBMI(originalIndex, 'height', e.target.value);
+                            }}
                           />
                         )}
-                      />
-                    </div>
-                    <div>
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Weight (kg/lbs)</label>
                       <Controller
                         name={`vitalSigns.${originalIndex}.weight`}
                         control={control}
                         render={({ field }) => (
-                          <Input
-                            type="text"
-                            placeholder="Weight"
-                            className="w-full h-14 p-3 border border-[#737373] rounded"
-                            {...register(`vitalSigns.${originalIndex}.weight`, {
-                              onChange: (e) => {
-                                calculateBMI(originalIndex, "weight", e.target.value);
-                              },
-                            })}
+                <Input
+                  type="text"
+                  placeholder="Weight"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              calculateBMI(originalIndex, 'weight', e.target.value);
+                            }}
                           />
                         )}
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
                       <label className="block text-base text-black font-normal mb-2">BMI</label>
                       <Input
-                        type="text"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
-                        placeholder="BMI (auto-calculated)"
+                  type="text"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                  placeholder="BMI (auto-calculated)"
                         {...register(`vitalSigns.${originalIndex}.bmi`)}
-                        readOnly
-                      />
-                    </div>
-                    <div>
+                  readOnly
+                />
+              </div>
+              <div>
                       <label className="block text-base text-black font-normal mb-2">Pain Score (0-10)</label>
-                      <Input
-                        type="text"
-                        className="w-full h-14 p-3 border border-[#737373] rounded"
-                        placeholder="Pain Score"
+                <Input
+                  type="text"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                  placeholder="Pain Score"
                         {...register(`vitalSigns.${originalIndex}.painScore`)}
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
+            </div>
 
                   {/* Save and Cancel Buttons */}
                   <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
@@ -394,7 +394,7 @@ export default function VitalSignsForm() {
               </div>
             );
           })}
-        </div>
+          </div>
       )}
 
       {sortedVitalSigns.length === 0 && (

@@ -365,8 +365,8 @@ export default function Page({ slug }: { slug: string }) {
           ) : paginatedSchedules.length > 0 ? (
             paginatedSchedules.map((scheduleItem: any) => {
               const { day, dropdownKey } = scheduleItem;
-              return (
-                <TableRow key={dropdownKey} className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100">
+                return (
+                  <TableRow key={dropdownKey} className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100">
                   <TableCell>{scheduleItem.id}</TableCell>
                   <TableCell className="py-[21px]">
                     <div className="flex items-center gap-[10px]">
@@ -387,48 +387,48 @@ export default function Page({ slug }: { slug: string }) {
                   <TableCell className="font-semibold text-xs text-[#737373]">
                     {day.endTime}
                   </TableCell>
-                  <TableCell>
-                    <div className="relative">
-                      <button
-                        className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-gray-100 rounded flex items-center justify-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenDropdownId(openDropdownId === dropdownKey ? null : dropdownKey);
-                        }}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                      {openDropdownId === dropdownKey && (
-                        <div 
-                          className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
-                          onClick={(e) => e.stopPropagation()}
+                    <TableCell>
+                      <div className="relative">
+                        <button
+                          className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-gray-100 rounded flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDropdownId(openDropdownId === dropdownKey ? null : dropdownKey);
+                          }}
                         >
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {openDropdownId === dropdownKey && (
+                          <div 
+                            className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
                               handleEditClick(scheduleItem);
-                            }}
-                            className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </div>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
+                              }}
+                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </div>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
                               handleDeleteClick(scheduleItem);
-                            }}
-                            className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                              }}
+                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
                             {deletingId === scheduleItem.id ? "Deleting..." : "Delete"}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
+                        )}
+                      </div>
+                    </TableCell>
                 </TableRow>
-              );
+                );
             })
           ) : (
             <TableRow>

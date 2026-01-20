@@ -190,15 +190,15 @@ export default function ScheduleForm({ slug }: { slug: string }) {
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Schedule Days and Times</h2>
               <p className="text-sm text-gray-600">
-                Add the days and times when the employee is available
-              </p>
+            Add the days and times when the employee is available
+          </p>
             </div>
           </div>
 
           <div className="space-y-4">
-            {fields.map((field, index) => (
+          {fields.map((field, index) => (
               <div key={field.id} className="border border-gray-300 rounded-lg p-5 bg-white shadow-sm">
-                <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Schedule Day {index + 1}</h3>
                 {fields.length > 1 && (
                   <Button
@@ -335,19 +335,19 @@ export default function ScheduleForm({ slug }: { slug: string }) {
                 </div>
               </div>
             </div>
-            ))}
+          ))}
 
-            {/* Add Another Day Button */}
+          {/* Add Another Day Button */}
             <div className="mt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => append({ day: "", startTime: "", endTime: "" })}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => append({ day: "", startTime: "", endTime: "" })}
                 className="w-full md:w-auto text-[#003465] border-[#003465] hover:bg-[#003465] hover:text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Another Day
-              </Button>
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Day
+            </Button>
             </div>
           </div>
         </div>

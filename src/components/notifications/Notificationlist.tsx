@@ -182,7 +182,8 @@ export default function NotificationList() {
                     key={data.id || index}
                     className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100"
                   >
-                    <TableCell>{data.id || 'N/A'}</TableCell>
+                    {/* S/N Column */}
+          <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="py-[10px]">
                       <div className="flex items-center gap-[10px]">
                         <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">

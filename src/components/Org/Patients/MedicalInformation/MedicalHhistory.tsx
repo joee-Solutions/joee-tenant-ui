@@ -197,7 +197,7 @@ export default function MedicalHistoryForm() {
                 <div key={index} className="border border-gray-300 rounded-lg p-6 bg-gray-50">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold">Medication History</h3>
-                  </div>
+                </div>
 
                   {/* Medication History Section */}
             <div className="mt-4">
@@ -323,12 +323,12 @@ export default function MedicalHistoryForm() {
                       )}
                     />
                   ) : (
-                    <Input
-                      type="text"
+                  <Input
+                    type="text"
                       placeholder="Enter prescriber name"
                       className="w-full h-14 p-3 border border-[#737373] rounded"
-                      {...register(`medHistory.${index}.medPrescribersName`)}
-                    />
+                          {...register(`medHistory.${index}.medPrescribersName`)}
+                  />
                   )}
                 </div>
 
