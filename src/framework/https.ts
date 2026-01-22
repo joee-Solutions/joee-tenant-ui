@@ -143,6 +143,21 @@ const processRequestAuth = async (
 ) => {
   console.debug("request -> processDataRequest", path);
 
+  // Check offline status first (only in browser environment)
+  if (typeof window !== 'undefined') {
+    const { offlineService } = await import('@/lib/offline/offlineService');
+    const { offlineLogger } = await import('@/lib/offline/offlineLogger');
+    
+    // Always check online status before making requests
+    if (!offlineService.getOnlineStatus()) {
+      offlineLogger.info(`Intercepted ${method.toUpperCase()} request - routing to offline service`, { path });
+      // Use offline service for all requests when offline
+      return await offlineService.makeRequest(method, path, data);
+    }
+    // If online, continue with normal flow
+    offlineLogger.debug(`Processing ${method.toUpperCase()} request normally (online)`, { path });
+  }
+
   let rt;
   // if (isNotEmpty(files)) {
   //   data = convertToFormData(data, files)
@@ -169,6 +184,21 @@ const processRequestAuth = async (
     if (callback) {
       callback(path, rt.data);
     }
+    
+    // Cache GET responses for offline use (only in browser environment)
+    if (typeof window !== 'undefined' && method === 'get') {
+      try {
+        const { offlineService } = await import('@/lib/offline/offlineService');
+        const { offlineLogger } = await import('@/lib/offline/offlineLogger');
+        // Cache the response for offline access
+        await offlineService.cacheResponse(path, rt.data);
+        offlineLogger.debug(`Cached GET response in normal flow: ${path}`);
+      } catch (error) {
+        // Silently fail caching - don't break the request
+        console.warn('Failed to cache response:', error);
+      }
+    }
+    
     // console.log(rt.data, "rt.data");
     return rt.data;
   } catch (error: any) {

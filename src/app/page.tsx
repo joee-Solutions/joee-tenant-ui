@@ -7,18 +7,25 @@ const HomePage = () => {
   const router = useRouter();
   const handleLogout = async () => {
     console.log("logout");
+    // Logout works offline - just clears cookies
     Cookies.remove("auth_token");
     Cookies.remove("refresh_token");
     Cookies.remove("user");
+    Cookies.remove("mfa_token");
+    // Clear any offline-related data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('offline_precache_completed');
+    }
     router.push("/auth/login");
   };
   useEffect(() => {
-    if (!Cookies.get("auth_token")) {
+    const token = Cookies.get("auth_token");
+    if (!token) {
       router.push("/auth/login");
-    }else{
+    } else {
       router.push("/dashboard");
     }
-  }, []);
+  }, [router]);
   return (
     <div>
       <button onClick={handleLogout}>Logout</button>

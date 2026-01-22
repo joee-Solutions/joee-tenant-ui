@@ -1,17 +1,19 @@
 'use client'
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { IoSettingsSharp } from "react-icons/io5";
 import { SearchIcon, Menu, X } from "lucide-react";
 import { BellIcon } from "../icons/icon";
 import Image from "next/image";
 import profileImage from "./../../../public/assets/profile.png";
-import { useAdminProfile } from "@/hooks/swr";
+import { useAdminProfile, useNotificationsData } from "@/hooks/swr";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "react-toastify";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { mutate } from "swr";
+import { Button } from "@/components/ui/button";
 
 interface MainHeaderContentProps {
   isMobileMenuOpen?: boolean;
@@ -25,8 +27,9 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   const [searchQuery, setSearchQuery] = useState("");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]); 
-  const [loadingNotifications, setLoadingNotifications] = useState(false); 
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [markingAsRead, setMarkingAsRead] = useState<number | null>(null); 
   
   // Sync search query with URL params if on organization page
   useEffect(() => {
@@ -40,28 +43,71 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   const adminData = Array.isArray(admin) ? admin[0] : admin;
   const fullName = adminData ? `${adminData.first_name || ""} ${adminData.last_name || ""}`.trim() : "";
   const role = adminData?.roles?.[0]?.split("_").join(" ") || "Admin";
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      setLoadingNotifications(true);
-      try {
-        const response = await processRequestAuth("get", API_ENDPOINTS.GET_NOTIFICATIONS);
-        if (response?.data) {
-          setNotifications(response.data);
-        } else {
-          toast.error("Failed to fetch notifications");
-        }
+  
+  // Use SWR hook for notifications to enable automatic refetching
+  const { data: notificationsData, isLoading: loadingNotifications } = useNotificationsData();
+  
+  // Calculate unread count from notifications list
+  // Use useMemo with notificationsData as dependency to recalculate when SWR refetches
+  const { notifications, unreadCount } = useMemo(() => {
+    const notifs = Array.isArray(notificationsData) ? notificationsData : [];
+    
+    // Calculate unread count - if read property doesn't exist or is false, it's unread
+    // New notifications typically don't have a read property, so treat as unread
+    const count = notifs.filter((n: any) => {
+      // If read property is explicitly true, it's read
+      // Otherwise (undefined, null, false), treat as unread
+      return n.read !== true && n.isRead !== true && (!n.readAt || n.readAt === null);
+    }).length;
+    
+    return { notifications: notifs, unreadCount: count };
+  }, [notificationsData]);
+
+  // Handle notification click - open modal and mark as read
+  const handleNotificationClick = async (notification: any) => {
+    setSelectedNotification(notification);
+    setShowNotificationModal(true);
+    setIsNotificationOpen(false);
+    
+    // Mark as read if not already read
+    if (notification.read !== true && notification.isRead !== true && (!notification.readAt || notification.readAt === null)) {
+      await markNotificationAsRead(notification.id);
+    }
+  };
+
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId: number) => {
+    setMarkingAsRead(notificationId);
+    try {
+      await processRequestAuth("post", API_ENDPOINTS.MARK_NOTIFICATION_READ(notificationId));
+      // Invalidate and refetch notifications (unread count will be recalculated)
+      mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
       } catch (error) {
-        console.error("Error fetching notifications:", error);
-        toast.error("Error fetching notifications");
+      console.error("Error marking notification as read:", error);
+      toast.error("Failed to mark notification as read");
       } finally {
-        setLoadingNotifications(false);
-      }
-    };
+      setMarkingAsRead(null);
+    }
+  };
 
-    fetchNotifications();
-  }, []);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Mark all notifications as read
+  const handleMarkAllAsRead = async () => {
+    if (!adminData?.id) {
+      toast.error("Unable to mark all as read");
+      return;
+    }
+    
+    try {
+      await processRequestAuth("post", API_ENDPOINTS.MARK_ALL_NOTIFICATIONS_READ(adminData.id));
+      // Invalidate and refetch notifications (unread count will be recalculated)
+      mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
+      toast.success("All notifications marked as read");
+      setIsNotificationOpen(false);
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      toast.error("Failed to mark all notifications as read");
+    }
+  };
 
 
 
@@ -69,9 +115,8 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
     e.preventDefault();
     const query = searchQuery.trim();
     if (query) {
-      // Navigate to organizations page with search query
-      // The organizations page will handle the search using the search parameter
-      router.push(`/dashboard/organization?search=${encodeURIComponent(query)}`);
+      // Navigate to global search page that searches across all entities
+      router.push(`/dashboard/search?q=${encodeURIComponent(query)}`);
     } else {
       // If search is empty, navigate to organization page without search param
       if (pathname?.includes("/organization")) {
@@ -146,9 +191,7 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
             <span className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors">
               <BellIcon className="h-6 w-6" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadCount}
-                </span>
+                <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3"></span>
               )}
         </span>
           </PopoverTrigger>
@@ -162,46 +205,42 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
                   No notifications
                 </div>
               ) : (
-                notifications.map((notification) => (
+                notifications.map((notification) => {
+                  const isUnread = notification.read !== true && notification.isRead !== true && (!notification.readAt || notification.readAt === null);
+                  return (
                   <div
                     key={notification.id}
                     className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                      !notification.read ? "bg-blue-50" : ""
+                        isUnread ? "bg-blue-50" : ""
                     }`}
-                    onClick={() => {
-                      // Handle notification click
-                      console.log("Notification clicked:", notification.id);
-                    }}
+                      onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-[#003465]">
                           {notification.title}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
                           {notification.message}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
-                          {notification.time}
+                            {notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : ""}
                         </p>
+                        </div>
+                        {isUnread && (
+                          <span className="w-2 h-2 bg-blue-500 rounded-full ml-2 flex-shrink-0"></span>
+                        )}
                       </div>
-                      {!notification.read && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full ml-2"></span>
-                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
             {notifications.length > 0 && (
               <div className="p-3 border-t text-center">
                 <button
                   className="text-sm text-[#003465] hover:underline"
-                  onClick={() => {
-                    // Mark all as read
-                    console.log("Mark all as read");
-                    setIsNotificationOpen(false);
-                  }}
+                  onClick={handleMarkAllAsRead}
                 >
                   Mark all as read
                 </button>
@@ -209,6 +248,76 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
             )}
           </PopoverContent>
         </Popover>
+
+        {/* Notification View Modal */}
+        {showNotificationModal && selectedNotification && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowNotificationModal(false);
+              setSelectedNotification(null);
+            }}
+          >
+            <div
+              className="bg-white rounded-lg p-6 w-full max-w-2xl mx-auto my-auto max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-[#003465] pr-4">
+                  {selectedNotification.title}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowNotificationModal(false);
+                    setSelectedNotification(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 flex-shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Message</p>
+                  <p className="text-base text-gray-800 whitespace-pre-wrap">
+                    {selectedNotification.message}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600 mb-1">Date</p>
+                    <p className="text-sm text-gray-800">
+                      {selectedNotification.createdAt
+                        ? new Date(selectedNotification.createdAt).toLocaleString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                  {selectedNotification.tenant && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Organization</p>
+                      <p className="text-sm text-gray-800">
+                        {selectedNotification.tenant.name || "N/A"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNotificationModal(false);
+                    setSelectedNotification(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Settings */}
         <span

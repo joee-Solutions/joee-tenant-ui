@@ -17,12 +17,50 @@ const SideNavigation = ({ isMobileMenuOpen, setIsMobileMenuOpen }: SideNavigatio
   const router = useRouter();
   const handleLogout = async () => {
     try {
+      // Get user email before clearing cookies
+      const userCookie = Cookies.get('user');
+      let userEmail: string | undefined;
+      
+      if (userCookie) {
+        try {
+          const user = JSON.parse(userCookie);
+          userEmail = user.email;
+        } catch (error) {
+          // Ignore parse errors
+        }
+      }
+
+      // Logout works offline - just clears cookies and localStorage
       Cookies.remove("auth_token");
+      Cookies.remove("refresh_token");
       Cookies.remove("user");
-      // Cookies.remove()
+      Cookies.remove("mfa_token");
+      
+      // Clear offline credentials if email is available
+      if (userEmail && typeof window !== 'undefined') {
+        try {
+          const { offlineAuthService } = await import('@/lib/offline/offlineAuth');
+          await offlineAuthService.clearCredentials(userEmail);
+        } catch (error) {
+          // Ignore errors clearing credentials
+        }
+      }
+      
+      // Clear offline pre-cache status
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('offline_precache_completed');
+        localStorage.removeItem('offline_precache_timestamp');
+        localStorage.removeItem('offline_precache_stats');
+      }
       router.push("/auth/login");
     } catch (error) {
       console.log("Logout error:", error);
+      // Even if there's an error, try to clear cookies and redirect
+      Cookies.remove("auth_token");
+      Cookies.remove("refresh_token");
+      Cookies.remove("user");
+      Cookies.remove("mfa_token");
+      router.push("/auth/login");
     }
   };
   const pathName = usePathname();

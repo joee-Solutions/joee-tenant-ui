@@ -16,29 +16,13 @@ const PatientsDonut: FC<PatientsDonutProps> = ({ data }) => {
     <div className=" bg-white p-6 rounded-lg shadow-md h-fit">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg md:text-xl font-medium text-black">Patients</h2>
-        <Link href="#" className="text-blue-800 text-sm flex items-center">
-          View all
-          <svg
-            className="h-4 w-4 ml-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </Link>
       </div>
 
       <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-center gap-6">
         <div className="mb-6  ">
           <p className="text-gray-500 text-lg">Total Patients</p>
           <p className="text-xl font-medium text-blue-900">
-            {data.totalPatients.toLocaleString()} People
+            {data.totalPatients === 0 ? "0 Patients" : `${data.totalPatients.toLocaleString()} Patients`}
           </p>
         </div>
 
@@ -57,15 +41,31 @@ const PatientsDonut: FC<PatientsDonutProps> = ({ data }) => {
                     stroke="none"
                   >
                     {data.ageDistribution.map((group, index) => (
-                      <Cell key={`cell-${index}`} fill={group.color} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={data.totalPatients === 0 ? "#E5E7EB" : group.color} 
+                      />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
               {/* Center Label */}
               <div className="absolute inset-0 flex flex-col items-center justify-center ">
-                <span className="text-black font-bold text-lg">50%</span>
-                <span className="text-xs text-[#595959]">Below 30 years</span>
+                {data.totalPatients > 0 ? (
+                  <>
+                    <span className="text-black font-bold text-lg">
+                      {data.ageDistribution
+                        .filter((g) => g.range === "0-18" || g.range === "19-30")
+                        .reduce((sum, g) => sum + g.percentage, 0)}%
+                    </span>
+                    <span className="text-xs text-[#595959]">Below 30 years</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-gray-400 font-bold text-lg">0%</span>
+                    <span className="text-xs text-gray-400">No patients</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

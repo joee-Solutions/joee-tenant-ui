@@ -1,0 +1,117 @@
+/**
+ * Offline Mode Logger
+ * Provides detailed logging for offline mode operations
+ */
+
+type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+
+interface LogEntry {
+  timestamp: Date;
+  level: LogLevel;
+  message: string;
+  data?: any;
+}
+
+class OfflineLogger {
+  private logs: LogEntry[] = [];
+  private maxLogs = 100;
+  private enabled = true;
+
+  log(level: LogLevel, message: string, data?: any) {
+    if (!this.enabled) return;
+
+    const entry: LogEntry = {
+      timestamp: new Date(),
+      level,
+      message,
+      data,
+    };
+
+    this.logs.push(entry);
+    
+    // Keep only last maxLogs entries
+    if (this.logs.length > this.maxLogs) {
+      this.logs.shift();
+    }
+
+    // Also log to console with appropriate level
+    const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
+    const prefix = `[OFFLINE ${level.toUpperCase()}]`;
+    console[consoleMethod](prefix, message, data || '');
+
+    // Store in localStorage for persistence across page reloads
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('offline_logs', JSON.stringify(this.logs.slice(-50))); // Keep last 50
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    }
+  }
+
+  info(message: string, data?: any) {
+    this.log('info', message, data);
+  }
+
+  warn(message: string, data?: any) {
+    this.log('warn', message, data);
+  }
+
+  error(message: string, data?: any) {
+    this.log('error', message, data);
+  }
+
+  debug(message: string, data?: any) {
+    this.log('debug', message, data);
+  }
+
+  getLogs(): LogEntry[] {
+    return [...this.logs];
+  }
+
+  clearLogs() {
+    this.logs = [];
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('offline_logs');
+      } catch (e) {
+        // Ignore
+      }
+    }
+  }
+
+  enable() {
+    this.enabled = true;
+  }
+
+  disable() {
+    this.enabled = false;
+  }
+
+  // Load logs from localStorage on initialization
+  loadPersistedLogs() {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('offline_logs');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          this.logs = parsed.map((log: any) => ({
+            ...log,
+            timestamp: new Date(log.timestamp),
+          }));
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
+}
+
+export const offlineLogger = new OfflineLogger();
+
+// Load persisted logs on initialization
+if (typeof window !== 'undefined') {
+  offlineLogger.loadPersistedLogs();
+  offlineLogger.info('Offline logger initialized');
+}
+

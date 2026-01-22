@@ -6,6 +6,8 @@ import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { preCacheService } from "@/lib/offline/preCacheService";
+import { offlineService } from "@/lib/offline/offlineService";
 
 const links = [
   { href: "departments", label: "Departments", Icon: Building2 },
@@ -33,6 +35,19 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
       } catch {}
     }
   }, [data, isLoading, orgSlug]);
+
+  // Pre-cache this organization's tab pages when the layout loads
+  useEffect(() => {
+    if (!isLoading && data && offlineService.getOnlineStatus()) {
+      const tenantId = (data as any)?.id || (data as any)?.organization_id;
+      if (tenantId && typeof tenantId === 'number') {
+        // Pre-cache this organization's data in the background
+        preCacheService.preCacheTenant(tenantId).catch((error) => {
+          console.warn('Failed to pre-cache organization data:', error);
+        });
+      }
+    }
+  }, [data, isLoading]);
 
   const handleTabChange = (value: string) => {
     router.push(`${base}/${value}`);

@@ -17,6 +17,7 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Spinner } from "@/components/icons/Spinner";
+import { mutate } from "swr";
 
 // Removed NotificationType and NotificationPriority enums as they are no longer needed
 
@@ -122,6 +123,9 @@ export default function AddNotification() {
       
       // Check for success indicators
       if (response?.status || response?.success || (response && !response.error)) {
+        // Invalidate and refetch notifications cache to update the bell icon immediately
+        mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
+        
         setSuccess(true);
         toast.success("Notification sent successfully!");
         setTimeout(() => {
@@ -206,17 +210,17 @@ export default function AddNotification() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Title */}
         <div className="mb-4">
-          <Label className="block text-base text-black font-normal mb-2">
-            Title *
-          </Label>
-          <Input
-            placeholder="Enter notification title"
-            {...form.register("title")}
-            className="w-full h-14 p-3 border border-[#737373] rounded"
-          />
-          {form.formState.errors.title && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
-          )}
+            <Label className="block text-base text-black font-normal mb-2">
+              Title *
+            </Label>
+            <Input
+              placeholder="Enter notification title"
+              {...form.register("title")}
+              className="w-full h-14 p-3 border border-[#737373] rounded"
+            />
+            {form.formState.errors.title && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+            )}
         </div>
 
         {/* Send to All Tenants Checkbox */}
@@ -326,3 +330,5 @@ export default function AddNotification() {
     </div>
   );
 }
+
+

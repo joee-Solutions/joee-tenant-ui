@@ -2,6 +2,7 @@
 
 import { FC } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { useRouter } from "next/navigation";
 
 interface OrganizationStatusProps {
   data: {
@@ -19,24 +20,42 @@ interface OrganizationStatusProps {
 }
 
 const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
+  const router = useRouter();
   const placeholderColor = "#E5E7EB"; // light gray
   
   const hasAnyData = data.totalCount > 0;
   const hasActiveData = data.activeCount > 0;
   const hasInactiveData = data.inactiveCount > 0;
-  const hasDeactivatedData = data.deactivatedCount > 0;
   
-  // Use actual values when data exists, use 1 as placeholder when no data (so ring still renders)
-  // For single data point Pie with fixed startAngle/endAngle, the value doesn't affect arc length
-  // but Recharts needs value > 0 to render
-  // IMPORTANT: Convert to number - API might return strings, Recharts requires numbers
-  const activeValue = hasActiveData ? (typeof data.activeCount === 'string' ? parseInt(data.activeCount, 10) : Number(data.activeCount)) || 1 : 1;
-  const inactiveValue = hasInactiveData ? (typeof data.inactiveCount === 'string' ? parseInt(data.inactiveCount, 10) : Number(data.inactiveCount)) || 1 : 1;
-  const deactivatedValue = hasDeactivatedData ? (typeof data.deactivatedCount === 'string' ? parseInt(data.deactivatedCount, 10) : Number(data.deactivatedCount)) || 1 : 1;
+  // Convert to numbers - API might return strings, Recharts requires numbers
+  const totalCount = typeof data.totalCount === 'string' ? parseInt(data.totalCount, 10) : Number(data.totalCount) || 0;
+  const activeCount = typeof data.activeCount === 'string' ? parseInt(data.activeCount, 10) : Number(data.activeCount) || 0;
+  const inactiveCount = typeof data.inactiveCount === 'string' ? parseInt(data.inactiveCount, 10) : Number(data.inactiveCount) || 0;
   
-  const activeData = [{ name: "Active", value: activeValue }];
-  const inactiveData = [{ name: "Inactive", value: inactiveValue }];
-  const deactivatedData = [{ name: "Deactivated", value: deactivatedValue }];
+  // Calculate percentages for the rings (360 degrees = 100%)
+  // All organizations ring should show completion percentage (not always full)
+  // Active organizations ring should show percentage of active/total
+  // Inactive organizations ring should show percentage of inactive/total
+  const completionPercentage = typeof data.completionPercentage === 'number' ? data.completionPercentage : (totalCount > 0 ? 100 : 0);
+  const activePercentage = totalCount > 0 ? (activeCount / totalCount) * 100 : 0;
+  const inactivePercentage = totalCount > 0 ? (inactiveCount / totalCount) * 100 : 0;
+  
+  // Calculate end angles based on percentages
+  // Start at 90 degrees (top), go clockwise
+  // Full circle: 90 to -270 (360 degrees)
+  const allEndAngle = hasAnyData ? 90 - (completionPercentage * 3.6) : 90; // 3.6 = 360/100
+  const activeEndAngle = hasActiveData ? 90 - (activePercentage * 3.6) : 90;
+  const inactiveEndAngle = hasInactiveData ? 90 - (inactivePercentage * 3.6) : 90;
+  
+  // Use branded color for active organizations from StatCard
+  const activeColor = "#3FA907"; // Branded green color from StatCard
+  
+  // All organizations ring (outermost) - show completion percentage, use blue color
+  const allData = [{ name: "All", value: hasAnyData ? completionPercentage : 1 }];
+  // Active organizations ring - show percentage
+  const activeData = [{ name: "Active", value: hasActiveData ? activePercentage : 1 }];
+  // Inactive organizations ring - show percentage
+  const inactiveData = [{ name: "Inactive", value: hasInactiveData ? inactivePercentage : 1 }];
 
 
 
@@ -48,15 +67,38 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
         <div className="relative flex-shrink-0 mr-8">
           <ResponsiveContainer width={250} height={250}>
             <PieChart>
-              {/* Active Pie - Outer ring */}
+              {/* All Organizations Pie - Outermost ring */}
+              <Pie
+                data={allData}
+                cx="50%"
+                cy="50%"
+                innerRadius="85%"
+                outerRadius="100%"
+                startAngle={90}
+                endAngle={allEndAngle}
+                paddingAngle={0}
+                dataKey="value"
+                cornerRadius={10}
+                isAnimationActive={false}
+              >
+                {allData.map((entry, index) => (
+                  <Cell 
+                    key={`all-cell-${index}`} 
+                    fill={hasAnyData ? "#003465" : placeholderColor}
+                    stroke="none"
+                  />
+                ))}
+              </Pie>
+
+              {/* Active Pie - Middle ring */}
               <Pie
                 data={activeData}
                 cx="50%"
                 cy="50%"
-                innerRadius="80%"
-                outerRadius="100%"
+                innerRadius="60%"
+                outerRadius="80%"
                 startAngle={90}
-                endAngle={-250}
+                endAngle={activeEndAngle}
                 paddingAngle={0}
                 dataKey="value"
                 cornerRadius={10}
@@ -65,21 +107,21 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
                 {activeData.map((entry, index) => (
                   <Cell 
                     key={`active-cell-${index}`} 
-                    fill={hasActiveData ? colors.active : placeholderColor}
+                    fill={hasActiveData ? activeColor : placeholderColor}
                     stroke="none"
                   />
                 ))}
               </Pie>
 
-              {/* Inactive Pie - Middle ring */}
+              {/* Inactive Pie - Inner ring */}
               <Pie
                 data={inactiveData}
                 cx="50%"
                 cy="50%"
-                innerRadius="55%"
-                outerRadius="75%"
+                innerRadius="35%"
+                outerRadius="55%"
                 startAngle={90}
-                endAngle={-200}
+                endAngle={inactiveEndAngle}
                 paddingAngle={0}
                 dataKey="value"
                 cornerRadius={10}
@@ -94,28 +136,6 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
                 ))}
               </Pie>
 
-              {/* Deactivated Pie - Inner ring */}
-              <Pie
-                data={deactivatedData}
-                cx="50%"
-                cy="50%"
-                innerRadius="30%"
-                outerRadius="50%"
-                startAngle={90}
-                endAngle={-160}
-                paddingAngle={0}
-                dataKey="value"
-                cornerRadius={10}
-                isAnimationActive={false}
-              >
-                {deactivatedData.map((entry, index) => (
-                  <Cell 
-                    key={`deactivated-cell-${index}`} 
-                    fill={hasDeactivatedData ? colors.deactivated : placeholderColor}
-                    stroke="none"
-                  />
-                ))}
-              </Pie>
             </PieChart>
           </ResponsiveContainer>
 
@@ -136,27 +156,27 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
       </div>
 
       <div className="mt-6 flex justify-between">
-        <div className="text-center">
-            <p className="text-2xl font-medium" style={{ color: colors.active }}>{data.activeCount}</p>
-          <div className="flex gap-2 items-center">
-            <div className="w-3 h-3 " style={{ backgroundColor: colors.active }}></div>
+        <div className="text-center cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push("/dashboard/organization")}>
+            <p className="text-2xl font-medium" style={{ color: "#003465" }}>{data.totalCount}</p>
+          <div className="flex gap-2 items-center justify-center">
+            <div className="w-3 h-3 " style={{ backgroundColor: "#003465" }}></div>
+          <p className="text-gray-500 text-sm">All Organizations</p>
+          </div>
+        </div>
+
+        <div className="text-center cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push("/dashboard/organization/active")}>
+            <p className="text-2xl font-medium" style={{ color: activeColor }}>{data.activeCount}</p>
+          <div className="flex gap-2 items-center justify-center">
+            <div className="w-3 h-3 " style={{ backgroundColor: activeColor }}></div>
           <p className="text-gray-500 text-sm">Active Organization</p>
           </div>
         </div>
 
-        <div className="text-center">
+        <div className="text-center cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push("/dashboard/organization/inactive")}>
             <p className="text-2xl font-medium" style={{ color: colors.inactive }}>{data.inactiveCount}</p>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center justify-center">
             <div className="w-3 h-3 " style={{ backgroundColor: colors.inactive }}></div>
           <p className="text-gray-500 text-sm">Inactive Organization</p>
-          </div>
-        </div>
-
-        <div className="text-center">
-            <p className="text-2xl font-medium" style={{ color: colors.deactivated }}>{data.deactivatedCount}</p>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 " style={{ backgroundColor: colors.deactivated }}></div>
-          <p className="text-gray-500 text-sm">Deactivated Organization</p>
           </div>
         </div>
       </div>

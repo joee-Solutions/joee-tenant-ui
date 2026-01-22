@@ -55,8 +55,28 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
 
   if (!employees || employees.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 h-[300px] w-full flex items-center justify-center text-gray-500">
-        No employees to display
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+        <div className="relative p-6 text-white bg-no-repeat bg-center bg-cover h-[170px]" style={{backgroundImage: "url('/assets/images/employeebg.png')"}}>
+          <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
+          <div className="relative z-10 flex justify-between items-center w-full">
+            <h3 className="font-semibold text-lg">Employees - All Organizations</h3>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center p-8 text-center -mt-12">
+          <div className="relative w-[180px] h-[180px] rounded-full border-8 border-[#003465] overflow-hidden bg-gray-200 flex items-center justify-center">
+            <Image 
+              src="/assets/images/employeeprofile.png" 
+              alt="No Employee" 
+              width={180}
+              height={180}
+              className="object-cover w-full h-full"
+            />
+          </div>
+          <div className="mt-8 bg-gray-50 rounded-lg p-8 w-full">
+            <p className="text-gray-600 text-lg font-medium mb-2">No Employees</p>
+            <p className="text-gray-500 text-sm">No employee data available at this time.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -70,7 +90,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
       <div className="relative  p-6 text-white  bg-no-repeat bg-center bg-cover h-[170px]" style={{backgroundImage: "url('assets/images/employeebg.png')"}}>
        <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
       <div className="relative z-10 flex justify-between items-center w-full ">
-        <h3 className="font-semibold text-lg ">Employees</h3>
+        <h3 className="font-semibold text-lg ">Employees - All Organizations</h3>
           </div>
       </div>
 

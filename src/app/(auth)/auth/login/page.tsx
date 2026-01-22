@@ -15,6 +15,8 @@ import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useTenantStore } from "@/contexts/AuthProvider";
+import { getToken } from "@/framework/get-token";
+import { offlineAuthService } from "@/lib/offline/offlineAuth";
 
 type LoginProps = z.infer<typeof schema>;
 
@@ -38,6 +40,7 @@ const TenantLoginPage = () => {
   const { setUser } = useTenantStore(state => state.actions);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errMessage, setErrMessage] = useState<string>("");
+  const [isOffline, setIsOffline] = useState<boolean>(false);
   const {
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -47,10 +50,84 @@ const TenantLoginPage = () => {
     resolver: zodResolver(schema),
     // reValidateMode: "onChange",
   });
+
+  // Check if device is offline
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsOffline(!navigator.onLine);
+      
+      const handleOnline = () => setIsOffline(false);
+      const handleOffline = () => setIsOffline(true);
+      
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, []);
+
+  // Check if user has valid token and redirect to dashboard (works offline)
+  useEffect(() => {
+    const token = getToken();
+    const userCookie = Cookies.get('user');
+    
+    if (token && userCookie) {
+      try {
+        const user = JSON.parse(userCookie);
+        setUser(user);
+        router.push("/dashboard");
+      } catch (error) {
+        // Invalid user data, continue with login
+      }
+    }
+  }, [router, setUser]);
+
   const handleShowPassword = () => {
     setShowPassword((prev) => !prev);
   };
+  
   const handleFormSubmit = async (data: LoginProps) => {
+    // Check if offline - try offline login first
+    if (isOffline || !navigator.onLine) {
+      try {
+        // Attempt offline login using cached credentials
+        const offlineResult = await offlineAuthService.verifyCredentialsOffline(
+          data.email,
+          data.password
+        );
+
+        if (offlineResult.success && offlineResult.token && offlineResult.userData) {
+          // Offline login successful
+          Cookies.set("auth_token", offlineResult.token, { expires: 1 });
+          Cookies.set("user", JSON.stringify(offlineResult.userData), { expires: 1 });
+          setUser(offlineResult.userData);
+          
+          toast.success("Offline login successful", { toastId: "offline-login-success" });
+          router.push("/dashboard");
+          return;
+        } else {
+          // No cached credentials or invalid
+          toast.error(
+            "No offline credentials found. Please login while online first to enable offline login.",
+            {
+              toastId: "offline-login-error",
+              autoClose: 5000,
+            }
+          );
+          return;
+        }
+      } catch (error: any) {
+        toast.error("Offline login failed. Please check your credentials or login while online.", {
+          toastId: "offline-login-error",
+        });
+        return;
+      }
+    }
+
+    // Online login
     try {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
       console.log(rt);
@@ -67,10 +144,19 @@ const TenantLoginPage = () => {
           Cookies.remove("mfa_token");
           
           // Set user data if available in login response
-          if (rt.data?.user) {
-            Cookies.set("user", JSON.stringify(rt.data.user), { expires: 1 });
-            setUser(rt.data.user);
+          const userData = rt.data?.user;
+          if (userData) {
+            Cookies.set("user", JSON.stringify(userData), { expires: 1 });
+            setUser(userData);
           }
+          
+          // Store credentials for offline login (encrypted)
+          await offlineAuthService.storeCredentials(
+            data.email,
+            data.password,
+            authToken,
+            userData
+          );
           
           toast.success("Login successful", { toastId: "login-success" });
           router.push("/dashboard");
@@ -80,9 +166,36 @@ const TenantLoginPage = () => {
         }
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Login failed");
-      if (error?.status === 401) {
-        setErrMessage(error?.response?.data?.error);
+      // Check if error is due to offline
+      if (!navigator.onLine || isOffline) {
+        // Try offline login as fallback
+        try {
+          const offlineResult = await offlineAuthService.verifyCredentialsOffline(
+            data.email,
+            data.password
+          );
+
+          if (offlineResult.success && offlineResult.token && offlineResult.userData) {
+            Cookies.set("auth_token", offlineResult.token, { expires: 1 });
+            Cookies.set("user", JSON.stringify(offlineResult.userData), { expires: 1 });
+            setUser(offlineResult.userData);
+            
+            toast.success("Offline login successful", { toastId: "offline-login-success" });
+            router.push("/dashboard");
+            return;
+          }
+        } catch (offlineError) {
+          // Fall through to show error
+        }
+        
+        toast.error("Login requires internet connection. Please check your network and try again.", {
+          toastId: "offline-login-error",
+        });
+      } else {
+        toast.error(error?.response?.data?.error || "Login failed");
+        if (error?.status === 401) {
+          setErrMessage(error?.response?.data?.error);
+        }
       }
     }
   };
@@ -181,12 +294,20 @@ const TenantLoginPage = () => {
                 Forgot password?
               </Link>
             </div>
+            {isOffline && (
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Offline Mode:</strong> You can login using previously saved credentials. 
+                  If you haven't logged in online before, please connect to the internet first.
+                </p>
+              </div>
+            )}
             <Button
               className="font-medium mb-3 bg-[#003465]"
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Spinner /> : "Login"}
+              {isSubmitting ? <Spinner /> : isOffline ? "Login Offline" : "Login"}
             </Button>
           </form>
         </div>

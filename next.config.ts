@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   //     },
   //   ];
   // },
+  // Add empty turbopack config to silence the warning
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);

@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Cell,
 } from "recharts";
 
 interface AppointmentsByDay {
@@ -66,9 +67,17 @@ const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
     }
     
     // Ensure all 7 days are present, filling missing ones with 0
+    // For empty days, use a minimum value to ensure bars are visible
     return allDaysOfWeek.map(day => {
       const existingData = dataMap.get(day);
-      return existingData || { day, male: 0, female: 0 };
+      if (existingData) {
+        // If both are 0, set a minimum value to show gray bar
+        if (existingData.male === 0 && existingData.female === 0) {
+          return { day, male: 1, female: 1, isEmpty: true };
+        }
+        return existingData;
+      }
+      return { day, male: 1, female: 1, isEmpty: true };
     });
   }, [data.appointmentsByDay]);
 
@@ -116,8 +125,22 @@ const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
               interval={0}
             />
             <Legend />
-            <Bar dataKey="male" fill="#0A3161" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="female" fill="#FFD700" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="male" radius={[4, 4, 0, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`male-cell-${index}`} 
+                  fill={(entry as any).isEmpty ? "#E5E7EB" : "#0A3161"} 
+                />
+              ))}
+            </Bar>
+            <Bar dataKey="female" radius={[4, 4, 0, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`female-cell-${index}`} 
+                  fill={(entry as any).isEmpty ? "#E5E7EB" : "#FFD700"} 
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
