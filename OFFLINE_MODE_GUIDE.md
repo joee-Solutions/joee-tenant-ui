@@ -39,18 +39,21 @@ The offline mode automatically caches API responses when you're online, allowing
 
 **Automatically Pre-cached on First Load:**
 - ✅ **Dashboard data** (organizations, employees, patients, appointments)
-- ✅ **All organizations** (list and details)
+- ✅ **All organizations** (list, details, multiple paginated pages, filtered by status)
 - ✅ **All organization tab pages** for every organization:
-  - Departments
-  - Employees
-  - Patients
-  - Appointments
-  - Schedules
-- ✅ **Notifications** (all, sent, received tabs)
+  - Departments (with pagination)
+  - Employees (multiple pages)
+  - Patients (multiple pages + individual patient details)
+  - Appointments (multiple pages)
+  - Schedules (with pagination)
+- ✅ **Notifications** (all, sent, received tabs, multiple pages)
 - ✅ **Login data** (admin profile)
 - ✅ **System settings**
-- ✅ **Roles & permissions**
-- ✅ **Training guides**
+- ✅ **Roles & permissions** (with pagination)
+- ✅ **Training guides** (list, categories, individual guide details)
+- ✅ **Super admins** (list with pagination)
+- ✅ **All users/employees** (multiple pages)
+- ✅ **Individual items** (patient details, training guide details extracted from lists)
 
 **Cached When You Visit:**
 - ✅ **Organization details** (when you visit an organization page - also triggers background pre-cache of all its tabs)
@@ -78,19 +81,20 @@ The offline mode automatically caches API responses when you're online, allowing
 **Can I logout and login again without internet?**
 
 - ✅ **Logout**: Yes, works offline - clears your session and redirects to login page
-- ✅ **Offline Login**: Yes! If you've logged in online before, you can login offline using your saved credentials
+- ✅ **Offline Login**: Yes! If you've logged in online before, you can **logout and login again offline** using your saved credentials
 - ✅ **Online Login**: Requires internet - authenticates with server and saves credentials for future offline login
 - ✅ **Access with existing session**: Yes, if you have a valid token in cookies, you can access the app offline
 
 **How it works:**
 1. **First time (online)**: Login normally - your credentials are encrypted and saved locally
-2. **When offline**: 
+2. **Logout**: Clears session cookies but **keeps offline credentials** (allows future offline login)
+3. **When offline**: 
    - ✅ You can logout (clears cookies, redirects to login)
-   - ✅ You can login using your previously saved credentials (encrypted, secure)
+   - ✅ You can login again using your previously saved credentials (encrypted, secure)
+   - ✅ Credentials persist after logout (expire after 7 days automatically)
    - ✅ If you haven't logged in online before, you'll need internet for first-time login
-   - ❌ You cannot login (needs internet to authenticate)
    - ✅ If you have a valid token, you'll be auto-redirected to dashboard
-3. **After going offline**: 
+4. **After going offline**: 
    - ✅ Logout works immediately
    - ❌ Login shows a message: "Login requires internet connection"
    - ✅ If you had a valid session before, you can still access the app

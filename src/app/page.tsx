@@ -8,6 +8,7 @@ const HomePage = () => {
   const handleLogout = async () => {
     console.log("logout");
     // Logout works offline - just clears cookies
+    // Note: Offline credentials are kept for future offline login (expire after 7 days)
     Cookies.remove("auth_token");
     Cookies.remove("refresh_token");
     Cookies.remove("user");

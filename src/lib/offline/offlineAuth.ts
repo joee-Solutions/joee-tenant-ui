@@ -139,9 +139,16 @@ class OfflineAuthService {
 
   /**
    * Clear stored credentials (called on logout)
+   * @param email - Email to clear credentials for (optional, clears all if not provided)
+   * @param keepForOffline - If true, keeps credentials for offline login even after logout (default: true)
    */
-  async clearCredentials(email?: string): Promise<void> {
+  async clearCredentials(email?: string, keepForOffline: boolean = true): Promise<void> {
     try {
+      if (keepForOffline) {
+        offlineLogger.debug('Keeping offline credentials for future offline login', { email });
+        return; // Don't clear if user wants to keep for offline login
+      }
+
       if (email) {
         const credential = await db.offlineCredentials
           .where('email')

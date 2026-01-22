@@ -36,15 +36,10 @@ const SideNavigation = ({ isMobileMenuOpen, setIsMobileMenuOpen }: SideNavigatio
       Cookies.remove("user");
       Cookies.remove("mfa_token");
       
-      // Clear offline credentials if email is available
-      if (userEmail && typeof window !== 'undefined') {
-        try {
-          const { offlineAuthService } = await import('@/lib/offline/offlineAuth');
-          await offlineAuthService.clearCredentials(userEmail);
-        } catch (error) {
-          // Ignore errors clearing credentials
-        }
-      }
+      // Note: We keep offline credentials even after logout
+      // This allows users to login offline again later
+      // Credentials will expire after 7 days automatically
+      // If you want to clear credentials, use: offlineAuthService.clearCredentials(userEmail, false)
       
       // Clear offline pre-cache status
       if (typeof window !== 'undefined') {

@@ -36,6 +36,7 @@ class PreCacheService {
 
   /**
    * Get list of all important endpoints to pre-cache
+   * This includes ALL GET endpoints that can be cached
    */
   private getImportantEndpoints(): string[] {
     return [
@@ -45,19 +46,34 @@ class PreCacheService {
       API_ENDPOINTS.GET_DASHBOARD_PATIENTS,
       API_ENDPOINTS.GET_DASHBOARD_USERS,
       
-      // Organizations (will be expanded with tenant-specific endpoints)
+      // Organizations - Multiple pages for pagination
       API_ENDPOINTS.GET_ALL_TENANTS,
       `${API_ENDPOINTS.GET_ALL_TENANTS}?limit=4`, // Dashboard preview
-      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=1&limit=10`, // First page
+      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=2&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=3&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_TENANTS}?status=active`,
+      `${API_ENDPOINTS.GET_ALL_TENANTS}?status=inactive`,
+      
+      // All Users/Employees
+      API_ENDPOINTS.GET_ALL_USERS,
+      `${API_ENDPOINTS.GET_ALL_USERS}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_USERS}?page=2&limit=10`,
       
       // Notifications
       API_ENDPOINTS.GET_NOTIFICATIONS,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=all`,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=sent`,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=received`,
+      `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=2&limit=10`,
       
       // Admin Profile (Login-related)
       API_ENDPOINTS.GET_ADMIN_PROFILE,
+      
+      // Super Admins
+      API_ENDPOINTS.GET_SUPER_ADMIN,
+      `${API_ENDPOINTS.GET_SUPER_ADMIN}?page=1&limit=10`,
       
       // System Settings
       API_ENDPOINTS.GET_SYSTEM_SETTINGS,
@@ -65,16 +81,21 @@ class PreCacheService {
       // Roles & Permissions
       API_ENDPOINTS.GET_ALL_ROLES,
       `${API_ENDPOINTS.GET_ALL_ROLES}?permission=true`,
+      `${API_ENDPOINTS.GET_ALL_ROLES}?page=1&limit=10`,
       API_ENDPOINTS.GET_ALL_PERMISSIONS,
+      `${API_ENDPOINTS.GET_ALL_PERMISSIONS}?page=1&limit=10`,
       
-      // Training Guides
+      // Training Guides - List and categories
       API_ENDPOINTS.GET_TRAINING_GUIDES,
+      `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=2&limit=10`,
       API_ENDPOINTS.GET_TRAINING_GUIDE_CATEGORIES,
     ];
   }
 
   /**
    * Get tenant-specific endpoints for a given tenant
+   * Includes paginated versions for list endpoints
    */
   private getTenantEndpoints(tenantId: number): string[] {
     return [
@@ -83,18 +104,27 @@ class PreCacheService {
       
       // Departments tab
       API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId),
+      `${API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId)}?page=1&limit=10`,
       
-      // Employees tab
+      // Employees tab - Multiple pages
       API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId),
+      `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=2&limit=10`,
       
-      // Patients tab
+      // Patients tab - Multiple pages
       API_ENDPOINTS.TENANTS_PATIENTS(tenantId),
+      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=1&limit=10`,
+      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=2&limit=10`,
+      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=3&limit=10`,
       
-      // Appointments tab
+      // Appointments tab - Multiple pages
       API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId),
+      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=1&limit=10`,
+      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=2&limit=10`,
       
       // Schedules tab
       API_ENDPOINTS.TENANTS_SCHEDULES(tenantId),
+      `${API_ENDPOINTS.TENANTS_SCHEDULES(tenantId)}?page=1&limit=10`,
     ];
   }
 
@@ -220,9 +250,12 @@ class PreCacheService {
             }
 
             try {
-              await processRequestAuth('get', endpoint);
+              const response = await processRequestAuth('get', endpoint);
               successCount++;
               offlineLogger.debug(`✅ Pre-cached org endpoint: ${endpoint}`);
+              
+              // Step 4: Cache individual items from lists (patients, employees, appointments, etc.)
+              await this.cacheIndividualItemsFromList(endpoint, response, tenantId);
             } catch (error: any) {
               failCount++;
               offlineLogger.warn(`❌ Failed to pre-cache org endpoint: ${endpoint}`, {
@@ -234,6 +267,15 @@ class PreCacheService {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
+      }
+
+      // Step 4: Cache individual items from global lists
+      await this.cacheGlobalListItems(config, baseEndpoints.length, totalEndpoints);
+
+      // Step 5: Cache additional paginated results for organizations
+      if (organizations.length > 0) {
+        offlineLogger.info('📦 Step 5: Caching additional paginated results');
+        await this.cachePaginatedResults(organizations, config, totalEndpoints);
       }
 
       this.preCacheCompleted = true;
@@ -295,6 +337,54 @@ class PreCacheService {
   }
 
   /**
+   * Cache additional endpoints on-demand (for pages visited after initial pre-cache)
+   * This allows incremental caching of pages that weren't in the initial pre-cache
+   */
+  async cacheAdditionalEndpoints(endpoints: string[]): Promise<void> {
+    if (!offlineService.getOnlineStatus()) {
+      offlineLogger.warn('Cannot cache additional endpoints - device is offline');
+      return;
+    }
+
+    offlineLogger.info(`Caching ${endpoints.length} additional endpoints`);
+
+    for (const endpoint of endpoints) {
+      try {
+        await processRequestAuth('get', endpoint);
+        offlineLogger.debug(`✅ Cached additional endpoint: ${endpoint}`);
+      } catch (error: any) {
+        offlineLogger.warn(`❌ Failed to cache additional endpoint: ${endpoint}`, {
+          error: error?.message,
+        });
+      }
+      
+      // Small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  /**
+   * Cache a single endpoint on-demand
+   */
+  async cacheEndpoint(endpoint: string): Promise<boolean> {
+    if (!offlineService.getOnlineStatus()) {
+      offlineLogger.warn(`Cannot cache endpoint ${endpoint} - device is offline`);
+      return false;
+    }
+
+    try {
+      await processRequestAuth('get', endpoint);
+      offlineLogger.debug(`✅ Cached endpoint: ${endpoint}`);
+      return true;
+    } catch (error: any) {
+      offlineLogger.warn(`❌ Failed to cache endpoint: ${endpoint}`, {
+        error: error?.message,
+      });
+      return false;
+    }
+  }
+
+  /**
    * Reset pre-cache status (useful for testing or forcing re-cache)
    */
   resetPreCache(): void {
@@ -321,6 +411,133 @@ class PreCacheService {
       return localStorage.getItem('offline_precache_timestamp');
     }
     return null;
+  }
+
+  /**
+   * Cache individual items from a list response
+   * This allows caching detail pages for items in lists
+   */
+  private async cacheIndividualItemsFromList(
+    listEndpoint: string,
+    listResponse: any,
+    tenantId?: number
+  ): Promise<void> {
+    try {
+      // Extract data array from response (handle different response structures)
+      let items: any[] = [];
+      if (Array.isArray(listResponse)) {
+        items = listResponse;
+      } else if (listResponse?.data && Array.isArray(listResponse.data)) {
+        items = listResponse.data;
+      } else if (listResponse?.data?.data && Array.isArray(listResponse.data.data)) {
+        items = listResponse.data.data;
+      }
+
+      if (items.length === 0) return;
+
+      // Cache individual items based on endpoint type
+      if (listEndpoint.includes('/patients')) {
+        // Cache individual patient details
+        for (const item of items.slice(0, 20)) { // Limit to first 20 to avoid too many requests
+          const patientId = item.id || item.patientId;
+          if (patientId && tenantId) {
+            try {
+              await processRequestAuth('get', API_ENDPOINTS.GET_PATIENT(tenantId, patientId));
+              offlineLogger.debug(`✅ Pre-cached patient detail: ${patientId}`);
+            } catch (error) {
+              // Silently fail - not critical
+            }
+          }
+        }
+      } else if (listEndpoint.includes('/employees')) {
+        // Cache individual employee details (if endpoint exists)
+        // Employees might not have individual detail endpoints
+      } else if (listEndpoint.includes('/training-guides') && !listEndpoint.includes('/categories')) {
+        // Cache individual training guide details
+        for (const item of items.slice(0, 20)) {
+          const guideId = item.id || item.guideId;
+          if (guideId) {
+            try {
+              await processRequestAuth('get', API_ENDPOINTS.GET_TRAINING_GUIDE(guideId));
+              offlineLogger.debug(`✅ Pre-cached training guide: ${guideId}`);
+            } catch (error) {
+              // Silently fail - not critical
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      offlineLogger.debug('Error caching individual items', { error: error?.message });
+    }
+  }
+
+  /**
+   * Cache individual items from global lists (training guides, etc.)
+   */
+  private async cacheGlobalListItems(
+    config: Partial<PreCacheConfig> | undefined,
+    baseIndex: number,
+    totalEndpoints: number
+  ): Promise<void> {
+    try {
+      // Cache training guides
+      try {
+        const guidesResponse = await processRequestAuth('get', API_ENDPOINTS.GET_TRAINING_GUIDES);
+        await this.cacheIndividualItemsFromList(API_ENDPOINTS.GET_TRAINING_GUIDES, guidesResponse);
+      } catch (error) {
+        // Silently fail
+      }
+
+      // Cache super admins (if needed)
+      try {
+        const adminsResponse = await processRequestAuth('get', API_ENDPOINTS.GET_SUPER_ADMIN);
+        // Admins might not have individual detail endpoints
+      } catch (error) {
+        // Silently fail
+      }
+    } catch (error: any) {
+      offlineLogger.debug('Error caching global list items', { error: error?.message });
+    }
+  }
+
+  /**
+   * Cache paginated results for organizations
+   * This ensures we cache multiple pages of data for each organization
+   */
+  private async cachePaginatedResults(
+    organizations: any[],
+    config: Partial<PreCacheConfig> | undefined,
+    currentTotal: number
+  ): Promise<void> {
+    let additionalEndpoints = 0;
+    
+    // Cache additional pages for each organization's lists
+    for (const org of organizations.slice(0, 10)) { // Limit to first 10 orgs to avoid too many requests
+      const tenantId = org.id || org.organization_id || parseInt(org.slug || org.domain || '0', 10);
+      if (!tenantId || isNaN(tenantId)) continue;
+
+      const paginatedEndpoints = [
+        `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=3&limit=10`,
+        `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=4&limit=10`,
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=3&limit=10`,
+        `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=3&limit=10`,
+      ];
+
+      for (const endpoint of paginatedEndpoints) {
+        try {
+          await processRequestAuth('get', endpoint);
+          additionalEndpoints++;
+          offlineLogger.debug(`✅ Pre-cached paginated endpoint: ${endpoint}`);
+        } catch (error) {
+          // Silently fail - not all pages may exist
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+
+    if (additionalEndpoints > 0) {
+      offlineLogger.info(`Cached ${additionalEndpoints} additional paginated endpoints`);
+    }
   }
 }
 

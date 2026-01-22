@@ -91,7 +91,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
        <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
       <div className="relative z-10 flex justify-between items-center w-full ">
         <h3 className="font-semibold text-lg ">Employees - All Organizations</h3>
-          </div>
+        </div>
       </div>
 
 

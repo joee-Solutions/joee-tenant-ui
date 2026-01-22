@@ -163,7 +163,7 @@ export default function NotificationList() {
       toast.error("Failed to mark notification as read");
     } finally {
       setMarkingAsRead(null);
-    }
+  }
   };
 
   return (
@@ -216,8 +216,8 @@ export default function NotificationList() {
                     <X className="w-4 h-4" />
                   </button>
                 )}
-              </div>
-              <ListView pageSize={pageSize} setPageSize={setPageSize} />
+            </div>
+            <ListView pageSize={pageSize} setPageSize={setPageSize} />
             </div>
           </header>
           <DataTable tableDataObj={notificationTableData[0]}>
@@ -301,7 +301,7 @@ export default function NotificationList() {
                           className="flex items-center justify-center px-2 h-6 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6] hover:bg-red-50 hover:border-red-300"
                           disabled={deletingId === data.id}
                           title="Delete notification"
-                        >
+                      >
                           {deletingId === data.id ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
                           ) : (
