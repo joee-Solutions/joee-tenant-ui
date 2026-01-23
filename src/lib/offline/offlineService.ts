@@ -70,9 +70,24 @@ export class OfflineService {
       } else {
         // Queue write operations (POST, PUT, PATCH, DELETE)
         offlineLogger.info(`Queuing ${method.toUpperCase()} action for sync when online`, { endpoint });
-        await this.queueAction(method, endpoint, data);
-        // Return optimistic response
-        return { success: true, message: 'Action queued for sync when online' };
+        const queueId = await this.queueAction(method, endpoint, data);
+        
+        // Apply optimistic update to cache
+        const optimisticResponse = await this.applyOptimisticUpdate(method, endpoint, data);
+        
+        // Invalidate SWR cache for related endpoints
+        await this.invalidateRelatedCache(endpoint);
+        
+        offlineLogger.info(`Optimistic update applied for ${method.toUpperCase()} ${endpoint}`);
+        
+        // Return optimistic response that matches expected format
+        return optimisticResponse || { 
+          success: true, 
+          message: 'Action queued for sync when online',
+          data: data,
+          _offline: true,
+          _queueId: queueId
+        };
       }
     }
     
@@ -240,7 +255,7 @@ export class OfflineService {
     method: 'post' | 'put' | 'patch' | 'delete',
     endpoint: string,
     data?: any
-  ): Promise<void> {
+  ): Promise<number> {
     const action: SyncQueueItem['action'] = 
       method === 'post' ? 'create' :
       method === 'put' || method === 'patch' ? 'update' :
@@ -265,6 +280,8 @@ export class OfflineService {
       queueItemId: id,
       timestamp: queueItem.timestamp,
     });
+    
+    return id;
   }
 
   // Extract entity type from endpoint
@@ -377,6 +394,234 @@ export class OfflineService {
     const failed = await db.syncQueue.where('status').equals('failed').count();
 
     return { pending, syncing, failed };
+  }
+
+  // Apply optimistic update to cache
+  private async applyOptimisticUpdate(
+    method: 'post' | 'put' | 'patch' | 'delete',
+    endpoint: string,
+    data?: any
+  ): Promise<any> {
+    try {
+      // Get the list endpoint (e.g., /tenants/1/employees from /tenants/1/employees/5)
+      const listEndpoint = this.getListEndpoint(endpoint);
+      
+      // Get current cached data for the list
+      const cachedList = await this.getCachedResponse(listEndpoint);
+      
+      if (!cachedList) {
+        offlineLogger.debug(`No cached list found for optimistic update: ${listEndpoint}`);
+        return null;
+      }
+
+      let updatedData: any;
+
+      if (method === 'post') {
+        // CREATE: Add new item to list
+        const newItem = {
+          ...data,
+          id: `temp_${Date.now()}`, // Temporary ID until synced
+          _offline: true,
+          _pending: true,
+        };
+        
+        // Handle different response structures
+        if (Array.isArray(cachedList)) {
+          updatedData = [newItem, ...cachedList];
+        } else if (cachedList.data && Array.isArray(cachedList.data)) {
+          updatedData = { ...cachedList, data: [newItem, ...cachedList.data] };
+        } else if (cachedList.results && Array.isArray(cachedList.results)) {
+          updatedData = { ...cachedList, results: [newItem, ...cachedList.results] };
+        } else {
+          offlineLogger.debug(`Unknown list structure for ${listEndpoint}`);
+          return null;
+        }
+        
+        // Cache the updated list
+        await this.cacheResponse(listEndpoint, updatedData);
+        offlineLogger.info(`Optimistically added item to ${listEndpoint}`);
+        
+        return { success: true, data: newItem, message: 'Created (offline)' };
+        
+      } else if (method === 'put' || method === 'patch') {
+        // UPDATE: Update item in list
+        const itemId = this.extractIdFromEndpoint(endpoint);
+        
+        if (Array.isArray(cachedList)) {
+          updatedData = cachedList.map((item: any) => 
+            item.id === itemId || item.id?.toString() === itemId?.toString()
+              ? { ...item, ...data, _offline: true, _pending: true }
+              : item
+          );
+        } else if (cachedList.data && Array.isArray(cachedList.data)) {
+          updatedData = {
+            ...cachedList,
+            data: cachedList.data.map((item: any) =>
+              item.id === itemId || item.id?.toString() === itemId?.toString()
+                ? { ...item, ...data, _offline: true, _pending: true }
+                : item
+            ),
+          };
+        } else if (cachedList.results && Array.isArray(cachedList.results)) {
+          updatedData = {
+            ...cachedList,
+            results: cachedList.results.map((item: any) =>
+              item.id === itemId || item.id?.toString() === itemId?.toString()
+                ? { ...item, ...data, _offline: true, _pending: true }
+                : item
+            ),
+          };
+        } else {
+          offlineLogger.debug(`Unknown list structure for update: ${listEndpoint}`);
+          return null;
+        }
+        
+        // Cache the updated list
+        await this.cacheResponse(listEndpoint, updatedData);
+        
+        // Also update the individual item cache if it exists
+        const itemCache = await this.getCachedResponse(endpoint);
+        if (itemCache) {
+          await this.cacheResponse(endpoint, { ...itemCache, ...data, _offline: true, _pending: true });
+        }
+        
+        offlineLogger.info(`Optimistically updated item in ${listEndpoint}`);
+        
+        return { success: true, data: { ...data, id: itemId }, message: 'Updated (offline)' };
+        
+      } else if (method === 'delete') {
+        // DELETE: Remove item from list
+        const itemId = this.extractIdFromEndpoint(endpoint);
+        
+        if (Array.isArray(cachedList)) {
+          updatedData = cachedList.filter((item: any) => 
+            item.id !== itemId && item.id?.toString() !== itemId?.toString()
+          );
+        } else if (cachedList.data && Array.isArray(cachedList.data)) {
+          updatedData = {
+            ...cachedList,
+            data: cachedList.data.filter((item: any) =>
+              item.id !== itemId && item.id?.toString() !== itemId?.toString()
+            ),
+          };
+        } else if (cachedList.results && Array.isArray(cachedList.results)) {
+          updatedData = {
+            ...cachedList,
+            results: cachedList.results.filter((item: any) =>
+              item.id !== itemId && item.id?.toString() !== itemId?.toString()
+            ),
+          };
+        } else {
+          offlineLogger.debug(`Unknown list structure for delete: ${listEndpoint}`);
+          return null;
+        }
+        
+        // Cache the updated list
+        await this.cacheResponse(listEndpoint, updatedData);
+        
+        // Also remove the individual item cache if it exists
+        try {
+          const cachedItem = await db.apiCache.where('endpoint').equals(endpoint).first();
+          if (cachedItem) {
+            await db.apiCache.delete(cachedItem.id!);
+          }
+        } catch (error) {
+          // Ignore errors when deleting item cache
+        }
+        
+        offlineLogger.info(`Optimistically removed item from ${listEndpoint}`);
+        
+        return { success: true, message: 'Deleted (offline)' };
+      }
+      
+      return null;
+    } catch (error: any) {
+      offlineLogger.error(`Error applying optimistic update for ${endpoint}`, {
+        error: error?.message,
+      });
+      return null;
+    }
+  }
+
+  // Get list endpoint from detail endpoint
+  private getListEndpoint(endpoint: string): string {
+    // Remove trailing ID and slash (e.g., /tenants/1/employees/5 -> /tenants/1/employees)
+    const parts = endpoint.split('/');
+    // Check if last part is a number (ID)
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && /^\d+$/.test(lastPart)) {
+      return parts.slice(0, -1).join('/');
+    }
+    return endpoint;
+  }
+
+  // Extract ID from endpoint
+  private extractIdFromEndpoint(endpoint: string): string | number | null {
+    const parts = endpoint.split('/');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && /^\d+$/.test(lastPart)) {
+      return parseInt(lastPart, 10);
+    }
+    return null;
+  }
+
+  // Invalidate related cache entries (for SWR)
+  private async invalidateRelatedCache(endpoint: string): Promise<void> {
+    try {
+      // Only invalidate in browser environment
+      if (typeof window === 'undefined') return;
+      
+      // Import mutate from SWR dynamically to avoid circular dependency
+      const { mutate } = await import('swr');
+      
+      // Invalidate the list endpoint
+      const listEndpoint = this.getListEndpoint(endpoint);
+      if (listEndpoint) {
+        mutate(listEndpoint);
+      }
+      
+      // Invalidate the detail endpoint
+      mutate(endpoint);
+      
+      // Invalidate common related endpoints using matcher function
+      if (endpoint.includes('/employees')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/employees'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/patients')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/patients'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/appointments')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/appointments'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/notification')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/notification'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/tenants') || endpoint.includes('/organizations')) {
+        mutate(
+          (key: string) => typeof key === 'string' && (key.includes('/tenants') || key.includes('/organizations')),
+          undefined,
+          { revalidate: true }
+        );
+      }
+      
+      offlineLogger.debug(`Invalidated SWR cache for ${endpoint} and related endpoints`);
+    } catch (error: any) {
+      offlineLogger.error(`Error invalidating cache for ${endpoint}`, {
+        error: error?.message,
+      });
+    }
   }
 }
 

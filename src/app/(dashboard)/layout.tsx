@@ -2,10 +2,15 @@
 import MainHeader from "@/components/shared/MainHeader";
 import SideNavigation from "@/components/shared/SideNavigation";
 import OfflineIndicator from "@/components/shared/OfflineIndicator";
-import OfflineDebugPanel from "@/components/shared/OfflineDebugPanel";
 import React, { useState, useEffect } from "react";
 import { preCacheService } from "@/lib/offline/preCacheService";
 import { offlineService } from "@/lib/offline/offlineService";
+import dynamic from "next/dynamic";
+
+// Only load debug panel in development - not bundled in production
+const OfflineDebugPanel = process.env.NODE_ENV === 'development' 
+  ? dynamic(() => import("@/components/shared/OfflineDebugPanel"), { ssr: false })
+  : () => null;
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -56,7 +61,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <MainHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
         {children}
         <OfflineIndicator />
-        {process.env.NODE_ENV === 'development' && <OfflineDebugPanel />}
+        <OfflineDebugPanel />
         
         {/* Pre-cache Progress Indicator */}
         {preCacheProgress && (
