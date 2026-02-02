@@ -14,6 +14,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { Spinner } from "@/components/icons/Spinner";
 import Link from "next/link";
+import { toast } from "react-toastify";
 
 const DepartmentSchema = z.object({
   name: z.string().min(1, "Department name is required"),
@@ -27,6 +28,7 @@ type DepartmentSchemaType = z.infer<typeof DepartmentSchema>;
 export default function AddDepartment({ slug }: { slug: string }) {
   const router = useRouter();
   const [fileSelected, setFileSelected] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const form = useForm<DepartmentSchemaType>({
     resolver: zodResolver(DepartmentSchema),
     mode: "onChange",
@@ -46,20 +48,65 @@ export default function AddDepartment({ slug }: { slug: string }) {
   const onSubmit = async (data: DepartmentSchemaType) => {
     console.log(data)
     try {
-      const datas = {
-        ...data,
-        status: data.status === false ? "inactive" : "active",
-      };
-      const res = await processRequestAuth(
-        "post",
-        API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
-        { ...datas }
-      );
-      if(res.success){
-        router.push(`/dashboard/organization/${slug}/departments`)
+      // Always use FormData when there's a file, otherwise use JSON
+      if (selectedFile) {
+        // Create FormData to handle file upload
+        const formData = new FormData();
+        // Ensure all values are strings and not undefined/null
+        // Backend expects these fields as strings in FormData
+        formData.append("name", String(data.name || ""));
+        formData.append("description", String(data.description || ""));
+        formData.append("status", data.status === false ? "inactive" : "active");
+        // Append the actual file object (not just the filename)
+        formData.append("image", selectedFile, selectedFile.name);
+        
+        console.log("Sending FormData with file:", {
+          name: data.name,
+          description: data.description,
+          status: data.status === false ? "inactive" : "active",
+          imageFile: selectedFile.name,
+          imageSize: selectedFile.size,
+          imageType: selectedFile.type
+        });
+        
+        const res = await processRequestAuth(
+          "post",
+          API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
+          formData
+        );
+        if(res && (res.success || res.status)) {
+          toast.success("Department created successfully");
+          router.push(`/dashboard/organization/${slug}/departments`)
+        } else {
+          toast.error(res?.message || "Failed to create department");
+        }
+      } else {
+        // Use JSON payload when no file is selected (same as edit form)
+        const payload = {
+          name: data.name,
+          description: data.description,
+          status: data.status === false ? "inactive" : "active",
+        };
+        
+        const res = await processRequestAuth(
+          "post",
+          API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
+          payload
+        );
+        if(res && (res.success || res.status)) {
+          toast.success("Department created successfully");
+          router.push(`/dashboard/organization/${slug}/departments`)
+        } else {
+          toast.error(res?.message || "Failed to create department");
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log(error,"error")
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.validationErrors?.join(", ") ||
+                          error?.message || 
+                          "Failed to create department";
+      toast.error(errorMessage);
     }
     // Handle form submission
   };
@@ -123,11 +170,13 @@ export default function AddDepartment({ slug }: { slug: string }) {
               <input
                 id="fileInput"
                 type="file"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
                     setFileSelected(file.name);
+                    setSelectedFile(file);
                     form.setValue("image", file.name);
                   }
                 }}

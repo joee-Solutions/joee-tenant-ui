@@ -15,6 +15,8 @@ export const API_ENDPOINTS = {
   GET_DASHBOARD_PATIENTS: "/super/tenants/dashboard/patients",
   CREATE_TENANTs: "/super/tenants",
   GET_ALL_TENANTS: "/super/tenants/all",
+  GET_ALL_TENANTS_ACTIVE: "/super/tenants/all/active",
+  GET_ALL_TENANTS_INACTIVE: "/super/tenants/all/inactive",
   GET_TENANT: (tenantId: string) => `/super/tenants/${tenantId}`,
   EDIT_ORGANIZATION: (tenantId: string) => `/super/tenants/${tenantId}`,
   TENANTS_DEPARTMENTS: (tenantId: number) =>

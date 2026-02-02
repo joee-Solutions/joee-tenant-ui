@@ -15,6 +15,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { z } from "zod";
 import { Controller, useFormContext } from "react-hook-form";
 import { FormDataStepper } from "../PatientStepper";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 export const PatientDemoSchema = z.object({
   suffix: z.string().optional(),
@@ -22,7 +23,7 @@ export const PatientDemoSchema = z.object({
   middleName: z.string().optional(),
   lastName: z.string().min(1, "Last name is required"),
   preferredName: z.string().optional(),
-  sex: z.string().optional(),
+  sex: z.string().min(1, "Gender is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   maritalStatus: z.string().optional(),
   race: z.string().optional(),
@@ -240,10 +241,9 @@ export default function PatientInfoForm() {
               control={control}
               render={({ field }) => (
                 <DatePicker
-                  date={field.value ? new Date(field.value) : undefined}
-                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                  date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                  onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                   placeholder="Select date of birth"
-
                 />
               )}
             />
@@ -269,11 +269,17 @@ export default function PatientInfoForm() {
                     >
                       {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                     </label>
-                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value || undefined} 
+                      onValueChange={(value) => {
+                        console.log(`Select ${key} changed:`, value);
+                        field.onChange(value);
+                      }}
+                    >
                       <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                         <SelectValue placeholder={`Select ${key}`} />
                       </SelectTrigger>
-                      <SelectContent className="z-10 bg-white">
+                      <SelectContent className="z-[100] bg-white">
                         {dropdownOptions[key].map((option) => (
                           <SelectItem key={option} value={option}>
                             {option}

@@ -67,17 +67,13 @@ const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
     }
     
     // Ensure all 7 days are present, filling missing ones with 0
-    // For empty days, use a minimum value to ensure bars are visible
+    // Don't show gray bars for empty data - just show 0
     return allDaysOfWeek.map(day => {
       const existingData = dataMap.get(day);
       if (existingData) {
-        // If both are 0, set a minimum value to show gray bar
-        if (existingData.male === 0 && existingData.female === 0) {
-          return { day, male: 1, female: 1, isEmpty: true };
-        }
         return existingData;
       }
-      return { day, male: 1, female: 1, isEmpty: true };
+      return { day, male: 0, female: 0 };
     });
   }, [data.appointmentsByDay]);
 
@@ -125,22 +121,8 @@ const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
               interval={0}
             />
             <Legend />
-            <Bar dataKey="male" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell 
-                  key={`male-cell-${index}`} 
-                  fill={(entry as any).isEmpty ? "#E5E7EB" : "#0A3161"} 
-                />
-              ))}
-            </Bar>
-            <Bar dataKey="female" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell 
-                  key={`female-cell-${index}`} 
-                  fill={(entry as any).isEmpty ? "#E5E7EB" : "#FFD700"} 
-                />
-              ))}
-            </Bar>
+            <Bar dataKey="male" radius={[4, 4, 0, 0]} fill="#0A3161" />
+            <Bar dataKey="female" radius={[4, 4, 0, 0]} fill="#FFD700" />
           </BarChart>
         </ResponsiveContainer>
       </div>

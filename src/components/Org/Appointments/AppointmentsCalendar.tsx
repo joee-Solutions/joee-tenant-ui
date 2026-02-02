@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, Plus } from "lucide-react";
 import {
   format,
   startOfWeek,
@@ -39,6 +39,7 @@ interface AppointmentCalendarProps {
   appointments: Appointment[];
   onViewAppointment: (appointment: Appointment) => void;
   onAddAppointment: () => void;
+  onShowList?: () => void;
 }
 
 const getStatusColor = (status: Appointment["status"]) => {
@@ -64,8 +65,14 @@ export default function AppointmentCalendar({
   appointments,
   onViewAppointment,
   onAddAppointment,
+  onShowList,
 }: AppointmentCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate);
+
+  // Sync currentDate with selectedDate prop changes
+  useEffect(() => {
+    setCurrentDate(selectedDate);
+  }, [selectedDate]);
 
   const handlePrevious = () => {
     if (viewMode === "month") setCurrentDate(subMonths(currentDate, 1));
@@ -87,6 +94,22 @@ export default function AppointmentCalendar({
 
   const getAppointmentsForDate = (date: Date) =>
     appointments.filter((apt) => isSameDay(apt.appointmentDate, date));
+
+  const hours = Array.from({ length: 13 }, (_, i) => 5 + i); // 5am - 5pm
+
+  const formatHourLabel = (hour: number) => {
+    const suffix = hour >= 12 ? "pm" : "am";
+    const normalized = ((hour + 11) % 12) + 1;
+    return `${normalized}:00 ${suffix}`;
+  };
+
+  // Very simple hour matching based on the start of the time string (e.g. "09:00")
+  const getAppointmentsForDateAndHour = (date: Date, hour: number) => {
+    const hourPrefix = `${hour.toString().padStart(2, "0")}:`;
+    return getAppointmentsForDate(date).filter((apt) =>
+      apt.time?.startsWith(hourPrefix)
+    );
+  };
 
   /* ---------------- Month View ---------------- */
 
@@ -153,13 +176,127 @@ export default function AppointmentCalendar({
   };
 
   /* ---------------- Week & Day Views (unchanged logic) ---------------- */
+  /* ---------------- Week & Day Views ---------------- */
 
-  const renderWeekView = () => null;
-  const renderDayView = () => null;
+  const renderWeekView = () => {
+    const start = startOfWeek(currentDate);
+    const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+
+    return (
+      <div className="bg-white rounded-lg shadow-md p-4 overflow-x-auto">
+        <div className="min-w-[900px]">
+          {/* Header row with days */}
+          <div className="grid grid-cols-[100px,repeat(7,1fr)] mb-2">
+            <div></div>
+            {days.map((day) => (
+              <div
+                key={day.toISOString()}
+                className="text-center font-semibold text-gray-700 py-2 border-b"
+              >
+                <div>{format(day, "dd EEE")}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Time rows */}
+          {hours.map((hour) => (
+            <div
+              key={hour}
+              className="grid grid-cols-[100px,repeat(7,1fr)] border-t last:border-b"
+            >
+              <div className="text-xs text-gray-500 py-4 pr-2 text-right border-r">
+                {formatHourLabel(hour)}
+              </div>
+              {days.map((day) => {
+                const slotAppointments = getAppointmentsForDateAndHour(
+                  day,
+                  hour
+                );
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className="relative h-16 border-r last:border-r-0 bg-white"
+                  >
+                    {slotAppointments.map((apt) => (
+                      <button
+                        key={apt.id}
+                        type="button"
+                        onClick={() => onViewAppointment(apt)}
+                        className={`absolute inset-1 rounded-md text-[10px] leading-tight px-2 py-1 text-left ${getStatusColor(
+                          apt.status
+                        )}`}
+                      >
+                        <div className="font-semibold">
+                          {apt.time || "Appointment"}
+                        </div>
+                        <div className="truncate">{apt.patientName}</div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDayView = () => {
+    const day = currentDate;
+
+    return (
+      <div className="bg-white rounded-lg shadow-md p-4 overflow-x-auto">
+        <div className="min-w-[700px]">
+          {/* Header */}
+          <div className="grid grid-cols-[100px,1fr] mb-2">
+            <div></div>
+            <div className="text-center font-semibold text-gray-700 py-2 border-b">
+              {format(day, "EEEE, MMM d")}
+            </div>
+          </div>
+
+          {/* Time rows */}
+          {hours.map((hour) => {
+            const slotAppointments = getAppointmentsForDateAndHour(day, hour);
+            return (
+              <div
+                key={hour}
+                className="grid grid-cols-[100px,1fr] border-t last:border-b"
+              >
+                <div className="text-xs text-gray-500 py-4 pr-2 text-right border-r">
+                  {formatHourLabel(hour)}
+                </div>
+                <div className="relative h-16 bg-white">
+                  {slotAppointments.map((apt) => (
+                    <button
+                      key={apt.id}
+                      type="button"
+                      onClick={() => onViewAppointment(apt)}
+                      className={`absolute inset-1 rounded-md text-[10px] leading-tight px-2 py-1 text-left ${getStatusColor(
+                        apt.status
+                      )}`}
+                    >
+                      <div className="font-semibold">
+                        {apt.time || "Appointment"}
+                      </div>
+                      <div className="truncate">{apt.patientName}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-md">
+    <div className="space-y-4 relative">
+      {/* Header + controls */}
+      <div className="bg-white p-4 rounded-lg shadow-md space-y-3">
+        <div className="flex justify-between items-center">
         <div className="flex gap-2 items-center">
           <Button size="sm" variant="outline" onClick={handleToday}>
             Today
@@ -170,7 +307,7 @@ export default function AppointmentCalendar({
           <Button size="sm" variant="outline" onClick={handleNext}>
             <ChevronRight className="w-4 h-4" />
           </Button>
-          <span className="ml-4 font-semibold">
+            <span className="ml-4 font-semibold text-gray-900">
             {format(currentDate, "MMMM yyyy")}
           </span>
         </div>
@@ -182,16 +319,28 @@ export default function AppointmentCalendar({
               size="sm"
               variant={viewMode === m ? "default" : "outline"}
               onClick={() => setViewMode(m)}
-            >
-              {m}
+                className={
+                  viewMode === m
+                    ? "bg-[#003465] text-white border-[#003465]"
+                    : ""
+                }
+              >
+                {m === "month"
+                  ? "Month"
+                  : m === "week"
+                  ? "Week"
+                  : "Day"}
             </Button>
           ))}
         </div>
+        </div>
       </div>
 
+      {/* Views */}
       {viewMode === "month" && renderMonthView()}
       {viewMode === "week" && renderWeekView()}
       {viewMode === "day" && renderDayView()}
+
     </div>
   );
 }

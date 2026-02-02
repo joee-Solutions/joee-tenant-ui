@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 // schema.ts
 import { z } from "zod";
@@ -140,7 +141,13 @@ export default function AllergyInformationForm() {
                 name={`allergies.${index}.allergy`}
                 render={({ field }) => (
                   <>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select 
+                    value={field.value || undefined} 
+                    onValueChange={(value) => {
+                      console.log("Allergy selected:", value);
+                      field.onChange(value);
+                    }}
+                  >
                     <SelectTrigger className="w-full h-14 p-3 border border-gray-400 rounded z-[1000]">
                       <SelectValue placeholder="Select an allergy" />
                     </SelectTrigger>
@@ -187,8 +194,8 @@ export default function AllergyInformationForm() {
                 control={control}
                 render={({ field }) => (
                   <DatePicker
-                    date={field.value ? new Date(field.value) : undefined}
-                    onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                     placeholder="Select start date"
                   />
                 )}
@@ -210,8 +217,8 @@ export default function AllergyInformationForm() {
                 control={control}
                 render={({ field }) => (
                   <DatePicker
-                    date={field.value ? new Date(field.value) : undefined}
-                    onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                     placeholder="Select end date"
                   />
                 )}
@@ -290,7 +297,7 @@ export default function AllergyInformationForm() {
             </div>
           </div>
 
-          {/* Save and Cancel Buttons at Bottom */}
+          {/* Cancel Button at Bottom - Auto-save is enabled */}
           <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
             <Button
               type="button"
@@ -298,15 +305,7 @@ export default function AllergyInformationForm() {
               className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
             >
               <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleSave(index)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
-            >
-              <Check className="w-4 h-4 mr-2" />
-              Save
+              Close
             </Button>
           </div>
         </div>

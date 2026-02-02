@@ -166,14 +166,22 @@ const processRequestAuth = async (
   // }
 
   try {
+    // Check if data is FormData
+    // When using FormData, DO NOT set Content-Type header manually
+    // Axios will automatically set it with the correct boundary
+    const isFormData = data instanceof FormData;
+    const config = isFormData ? {} : {}; // Empty config for FormData - let axios handle headers
+    
     if (method === "post") {
-      rt = await httpAuth.post(`/api${path}`, data);
+      rt = await httpAuth.post(`/api${path}`, data, config);
     } else if (method === "get") {
       rt = await httpAuth.get(`/api${path}`, {
         signal: controller.signal,
       });
     } else if (method === "put") {
-      rt = await httpAuth.put(`/api${path}`, data);
+      rt = await httpAuth.put(`/api${path}`, data, config);
+    } else if (method === "patch") {
+      rt = await httpAuth.patch(`/api${path}`, data, config);
     } else if (method === "delete") {
       // Keep DELETE consistent with other verbs – backend expects /api-prefixed paths
       rt = await httpAuth.delete(`/api${path}`);
@@ -186,6 +194,7 @@ const processRequestAuth = async (
     }
     
     // Cache GET responses for offline use (only in browser environment)
+    // This ensures ALL pages visited are cached, even if not pre-cached
     if (typeof window !== 'undefined' && method === 'get') {
       try {
         const { offlineService } = await import('@/lib/offline/offlineService');
@@ -193,6 +202,18 @@ const processRequestAuth = async (
         // Cache the response for offline access
         await offlineService.cacheResponse(path, rt.data);
         offlineLogger.debug(`Cached GET response in normal flow: ${path}`);
+        
+        // Also try to cache individual items from list responses
+        // This helps build up the cache incrementally
+        try {
+          const { preCacheService } = await import('@/lib/offline/preCacheService');
+          // Extract tenant ID from path if available
+          const tenantMatch = path.match(/\/tenants\/(\d+)/);
+          const tenantId = tenantMatch ? parseInt(tenantMatch[1], 10) : undefined;
+          await preCacheService.cacheIndividualItemsFromList(path, rt.data, tenantId);
+        } catch (error) {
+          // Silently fail - not critical
+        }
       } catch (error) {
         // Silently fail caching - don't break the request
         console.warn('Failed to cache response:', error);

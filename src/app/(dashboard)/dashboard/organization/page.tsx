@@ -19,12 +19,16 @@ import OrgManagement from "./OrgManagement";
 import Link from "next/link";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { formatDateFn } from "@/lib/utils";
-import { useDashboardData, useTenantsData } from "@/hooks/swr";
+import { useTenantsData } from "@/hooks/swr";
+import { useSWRConfig } from "swr";
 import { Tenant } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import useSWR from "swr";
+import { authFectcher } from "@/hooks/swr";
+import { extractData } from "@/framework/joee.client";
 import { toast } from "react-toastify";
 import {
   DropdownMenu,
@@ -103,8 +107,61 @@ function PageContent() {
     }
   }, [searchParams]);
 
-  // Fetch dashboard stats
-  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData();
+  // Fetch stat card data from separate endpoints (same as dashboard page)
+  const { data: statsAllTenantsData, isLoading: loadingAllTenants } = useSWR(
+    API_ENDPOINTS.GET_ALL_TENANTS,
+    authFectcher,
+    { revalidateOnFocus: false }
+  );
+  
+  const { data: statsActiveTenantsData, isLoading: loadingActiveTenants } = useSWR(
+    API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE,
+    authFectcher,
+    { revalidateOnFocus: false }
+  );
+  
+  const { data: statsInactiveTenantsData, isLoading: loadingInactiveTenants } = useSWR(
+    API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE,
+    authFectcher,
+    { revalidateOnFocus: false }
+  );
+
+  // Extract and count tenants from each endpoint
+  const allTenantsRaw: any = extractData<Tenant | Tenant[]>(statsAllTenantsData);
+  const activeTenantsRaw: any = extractData<Tenant | Tenant[]>(statsActiveTenantsData);
+  const inactiveTenantsRaw: any = extractData<Tenant | Tenant[]>(statsInactiveTenantsData);
+  
+  // Helper function to normalize to array (handle nested arrays and single objects)
+  const normalizeToArray = (data: any): Tenant[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+      // Flatten if nested arrays exist
+      const flattened = data.flat();
+      // Ensure all items are Tenant objects (not arrays)
+      return flattened.filter((item): item is Tenant => 
+        item && typeof item === 'object' && 'id' in item && !Array.isArray(item)
+      );
+    }
+    // Single object
+    if (data && typeof data === 'object' && 'id' in data) {
+      return [data as Tenant];
+    }
+    return [];
+  };
+  
+  // Ensure we have arrays (handle both single object and array responses)
+  const allTenants = normalizeToArray(allTenantsRaw);
+  const activeTenants = normalizeToArray(activeTenantsRaw);
+  const inactiveTenants = normalizeToArray(inactiveTenantsRaw);
+  
+  // Calculate counts
+  const totalTenantsCount = allTenants.length;
+  const activeTenantsCount = activeTenants.length;
+  const inactiveTenantsCount = inactiveTenants.length;
+  
+  const dashboardLoading = loadingAllTenants || loadingActiveTenants || loadingInactiveTenants;
+  
+  const { mutate: globalMutate } = useSWRConfig();
   // Map sortBy to backend fields
   const sortFieldMap: Record<string, string> = {
     Name: "name",
@@ -213,8 +270,14 @@ function PageContent() {
       if (changedFields.name) updatePayload.name = changedFields.name;
       if (changedFields.status) {
         // Backend expects boolean is_active; also keep string status for compatibility
-        updatePayload.status = changedFields.status.toUpperCase();
-        updatePayload.is_active = changedFields.status.toLowerCase() === "active";
+        // Backend expects lowercase enum values: "active" or "deactivated"
+        const statusValue = changedFields.status.toLowerCase();
+        if (statusValue === "inactive") {
+          updatePayload.status = "deactivated";
+        } else {
+          updatePayload.status = "active";
+        }
+        updatePayload.is_active = statusValue === "active";
       }
       if (changedFields.phoneNumber) updatePayload.phone_number = changedFields.phoneNumber;
       if (changedFields.organizationEmail) updatePayload.email = changedFields.organizationEmail;
@@ -263,10 +326,82 @@ function PageContent() {
         API_ENDPOINTS.EDIT_ORGANIZATION(String(selectedOrg.id))
       );
       toast.success("Organization deleted successfully");
+      
+      // Calculate if we need to adjust pagination
+      // Check if current page will be empty after deletion
+      const currentPageItemCount = sortedTenantsData?.length || 0;
+      const willPageBeEmpty = currentPageItemCount === 1; // Only the item being deleted
+      const shouldGoToPreviousPage = willPageBeEmpty && page > 1;
+      
+      // Optimistically update local list to remove deleted organization
+      setLocalTenants((prev) =>
+        Array.isArray(prev)
+          ? prev.filter((org) => org.id !== selectedOrg.id)
+          : prev
+      );
+      
+      // Also update the main tenantsData by mutating SWR cache
+      // This updates both the data array and the meta (total count)
+      globalMutate(
+        (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS),
+        (currentData: any) => {
+          if (!currentData) return currentData;
+          
+          // Handle different response structures
+          let data = [];
+          let metaData = null;
+          
+          if (Array.isArray(currentData)) {
+            data = currentData;
+          } else if (currentData?.data) {
+            data = currentData.data;
+            metaData = currentData.meta;
+          } else if (currentData?.results) {
+            data = currentData.results;
+            metaData = currentData.meta;
+          }
+          
+          // Filter out deleted organization
+          const filtered = data.filter((org: any) => org.id !== selectedOrg.id);
+          
+          // Update meta total count
+          if (metaData && typeof metaData.total === 'number') {
+            metaData = {
+              ...metaData,
+              total: Math.max(0, metaData.total - 1),
+            };
+          }
+          
+          // Return updated structure
+          if (Array.isArray(currentData)) {
+            return filtered;
+          } else if (currentData?.data) {
+            return { ...currentData, data: filtered, meta: metaData || currentData.meta };
+          } else if (currentData?.results) {
+            return { ...currentData, results: filtered, meta: metaData || currentData.meta };
+          }
+          return filtered;
+        },
+        false
+      );
+      
+      // Adjust pagination if needed - go to previous page if current page becomes empty
+      if (shouldGoToPreviousPage) {
+        setPage(page - 1);
+      }
+      
       setDeleteConfirmOpen(false);
       setDeleteModalOpen(false);
       setSelectedOrg(null);
-      window.location.reload();
+      
+      // Revalidate to ensure we have the latest data from server
+      // This ensures pagination and other pages are updated correctly
+      setTimeout(() => {
+        // Revalidate all matching keys to get fresh data from server
+        globalMutate(
+          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS)
+        );
+      }, 100);
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete organization");
@@ -275,60 +410,45 @@ function PageContent() {
     }
   };
 
-  // Map dashboard data to StatCard format
+  // Calculate growth percentages
+  const growth = {
+    allOrganizations: null,
+    activeOrganizations: totalTenantsCount > 0
+      ? parseFloat(((activeTenantsCount * 100) / totalTenantsCount).toFixed(2))
+      : 0,
+    inactiveOrganizations: totalTenantsCount > 0
+      ? parseFloat(((inactiveTenantsCount * 100) / totalTenantsCount).toFixed(2))
+      : 0,
+  };
+
+  // Map to StatCard format (same APIs as dashboard page)
   const statsCards = [
     {
       key: "totalTenants" as const,
       title: "All Organizations",
-      value: dashboardData?.totalTenants || 0,
-      growth: null as number | null,
+      value: totalTenantsCount,
+      growth: growth.allOrganizations,
       color: "blue" as const,
       icon: <Building2 className="text-white size-5" />,
     },
     {
       key: "activeTenants" as const,
       title: "Active Organizations",
-      value: dashboardData?.activeTenants || 0,
-      growth: dashboardData?.totalTenants
-        ? parseFloat(
-            ((dashboardData.activeTenants * 100) / dashboardData.totalTenants).toFixed(2)
-          )
-        : null,
+      value: activeTenantsCount,
+      growth: growth.activeOrganizations,
       color: "green" as const,
       icon: <UserRoundPlus className="text-white size-5" />,
     },
     {
       key: "inactiveTenants" as const,
       title: "Inactive Organizations",
-      value: dashboardData?.inactiveTenants || 0,
-      growth: dashboardData?.totalTenants
-        ? parseFloat(
-            ((dashboardData.inactiveTenants * 100) / dashboardData.totalTenants).toFixed(2)
-          )
-        : null,
+      value: inactiveTenantsCount,
+      growth: growth.inactiveOrganizations,
       color: "yellow" as const,
       icon: <UserRound className="text-white size-5" />,
     },
   ];
 
-  // Handle error states - only show error page for critical dashboard errors
-  // For tenants data, empty results should show empty state in table, not error page
-  if (dashboardError) {
-    return (
-      <section className="px-[30px] mb-10">
-        <div className="flex flex-col items-center justify-center gap-4 py-12">
-          <h2 className="text-2xl font-semibold text-red-600">Failed to Load Organizations</h2>
-          <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="px-[30px] mb-10">
@@ -408,8 +528,8 @@ function PageContent() {
                     <TableCell><SkeletonBox className="h-6 w-20" /></TableCell>
                   </TableRow>
                 ))
-              ) : tenantsError ? (
-                // Show error message
+              ) : tenantsError && (!allTenantsData || (Array.isArray(allTenantsData) && allTenantsData.length === 0)) ? (
+                // Show error message only if we don't have any data (including cached data)
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
@@ -473,7 +593,10 @@ function PageContent() {
                         </button>
                         {openDropdownId === data.id && (
                           <div 
-                            className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                            className={`absolute right-0 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md ${
+                              // Show above if it's the last item, last 2 items, or if there's only 1 item
+                              index >= sortedTenantsData.length - 2 || sortedTenantsData.length === 1 ? 'bottom-10' : 'top-10'
+                            }`}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div

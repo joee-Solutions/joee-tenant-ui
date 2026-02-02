@@ -13,6 +13,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FormDataStepper } from "../PatientStepper";
 import { Country, State, City } from "country-state-city";
 import { useMemo, useEffect } from "react";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 // Validation schema
 export const addionalDemoSchema = z.object({
@@ -20,7 +21,7 @@ export const addionalDemoSchema = z.object({
   state: z.string().optional(),
   city: z.string().optional(),
   postal: z.string().optional(),
-  email: z.string().email("Invalid email address").optional(),
+  email: z.string().email("Invalid email address").min(1, "Email is required"),
   workEmail: z.string().email("Invalid work email address").optional(),
   homePhone: z.string().optional().refine(
     (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
@@ -30,7 +31,7 @@ export const addionalDemoSchema = z.object({
     (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
     { message: "Invalid phone number format" }
   ),
-  address: z.string().optional(),
+  address: z.string().min(1, "Address is required"),
   addressFrom: z.string().optional(),
   addressTo: z.string().optional(),
   currentAddress: z.string().optional(),
@@ -468,8 +469,8 @@ export default function ContactDemographicForm() {
             control={control}
             render={({ field }) => (
               <DatePicker
-                date={field.value ? new Date(field.value) : undefined}
-                onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                 placeholder="Select start date"
               />
             )}
@@ -494,8 +495,8 @@ export default function ContactDemographicForm() {
             control={control}
             render={({ field }) => (
               <DatePicker
-                date={field.value ? new Date(field.value) : undefined}
-                onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                 placeholder="Select end date"
               />
             )}

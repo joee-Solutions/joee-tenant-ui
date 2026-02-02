@@ -109,7 +109,7 @@ const ProfilePage = () => {
           <ChangePasswordComponent />
         ) : isLoading ? (
           <div>Loading...</div>
-        ) : error ? (
+        ) : error && !adminData ? (
           <div className="text-red-500">Failed to load profile</div>
         ) : (
           <ProfileForm admin={adminData} />

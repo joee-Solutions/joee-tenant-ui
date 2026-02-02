@@ -18,6 +18,7 @@ import { authFectcher } from "@/hooks/swr";
 import { useState, useMemo } from "react";
 import { Edit2, Trash2, Plus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 import { MEDICAL_CONDITIONS } from "./medicalConstants";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 
@@ -78,8 +79,10 @@ export default function MedicalVisitForm() {
   });
 
   // Fetch employees for provider dropdown
+  const orgId = orgSlug && !isNaN(parseInt(orgSlug)) ? parseInt(orgSlug) : null;
+  
   const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useSWR(
-    orgSlug ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(orgSlug)) : null,
+    orgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
     authFectcher
   );
 
@@ -178,8 +181,8 @@ export default function MedicalVisitForm() {
                 Date of Service *
                 </label>
                 <DatePicker
-                date={field.value ? new Date(field.value) : undefined}
-                onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                   placeholder="Select date of service"
                 />
               </div>
@@ -244,8 +247,8 @@ export default function MedicalVisitForm() {
                   HPI Onset Date
                   </label>
                   <DatePicker
-                  date={field.value ? new Date(field.value) : undefined}
-                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                  date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                  onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                     placeholder="Select onset date"
                   />
                 </div>
@@ -390,8 +393,8 @@ export default function MedicalVisitForm() {
                   Diagnosis Onset Date
                   </label>
                   <DatePicker
-                  date={field.value ? new Date(field.value) : undefined}
-                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                  date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                  onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                   placeholder="Select onset date"
                   />
                 </div>
@@ -487,7 +490,7 @@ export default function MedicalVisitForm() {
         />
           </div>
 
-      {/* Save and Cancel Buttons at Bottom */}
+      {/* Cancel Button - Auto-save is enabled */}
       <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
         <Button
           type="button"
@@ -495,15 +498,7 @@ export default function MedicalVisitForm() {
           className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
         >
           <X className="w-4 h-4 mr-2" />
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          onClick={handleSave}
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
-        >
-          <Check className="w-4 h-4 mr-2" />
-          Save
+          Close
         </Button>
       </div>
     </div>

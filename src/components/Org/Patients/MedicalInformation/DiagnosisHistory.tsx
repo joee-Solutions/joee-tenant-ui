@@ -8,6 +8,7 @@ import { MEDICAL_CONDITIONS } from "./medicalConstants";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 export const diagnosisHistorySchema = z.array(
   z.object({
@@ -48,7 +49,7 @@ export default function DiagnosisHistoryForm() {
   const handleAddNew = () => {
     append({
       id: Date.now(),
-      date: new Date().toISOString().split('T')[0],
+      date: formatDateLocal(new Date()),
       condition: "",
       onsetDate: "",
       endDate: "",
@@ -105,8 +106,8 @@ export default function DiagnosisHistoryForm() {
                         control={control}
                         render={({ field }) => (
                           <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                            date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                            onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                             placeholder="Select date"
                           />
                         )}
@@ -144,8 +145,8 @@ export default function DiagnosisHistoryForm() {
                         control={control}
                         render={({ field }) => (
                           <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                            date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                            onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                             placeholder="Select onset date"
                           />
                         )}
@@ -160,8 +161,8 @@ export default function DiagnosisHistoryForm() {
                         control={control}
                         render={({ field }) => (
                           <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                            date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                            onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                             placeholder="Select end date"
                           />
                         )}
@@ -179,21 +180,14 @@ export default function DiagnosisHistoryForm() {
                     />
                   </div>
 
-                  {/* Save and Cancel Buttons */}
+                  {/* Cancel Button - Auto-save is enabled */}
                   <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
                     <Button
                       type="button"
                       onClick={handleCancelEdit}
                       className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleSave}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
-                    >
-                      Save
+                      Close
                     </Button>
                   </div>
                 </div>

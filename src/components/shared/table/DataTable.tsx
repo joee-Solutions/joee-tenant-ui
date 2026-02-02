@@ -14,6 +14,10 @@ const getColumnHeaders = function (data: Record<string, any>) {
   const headers = Object.keys(data).map((key) => {
     // Handle specific column name transformations
     if (key === "id") {
+      // Check if this is a patient table by checking for patient-specific keys
+      if (data.patient || data.email || data.gender || data.date_of_birth) {
+        return "S/N";
+      }
       return "ID";
     } else if (key === "created_at") {
       return "Date Created";

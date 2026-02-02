@@ -120,8 +120,8 @@ export default function AdminListPage() {
     prevFilters.current = { search, sortBy, status };
   }, [search, sortBy, status]);
 
-  // Handle error state
-  if (error) {
+  // Handle error state - only show error if we don't have any data (including cached data)
+  if (error && (!adminsData || (Array.isArray(adminsData) && adminsData.length === 0))) {
     return (
       <div className="px-10 pt-[32px] pb-[56px]">
         <div className="flex flex-col items-center justify-center gap-4 py-12">

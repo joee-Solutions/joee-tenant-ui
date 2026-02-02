@@ -70,7 +70,7 @@ export default function NotificationList() {
   const [markingAsRead, setMarkingAsRead] = useState<number | null>(null);
 
   // Fetch notifications data with tab filtering
-  const { data: notificationsData, meta, isLoading, error, mutate } = useNotificationsByTab(activeTab);
+  const { data: notificationsData, meta, isLoading, error, mutate: mutateTabNotifications } = useNotificationsByTab(activeTab);
   const { data: admin } = useAdminProfile();
   const adminData = Array.isArray(admin) ? admin[0] : admin;
 
@@ -127,7 +127,7 @@ export default function NotificationList() {
       setNotificationToDelete(null);
       
       // Refetch notifications from API to update the table
-      mutate();
+      mutateTabNotifications();
       
       // Also invalidate main notifications cache to update bell icon
       mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
@@ -154,13 +154,91 @@ export default function NotificationList() {
   const markNotificationAsRead = async (notificationId: number) => {
     setMarkingAsRead(notificationId);
     try {
-      await processRequestAuth("post", API_ENDPOINTS.MARK_NOTIFICATION_READ(notificationId));
-      // Invalidate and refetch notifications (unread count will be recalculated)
-      mutate();
-      mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
+      // Store read notification ID in localStorage for persistence
+      const storedReadNotifications = localStorage.getItem('readNotifications');
+      const readIds = storedReadNotifications ? JSON.parse(storedReadNotifications) : [];
+      if (!readIds.includes(notificationId)) {
+        readIds.push(notificationId);
+        localStorage.setItem('readNotifications', JSON.stringify(readIds));
+      }
+      
+      // Get the current endpoint for this tab
+      const currentEndpoint = `${API_ENDPOINTS.GET_NOTIFICATIONS}${activeTab !== "all" ? `?tab=${activeTab}` : ""}`;
+      
+      // Optimistically update the current tab's notifications cache
+      mutateTabNotifications(
+        (currentData: any) => {
+          if (!currentData) return currentData;
+          
+          // Extract the actual notifications array
+          const notifications = Array.isArray(currentData) 
+            ? currentData 
+            : (currentData?.data || currentData?.results || []);
+          
+          // Update the notification that was marked as read
+          const updatedNotifications = notifications.map((n: Notification) => {
+            if (n.id === notificationId) {
+              return {
+                ...n,
+                read: true,
+                isRead: true,
+                readAt: new Date().toISOString(),
+              };
+            }
+            return n;
+          });
+          
+          // Return in the same format as the original data
+          if (Array.isArray(currentData)) {
+            return updatedNotifications;
+          } else if (currentData?.data) {
+            return { ...currentData, data: updatedNotifications };
+          } else if (currentData?.results) {
+            return { ...currentData, results: updatedNotifications };
+          }
+          return updatedNotifications;
+        },
+        false // Don't revalidate immediately
+      );
+      
+      // Also optimistically update the main notifications endpoint for the header bell
+      mutate(
+        API_ENDPOINTS.GET_NOTIFICATIONS,
+        (currentData: any) => {
+          if (!currentData) return currentData;
+          
+          const notifications = Array.isArray(currentData) 
+            ? currentData 
+            : (currentData?.data || currentData?.results || []);
+          
+          const updatedNotifications = notifications.map((n: Notification) => {
+            if (n.id === notificationId) {
+              return {
+                ...n,
+                read: true,
+                isRead: true,
+                readAt: new Date().toISOString(),
+              };
+            }
+            return n;
+          });
+          
+          if (Array.isArray(currentData)) {
+            return updatedNotifications;
+          } else if (currentData?.data) {
+            return { ...currentData, data: updatedNotifications };
+          } else if (currentData?.results) {
+            return { ...currentData, results: updatedNotifications };
+          }
+          return updatedNotifications;
+        },
+        false
+      );
+      
+      // No API call - endpoint doesn't exist, client-side only update
+      // The optimistic update above handles the UI change
     } catch (error) {
       console.error("Error marking notification as read:", error);
-      toast.error("Failed to mark notification as read");
     } finally {
       setMarkingAsRead(null);
   }
@@ -239,13 +317,13 @@ export default function NotificationList() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : error ? (
+            ) : error && (!notifications || (Array.isArray(notifications) && notifications.length === 0)) ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <p className="text-gray-600">Unable to load notifications at this time.</p>
                     <button
-                      onClick={() => mutate()}
+                      onClick={() => mutateTabNotifications()}
                       className="px-4 py-2 bg-[#003465] text-white rounded hover:bg-[#122a41] text-sm"
                     >
                       Try Again

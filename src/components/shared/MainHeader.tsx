@@ -14,6 +14,7 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { mutate } from "swr";
 import { Button } from "@/components/ui/button";
+import { Notification } from "@/lib/types";
 
 interface MainHeaderContentProps {
   isMobileMenuOpen?: boolean;
@@ -47,24 +48,95 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   // Use SWR hook for notifications to enable automatic refetching
   const { data: notificationsData, isLoading: loadingNotifications } = useNotificationsData();
   
-  // Calculate unread count from notifications list
+  // Load read notifications from localStorage on mount and merge with notifications
+  useEffect(() => {
+    // Only access localStorage on client side
+    if (typeof window === 'undefined') return;
+    
+    const storedReadNotifications = localStorage.getItem('readNotifications');
+    if (storedReadNotifications && notificationsData) {
+      try {
+        const readIds = JSON.parse(storedReadNotifications);
+        // Merge with current notifications data
+        mutate(
+          API_ENDPOINTS.GET_NOTIFICATIONS,
+          (currentData: any) => {
+            if (!currentData) return currentData;
+            const notifications = Array.isArray(currentData) ? currentData : (currentData?.data || currentData?.results || []);
+            return notifications.map((n: Notification) => {
+              if (readIds.includes(n.id)) {
+                return { ...n, read: true, isRead: true, readAt: n.readAt || new Date().toISOString() };
+              }
+              return n;
+            });
+          },
+          false
+        );
+      } catch (error) {
+        console.error("Error loading read notifications from localStorage:", error);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notificationsData]);
+  
+  // Calculate unread count from notifications list and get top 10 latest notifications
   // Use useMemo with notificationsData as dependency to recalculate when SWR refetches
   const { notifications, unreadCount } = useMemo(() => {
-    const notifs = Array.isArray(notificationsData) ? notificationsData : [];
+    // Handle different data structures - flatten if nested array
+    let notifs: Notification[] = [];
+    if (Array.isArray(notificationsData)) {
+      // Check if it's a nested array
+      if (notificationsData.length > 0 && Array.isArray(notificationsData[0])) {
+        notifs = (notificationsData as any).flat() as Notification[];
+      } else {
+        notifs = notificationsData as Notification[];
+      }
+    }
     
-    // Calculate unread count - if read property doesn't exist or is false, it's unread
+    // Load read notification IDs from localStorage (only on client side)
+    let readIds: number[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const storedReadNotifications = localStorage.getItem('readNotifications');
+        readIds = storedReadNotifications ? JSON.parse(storedReadNotifications) : [];
+      } catch (error) {
+        console.error('Error reading from localStorage:', error);
+        readIds = [];
+      }
+    }
+    
+    // Merge read status from localStorage
+    notifs = notifs.map((n: Notification) => {
+      if (readIds.includes(n.id)) {
+        return { ...n, read: true, isRead: true, readAt: n.readAt || new Date().toISOString() };
+      }
+      return n;
+    });
+    
+    // Sort notifications by createdAt (newest first)
+    const sortedNotifs = [...notifs].sort((a: Notification, b: Notification) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+    
+    // Get top 10 latest notifications
+    const topTenNotifications = sortedNotifs.slice(0, 10);
+    
+    // Calculate unread count from the top 10 notifications
+    // If read property doesn't exist or is false, it's unread
     // New notifications typically don't have a read property, so treat as unread
-    const count = notifs.filter((n: any) => {
+    const count = topTenNotifications.filter((n: Notification) => {
       // If read property is explicitly true, it's read
       // Otherwise (undefined, null, false), treat as unread
       return n.read !== true && n.isRead !== true && (!n.readAt || n.readAt === null);
     }).length;
     
-    return { notifications: notifs, unreadCount: count };
+    return { notifications: topTenNotifications, unreadCount: count };
   }, [notificationsData]);
 
   // Handle notification click - open modal and mark as read
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification: Notification) => {
     setSelectedNotification(notification);
     setShowNotificationModal(true);
     setIsNotificationOpen(false);
@@ -75,38 +147,67 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
     }
   };
 
-  // Mark notification as read
+  // Mark notification as read (client-side only, no API endpoint available)
   const markNotificationAsRead = async (notificationId: number) => {
     setMarkingAsRead(notificationId);
     try {
-      await processRequestAuth("post", API_ENDPOINTS.MARK_NOTIFICATION_READ(notificationId));
-      // Invalidate and refetch notifications (unread count will be recalculated)
-      mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
+      // Store read notification ID in localStorage for persistence (only on client side)
+      if (typeof window !== 'undefined') {
+        const storedReadNotifications = localStorage.getItem('readNotifications');
+        const readIds = storedReadNotifications ? JSON.parse(storedReadNotifications) : [];
+        if (!readIds.includes(notificationId)) {
+          readIds.push(notificationId);
+          localStorage.setItem('readNotifications', JSON.stringify(readIds));
+        }
+      }
+      
+      // Optimistically update the cache immediately - no API call since endpoint doesn't exist
+      mutate(
+        API_ENDPOINTS.GET_NOTIFICATIONS,
+        (currentData: any) => {
+          if (!currentData) return currentData;
+          
+          // Extract the actual notifications array
+          const notifications = Array.isArray(currentData) 
+            ? currentData 
+            : (currentData?.data || currentData?.results || []);
+          
+          // Update the notification that was marked as read
+          const updatedNotifications = notifications.map((n: Notification) => {
+            if (n.id === notificationId) {
+              return {
+                ...n,
+                read: true,
+                isRead: true,
+                readAt: new Date().toISOString(),
+              };
+            }
+            return n;
+          });
+          
+          // Return in the same format as the original data
+          if (Array.isArray(currentData)) {
+            return updatedNotifications;
+          } else if (currentData?.data) {
+            return { ...currentData, data: updatedNotifications };
+          } else if (currentData?.results) {
+            return { ...currentData, results: updatedNotifications };
+          }
+          return updatedNotifications;
+        },
+        false // Don't revalidate, this is client-side only
+      );
       } catch (error) {
       console.error("Error marking notification as read:", error);
-      toast.error("Failed to mark notification as read");
       } finally {
       setMarkingAsRead(null);
     }
   };
 
-  // Mark all notifications as read
-  const handleMarkAllAsRead = async () => {
-    if (!adminData?.id) {
-      toast.error("Unable to mark all as read");
-      return;
-    }
-    
-    try {
-      await processRequestAuth("post", API_ENDPOINTS.MARK_ALL_NOTIFICATIONS_READ(adminData.id));
-      // Invalidate and refetch notifications (unread count will be recalculated)
-      mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
-      toast.success("All notifications marked as read");
+  // Navigate to view all notifications
+  const handleViewAllNotifications = () => {
+    router.push("/dashboard/notifications");
       setIsNotificationOpen(false);
-    } catch (error) {
-      console.error("Error marking all as read:", error);
-      toast.error("Failed to mark all notifications as read");
-    }
   };
 
 
@@ -240,9 +341,9 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
               <div className="p-3 border-t text-center">
                 <button
                   className="text-sm text-[#003465] hover:underline"
-                  onClick={handleMarkAllAsRead}
+                  onClick={handleViewAllNotifications}
                 >
-                  Mark all as read
+                  View all notification
                 </button>
               </div>
             )}

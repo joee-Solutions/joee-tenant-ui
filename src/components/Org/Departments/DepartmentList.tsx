@@ -159,18 +159,39 @@ export default function Page({ slug }: { slug: string }) {
         ...data,
         status: data.status ? "active" : "inactive",
       };
-      await processRequestAuth(
+      const response = await processRequestAuth(
         "patch",
         `${API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug))}/${selectedDept.id}`,
         payload
       );
+      
+      // Optimistically update the local data immediately
+      mutate(
+        (currentData: any) => {
+          if (!currentData || !currentData.data) return currentData;
+          return {
+            ...currentData,
+            data: currentData.data.map((dept: Department) =>
+              dept.id === selectedDept.id
+                ? { ...dept, ...payload, status: payload.status }
+                : dept
+            ),
+          };
+        },
+        false // Don't revalidate immediately
+      );
+      
       toast.success("Department updated successfully");
-      mutate();
       setEditModalOpen(false);
       setSelectedDept(null);
+      
+      // Revalidate to ensure sync with server
+      mutate();
     } catch (error) {
       console.error(error);
       toast.error("Failed to update department");
+      // Revalidate on error to get correct state
+      mutate();
     }
   };
 
@@ -253,8 +274,12 @@ export default function Page({ slug }: { slug: string }) {
                     </button>
                       {openDropdownId === data.id && (
                         <div 
-                          className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                          className={`absolute right-0 z-[100] min-w-[120px] overflow-visible rounded-md border bg-white p-1 shadow-lg ${
+                            // Show above if it's the last item, last 2 items, or if there's only 1 item
+                            index >= filteredDepartments.length - 2 || filteredDepartments.length === 1 ? 'bottom-10' : 'top-10'
+                          }`}
                           onClick={(e) => e.stopPropagation()}
+                          style={{ position: 'absolute' }}
                         >
                           <div
                             onClick={(e) => {
@@ -331,8 +356,8 @@ export default function Page({ slug }: { slug: string }) {
             </div>
 
             <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6">
-              <div className="mb-4 flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6">
-                <div className="flex-1">
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="w-full">
                   <label className="block text-base text-black font-normal mb-2">
                     Department name
                   </label>
@@ -346,13 +371,13 @@ export default function Page({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                <div className="flex-1">
+                <div className="w-full min-w-0">
                   <label className="block text-base text-black font-normal mb-2">
                     Upload Department Image
                   </label>
-                  <div className="flex">
-                    <div className="flex-1 border h-14 border-[#737373] rounded flex items-center px-4">
-                      <span className="mr-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1 border h-14 border-[#737373] rounded flex items-center px-4 min-w-0 overflow-hidden">
+                      <span className="mr-2 flex-shrink-0">
                         <svg
                           width="16"
                           height="16"
@@ -366,13 +391,13 @@ export default function Page({ slug }: { slug: string }) {
                           />
                         </svg>
                       </span>
-                      <span className="text-gray-500">
+                      <span className="text-gray-500 truncate">
                         {fileSelected || "Choose File"}
                       </span>
                     </div>
                     <Button
                       type="button"
-                      className="bg-[#003465] hover:bg-[#102437] text-white px-6 py-2 h-14 rounded"
+                      className="bg-[#003465] hover:bg-[#102437] text-white px-6 py-2 h-14 rounded flex-shrink-0"
                       onClick={() => document.getElementById("fileInput")?.click()}
                     >
                       Browse

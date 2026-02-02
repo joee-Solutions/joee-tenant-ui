@@ -149,9 +149,10 @@ export interface Role {
 }
 
 export interface DashboardData {
-  totalTenants: number;
-  activeTenants: number;
-  inactiveTenants: number;
+  totalTenants?: number;
+  activeTenants?: number;
+  inactiveTenants?: number;
+  deactivatedTenants?: number;
 }
 
 export interface Notification {
@@ -162,6 +163,9 @@ export interface Notification {
   priority: string;
   status: string;
   createdAt: string;
+  read?: boolean;
+  isRead?: boolean;
+  readAt?: string | null;
   user?: {
     first_name: string;
     last_name: string;

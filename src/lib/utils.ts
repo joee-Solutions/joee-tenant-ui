@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatDate } from "date-fns"
+import { formatDate, parseISO } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -9,6 +9,37 @@ export function cn(...inputs: ClassValue[]) {
 export const formatDateFn = (date: string | Date = new Date()) => {
   return formatDate(new Date(date), "MMMM dd, yyyy");
 };
+
+/**
+ * Formats a date to YYYY-MM-DD string in local timezone (not UTC)
+ * This prevents timezone issues where dates shift by one day
+ */
+export function formatDateLocal(date: Date | string | undefined): string {
+  if (!date) return '';
+  if (typeof date === 'string') {
+    date = parseISO(date);
+  }
+  // Format to 'YYYY-MM-DD' to avoid timezone issues when sending to backend
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parses an ISO string (YYYY-MM-DD) to a local Date object, avoiding timezone shifts
+ * This ensures that dates like "2026-01-03" are displayed as Jan 3, not Jan 2
+ */
+export function parseISOStringToLocalDate(isoString: string): Date {
+  // If the string is in YYYY-MM-DD format, parse it directly to avoid timezone issues
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
+    const [year, month, day] = isoString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  // For full ISO strings, parse and convert to local
+  const date = parseISO(isoString);
+  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
 
 export function getChangedFields(original: any, updated: any) {
   const result: any = {};

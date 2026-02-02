@@ -72,16 +72,29 @@ export class OfflineService {
         offlineLogger.info(`Queuing ${method.toUpperCase()} action for sync when online`, { endpoint });
         const queueId = await this.queueAction(method, endpoint, data);
         
-        // Apply optimistic update to cache
+        // Apply optimistic update to cache FIRST
         const optimisticResponse = await this.applyOptimisticUpdate(method, endpoint, data);
         
-        // Invalidate SWR cache for related endpoints
-        await this.invalidateRelatedCache(endpoint);
+        // Update SWR cache with optimistic data to trigger immediate UI update
+        await this.updateSWRCacheWithOptimisticData(endpoint, method, data);
         
         offlineLogger.info(`Optimistic update applied for ${method.toUpperCase()} ${endpoint}`);
         
         // Return optimistic response that matches expected format
-        return optimisticResponse || { 
+        // Components expect: { status: true, success: true, message: string, data?: any }
+        if (optimisticResponse) {
+          return {
+            ...optimisticResponse,
+            status: true,
+            success: true,
+            _offline: true,
+            _queueId: queueId
+          };
+        }
+        
+        // Fallback response format
+        return { 
+          status: true,
           success: true, 
           message: 'Action queued for sync when online',
           data: data,
@@ -201,8 +214,8 @@ export class OfflineService {
     }
   }
 
-  // Get cached API response
-  private async getCachedResponse(endpoint: string): Promise<any | null> {
+  // Get cached API response (public method for use in fetchers)
+  async getCachedResponse(endpoint: string): Promise<any | null> {
     try {
       // Try exact match first
       let cached = await db.apiCache
@@ -441,7 +454,13 @@ export class OfflineService {
         await this.cacheResponse(listEndpoint, updatedData);
         offlineLogger.info(`Optimistically added item to ${listEndpoint}`);
         
-        return { success: true, data: newItem, message: 'Created (offline)' };
+        // Return response format that components expect
+        return { 
+          status: true,
+          success: true, 
+          data: newItem, 
+          message: 'Created successfully (offline - will sync when online)' 
+        };
         
       } else if (method === 'put' || method === 'patch') {
         // UPDATE: Update item in list
@@ -487,7 +506,13 @@ export class OfflineService {
         
         offlineLogger.info(`Optimistically updated item in ${listEndpoint}`);
         
-        return { success: true, data: { ...data, id: itemId }, message: 'Updated (offline)' };
+        // Return response format that components expect
+        return { 
+          status: true,
+          success: true, 
+          data: { ...data, id: itemId }, 
+          message: 'Updated successfully (offline - will sync when online)' 
+        };
         
       } else if (method === 'delete') {
         // DELETE: Remove item from list
@@ -531,7 +556,12 @@ export class OfflineService {
         
         offlineLogger.info(`Optimistically removed item from ${listEndpoint}`);
         
-        return { success: true, message: 'Deleted (offline)' };
+        // Return response format that components expect
+        return { 
+          status: true,
+          success: true, 
+          message: 'Deleted successfully (offline - will sync when online)' 
+        };
       }
       
       return null;
@@ -545,24 +575,116 @@ export class OfflineService {
 
   // Get list endpoint from detail endpoint
   private getListEndpoint(endpoint: string): string {
-    // Remove trailing ID and slash (e.g., /tenants/1/employees/5 -> /tenants/1/employees)
-    const parts = endpoint.split('/');
+    // Remove query parameters first
+    const endpointWithoutQuery = endpoint.split('?')[0];
+    const parts = endpointWithoutQuery.split('/').filter(p => p);
+    
+    // Try to find the list endpoint by removing trailing numeric IDs
+    // Examples:
+    // /super/tenants/1/employees/5 -> /super/tenants/1/employees
+    // /super/tenants/1/patients/123 -> /super/tenants/1/patients
+    // /management/super/training-guides/10 -> /management/super/training-guides
+    // /management/super/roles/5/update -> /management/super/roles (if last is "update")
+    
     // Check if last part is a number (ID)
     const lastPart = parts[parts.length - 1];
-    if (lastPart && /^\d+$/.test(lastPart)) {
-      return parts.slice(0, -1).join('/');
+    
+    // Handle special cases like "/update" or "/read" at the end
+    if (lastPart && (lastPart === 'update' || lastPart === 'read' || lastPart === 'delete')) {
+      // Remove the action word and check if previous part is a number
+      if (parts.length >= 2 && /^\d+$/.test(parts[parts.length - 2])) {
+        return '/' + parts.slice(0, -2).join('/');
+      }
+      return '/' + parts.slice(0, -1).join('/');
     }
-    return endpoint;
+    
+    // If last part is a number, it's likely an ID
+    if (lastPart && /^\d+$/.test(lastPart)) {
+      return '/' + parts.slice(0, -1).join('/');
+    }
+    
+    // If no ID found, return the endpoint as-is (might already be a list endpoint)
+    return endpointWithoutQuery;
   }
 
   // Extract ID from endpoint
   private extractIdFromEndpoint(endpoint: string): string | number | null {
-    const parts = endpoint.split('/');
+    // Remove query parameters first
+    const endpointWithoutQuery = endpoint.split('?')[0];
+    const parts = endpointWithoutQuery.split('/').filter(p => p);
+    
+    // Handle special cases like "/update" or "/read" at the end
     const lastPart = parts[parts.length - 1];
+    
+    // If last part is an action word, get the ID before it
+    if (lastPart && (lastPart === 'update' || lastPart === 'read' || lastPart === 'delete')) {
+      if (parts.length >= 2 && /^\d+$/.test(parts[parts.length - 2])) {
+        return parseInt(parts[parts.length - 2], 10);
+      }
+    }
+    
+    // If last part is a number, it's likely an ID
     if (lastPart && /^\d+$/.test(lastPart)) {
       return parseInt(lastPart, 10);
     }
+    
     return null;
+  }
+
+  // Update SWR cache with optimistic data for immediate UI updates
+  private async updateSWRCacheWithOptimisticData(
+    endpoint: string,
+    method: 'post' | 'put' | 'patch' | 'delete',
+    data?: any
+  ): Promise<void> {
+    try {
+      // Only update in browser environment
+      if (typeof window === 'undefined') return;
+      
+      // Import mutate from SWR dynamically
+      const { mutate } = await import('swr');
+      
+      // Get the list endpoint
+      const listEndpoint = this.getListEndpoint(endpoint);
+      
+      if (!listEndpoint) {
+        // If no list endpoint, just invalidate the detail endpoint
+        mutate(endpoint, undefined, { revalidate: false });
+        return;
+      }
+      
+      // Get the updated cached list data (after optimistic update)
+      const updatedCachedList = await this.getCachedResponse(listEndpoint);
+      
+      if (updatedCachedList) {
+        // Update SWR cache with the optimistic data
+        mutate(
+          listEndpoint,
+          updatedCachedList,
+          false // Don't revalidate - we're using cached/optimistic data
+        );
+        
+        // Also update any query parameter variations
+        mutate(
+          (key: string) => {
+            if (typeof key !== 'string') return false;
+            const keyWithoutQuery = key.split('?')[0];
+            return keyWithoutQuery === listEndpoint;
+          },
+          updatedCachedList,
+          false
+        );
+        
+        offlineLogger.debug(`Updated SWR cache with optimistic data for ${listEndpoint}`);
+      } else {
+        // Fallback: just invalidate to trigger re-render
+        mutate(listEndpoint, undefined, { revalidate: false });
+      }
+    } catch (error: any) {
+      offlineLogger.error(`Error updating SWR cache for ${endpoint}`, {
+        error: error?.message,
+      });
+    }
   }
 
   // Invalidate related cache entries (for SWR)
@@ -574,16 +696,33 @@ export class OfflineService {
       // Import mutate from SWR dynamically to avoid circular dependency
       const { mutate } = await import('swr');
       
-      // Invalidate the list endpoint
+      // Remove query parameters for cache key matching
+      const endpointWithoutQuery = endpoint.split('?')[0];
+      
+      // Invalidate the list endpoint (most important for UI updates)
       const listEndpoint = this.getListEndpoint(endpoint);
-      if (listEndpoint) {
+      if (listEndpoint && listEndpoint !== endpointWithoutQuery) {
+        // Invalidate exact match
         mutate(listEndpoint);
+        // Also invalidate with query params variations
+        mutate((key: string) => {
+          if (typeof key !== 'string') return false;
+          const keyWithoutQuery = key.split('?')[0];
+          return keyWithoutQuery === listEndpoint;
+        }, undefined, { revalidate: true });
+        offlineLogger.debug(`Invalidated list endpoint: ${listEndpoint}`);
       }
       
       // Invalidate the detail endpoint
-      mutate(endpoint);
+      mutate(endpointWithoutQuery);
+      mutate((key: string) => {
+        if (typeof key !== 'string') return false;
+        const keyWithoutQuery = key.split('?')[0];
+        return keyWithoutQuery === endpointWithoutQuery;
+      }, undefined, { revalidate: true });
       
       // Invalidate common related endpoints using matcher function
+      // This ensures all related endpoints are refreshed
       if (endpoint.includes('/employees')) {
         mutate(
           (key: string) => typeof key === 'string' && key.includes('/employees'),
@@ -611,6 +750,36 @@ export class OfflineService {
       } else if (endpoint.includes('/tenants') || endpoint.includes('/organizations')) {
         mutate(
           (key: string) => typeof key === 'string' && (key.includes('/tenants') || key.includes('/organizations')),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/training-guides')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/training-guides'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/roles')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/roles'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/permissions')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/permissions'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/departments')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/departments'),
+          undefined,
+          { revalidate: true }
+        );
+      } else if (endpoint.includes('/schedules')) {
+        mutate(
+          (key: string) => typeof key === 'string' && key.includes('/schedules'),
           undefined,
           { revalidate: true }
         );

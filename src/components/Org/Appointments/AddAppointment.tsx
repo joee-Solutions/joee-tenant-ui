@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,8 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Clock } from "lucide-react";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -39,33 +41,31 @@ export default function AddAppointment({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Validate slug and get orgId - handle both string and number
+  const orgId = useMemo(() => {
+    if (!slug) {
+      return null;
+    }
+    const slugStr = String(slug);
+    const parsed = parseInt(slugStr);
+    if (isNaN(parsed)) {
+      return null;
+    }
+    return parsed;
+  }, [slug]);
+
   // Fetch data for dropdowns
-  const { data: patientsData } = useSWR(
-    API_ENDPOINTS.TENANTS_PATIENTS(parseInt(slug)),
+  const { data: patientsData, isLoading: isLoadingPatients } = useSWR(
+    orgId ? API_ENDPOINTS.TENANTS_PATIENTS(orgId) : null,
     authFectcher
   );
 
-  const { data: employeesData } = useSWR(
-    API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
+  const { data: employeesData, isLoading: isLoadingEmployees } = useSWR(
+    orgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
     authFectcher
   );
 
-  // Filter employees to only show doctors/medical staff
-  const doctors = Array.isArray(employeesData?.data)
-    ? employeesData.data.filter((employee: any) => {
-      const designation = typeof employee.designation === 'string' 
-        ? employee.designation.toLowerCase() 
-        : '';
-      const departmentName = typeof employee.department === 'string'
-        ? employee.department.toLowerCase()
-        : (employee.department?.name || '').toLowerCase();
-      
-      return designation.includes('doctor') ||
-        designation.includes('physician') ||
-        designation.includes('medical') ||
-        departmentName.includes('medical');
-    })
-    : [];
+
 
   const form = useForm<AppointmentSchemaType>({
     resolver: zodResolver(AppointmentSchema),
@@ -79,7 +79,6 @@ export default function AddAppointment({ slug }: { slug: string }) {
       description: "",
     },
   });
-  console.log(patientsData, "patientsData", employeesData);
 
   const onSubmit = async (data: AppointmentSchemaType) => {
     setLoading(true);
@@ -180,14 +179,22 @@ export default function AddAppointment({ slug }: { slug: string }) {
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select patient" />
+                    <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {Array.isArray(patientsData?.data.data) && patientsData.data.data.map((patient: any) => (
-                      <SelectItem key={patient.id} value={patient.id.toString()} className="hover:bg-gray-200">
-                        {patient.firstname} {patient.lastname} ({patient.gender})
-                      </SelectItem>
-                    ))}
+                  <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
+                    {isLoadingPatients ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
+                    ) : Array.isArray(patientsData?.data?.data) && patientsData.data.data.length > 0 ? (
+                      patientsData.data.data.map((patient: any) => (
+                        <SelectItem key={patient.id} value={patient.id.toString()} className="hover:bg-gray-200">
+                          {patient.firstname} {patient.lastname} {patient.gender && `(${patient.gender})`}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        {patientsData ? 'No patients available' : 'Loading...'}
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               )}
@@ -206,19 +213,22 @@ export default function AddAppointment({ slug }: { slug: string }) {
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder="Select provider" />
+                    <SelectValue placeholder={isLoadingEmployees ? "Loading providers..." : "Select provider"} />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
-                    {doctors.length > 0 ? (
-                      doctors.map((doctor: any) => (
-                        <SelectItem key={doctor.id} value={doctor.id.toString()} className="hover:bg-gray-200">
-                          {doctor.firstname} {doctor.lastname}
-                          {doctor.department?.name && ` - ${doctor.department.name}`}
+                  <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
+                    {isLoadingEmployees ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading providers...</div>
+                    ) : Array.isArray(employeesData?.data) && employeesData.data.length > 0 ? (
+                      employeesData.data.map((employee: any) => (
+                        <SelectItem key={employee.id} value={employee.id.toString()} className="hover:bg-gray-200">
+                          {employee.firstname} {employee.lastname}
+                          {employee.department?.name && ` - ${employee.department.name}`}
+                          {employee.designation && ` (${employee.designation})`}
                         </SelectItem>
                       ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-gray-500">
-                        No providers available
+                        {employeesData ? 'No providers available' : 'Loading...'}
                       </div>
                     )}
                   </SelectContent>
@@ -229,7 +239,10 @@ export default function AddAppointment({ slug }: { slug: string }) {
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.doctorId.message}</p>
             )}
           </div>
+          </div>
 
+        {/* Appointment Date, Start Time, and End Time on the same row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Appointment Date */}
           <div>
             <label className="block text-base text-black font-normal mb-2">Appointment Date</label>
@@ -238,8 +251,8 @@ export default function AddAppointment({ slug }: { slug: string }) {
               control={form.control}
               render={({ field }) => (
                 <DatePicker
-                  date={field.value ? new Date(field.value) : undefined}
-                  onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                  date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                  onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                   placeholder="Select appointment date"
                 />
               )}
@@ -252,11 +265,23 @@ export default function AddAppointment({ slug }: { slug: string }) {
           {/* Start Time */}
           <div>
             <label className="block text-base text-black font-normal mb-2">Start Time</label>
-            <Input
-              placeholder="Enter start time"
-              type="time"
-              {...form.register("startTime")}
-              className="w-full p-3 border border-[#737373] h-14 rounded"
+            <Controller
+              name="startTime"
+              control={form.control}
+              render={({ field }) => (
+                <div className="relative">
+                  <input
+                    placeholder="Select appointment start time"
+                    type="time"
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
+                  />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+                </div>
+              )}
             />
             {form.formState.errors.startTime && (
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.startTime.message}</p>
@@ -266,11 +291,23 @@ export default function AddAppointment({ slug }: { slug: string }) {
           {/* End Time */}
           <div>
             <label className="block text-base text-black font-normal mb-2">End Time</label>
-            <Input
-              placeholder="Enter end time"
-              type="time"
-              {...form.register("endTime")}
-              className="w-full p-3 border border-[#737373] h-14 rounded"
+            <Controller
+              name="endTime"
+              control={form.control}
+              render={({ field }) => (
+                <div className="relative">
+                  <input
+                    placeholder="Select appointment end time"
+                    type="time"
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
+                  />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+                </div>
+              )}
             />
             {form.formState.errors.endTime && (
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.endTime.message}</p>

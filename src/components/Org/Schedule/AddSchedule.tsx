@@ -41,8 +41,10 @@ export default function ScheduleForm({ slug }: { slug: string }) {
   const [success, setSuccess] = useState(false);
 
   // Fetch employees for dropdown
+  const orgId = slug && !isNaN(parseInt(slug)) ? parseInt(slug) : null;
+  
   const { data: employeesData } = useSWR(
-    API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
+    orgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
     authFectcher
   );
 

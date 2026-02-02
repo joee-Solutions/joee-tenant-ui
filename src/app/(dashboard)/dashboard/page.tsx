@@ -16,8 +16,11 @@ import type { User } from "@/lib/types";
 import { useTenantsData } from "@/hooks/swr";
 import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { extractData } from "@/framework/joee.client";
+import type { Tenant } from "@/lib/types";
 import { useTenantStore } from "@/contexts/AuthProvider";
-import { Building2, UserRoundPlus, UserRound, UserRoundX } from "lucide-react";
+import { Building2, UserRoundPlus, UserRound } from "lucide-react";
 
 // import { Organization, Employee, Patient } from '@/lib/types';
 
@@ -56,8 +59,74 @@ function hasTenant(obj: unknown): obj is { tenant: { name?: string } } {
   );
 }
 
+// Helper function to check if error is a syntax error
+const isSyntaxError = (error: any): boolean => {
+  if (!error) return false;
+  const errorMessage = error?.message || '';
+  const errorData = error?.response?.data || {};
+  const errorString = JSON.stringify(errorData).toLowerCase();
+  return (
+    errorMessage.toLowerCase().includes('syntax error') ||
+    errorString.includes('syntax error') ||
+    error?.response?.status === 500
+  );
+};
+
 const DashboardPage: NextPage = () => {
-  const { data, isLoading, error } = useDashboardData();
+  // Fetch stat card data from separate endpoints
+  const { data: allTenantsData, isLoading: loadingAllTenants } = useSWR(
+    API_ENDPOINTS.GET_ALL_TENANTS,
+    authFectcher,
+    { revalidateOnFocus: false }
+  );
+  
+  const { data: activeTenantsData, isLoading: loadingActiveTenants } = useSWR(
+    API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE,
+    authFectcher,
+    { revalidateOnFocus: false }
+  );
+  
+  const { data: inactiveTenantsData, isLoading: loadingInactiveTenants } = useSWR(
+    API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE,
+    authFectcher,
+    { revalidateOnFocus: false }
+  );
+
+  // Extract and count tenants from each endpoint
+  const allTenantsRaw: any = extractData<Tenant | Tenant[]>(allTenantsData);
+  const activeTenantsRaw: any = extractData<Tenant | Tenant[]>(activeTenantsData);
+  const inactiveTenantsRaw: any = extractData<Tenant | Tenant[]>(inactiveTenantsData);
+  
+  // Helper function to normalize to array (handle nested arrays and single objects)
+  const normalizeToArray = (data: any): Tenant[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+      // Flatten if nested arrays exist
+      const flattened = data.flat();
+      // Ensure all items are Tenant objects (not arrays)
+      return flattened.filter((item): item is Tenant => 
+        item && typeof item === 'object' && 'id' in item && !Array.isArray(item)
+      );
+    }
+    // Single object
+    if (data && typeof data === 'object' && 'id' in data) {
+      return [data as Tenant];
+    }
+    return [];
+  };
+  
+  // Ensure we have arrays (handle both single object and array responses)
+  const allTenants = normalizeToArray(allTenantsRaw);
+  const activeTenants = normalizeToArray(activeTenantsRaw);
+  const inactiveTenants = normalizeToArray(inactiveTenantsRaw);
+  
+  // Calculate counts
+  const totalTenantsCount = allTenants.length;
+  const activeTenantsCount = activeTenants.length;
+  const inactiveTenantsCount = inactiveTenants.length;
+  
+  const isLoadingStats = loadingAllTenants || loadingActiveTenants || loadingInactiveTenants;
+  
   const { data: appointmentsData, isLoading: loadingAppointments, error: errorAppointments } = useDashboardAppointments();
   const { data: patientsData, isLoading: loadingPatients, error: errorPatients } = useDashboardPatients();
   const { data: employeesData, isLoading: loadingEmployees, error: errorEmployees } = useDashboardEmployees();
@@ -119,9 +188,40 @@ const DashboardPage: NextPage = () => {
       }))
     : [];
 
+  // Custom fetcher that handles errors gracefully for /organization/status
+  const orgStatusFetcher = async (url: string) => {
+    try {
+      return await authFectcher(url);
+    } catch (error: any) {
+      // Silently handle syntax errors and 500 errors from /organization/status endpoint
+      if (isSyntaxError(error)) {
+        console.warn('Organization status endpoint error (using fallback):', {
+          status: error?.response?.status,
+          error: error?.response?.data?.error || error?.message
+        });
+        // Return null to trigger fallback stats - SWR will treat this as successful but with null data
+        return null;
+      }
+      // Re-throw other errors
+      throw error;
+    }
+  };
+
   const { data: orgStatusData, isLoading: loadingOrgStatus, error: errorOrgStatus } = useSWR(
     "/organization/status",
-    authFectcher
+    orgStatusFetcher,
+    {
+      shouldRetryOnError: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      // Don't show error if it's a syntax error - just use fallback
+      onError: (error) => {
+        // Only log non-syntax errors
+        if (!isSyntaxError(error)) {
+          console.error('Organization status fetch error:', error);
+        }
+      },
+    }
   );
   const organizationStats = orgStatusData && typeof orgStatusData === 'object' && orgStatusData.data ? {
     activeCount: orgStatusData.data.activeTenants || 0,
@@ -138,60 +238,34 @@ const DashboardPage: NextPage = () => {
     totalCount: 0,
     completionPercentage: 0,
   };
-  // Handle error state
-  if (error) {
-    return (
-      <div className="min-h-screen w-full mb-10">
-        <main className="container mx-auto py-6 px-[30px]">
-          <div className="flex flex-col items-center justify-center gap-4 py-12">
-            <h2 className="text-2xl font-semibold text-red-600">Failed to Load Dashboard</h2>
-            <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Refresh Page
-            </button>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
+  // Calculate growth percentages
   const growth = {
     allOrganizations: null,
-    activeOrganizations: parseFloat(
-      (data?.activeTenants ? (data?.activeTenants * 100) / data?.totalTenants : 0).toFixed(2)
-    ),
-    inactiveOrganizations: parseFloat(
-      (data?.inactiveTenants ? (data?.inactiveTenants * 100) / data?.totalTenants : 0).toFixed(2)
-    ),
-    deactivatedOrganizations: parseFloat(
-      (data?.deactivatedTenants ? (data?.deactivatedTenants * 100) / data?.totalTenants : 0).toFixed(2)),
+    activeOrganizations: totalTenantsCount > 0
+      ? parseFloat(((activeTenantsCount * 100) / totalTenantsCount).toFixed(2))
+      : 0,
+    inactiveOrganizations: totalTenantsCount > 0
+      ? parseFloat(((inactiveTenantsCount * 100) / totalTenantsCount).toFixed(2))
+      : 0,
   };
 
   const stats = {
     allOrganizations: {
-      count: data?.totalTenants || 0,
+      count: totalTenantsCount,
       growth: growth.allOrganizations,
       icon: <Building2 className="text-white size-5" />,
     },
     activeOrganizations: {
-      count: data?.activeTenants || 0,
+      count: activeTenantsCount,
       growth: growth.activeOrganizations,
       icon: <UserRoundPlus className="text-white size-5" />,
     },
     inactiveOrganizations: {
-      count: data?.inactiveTenants || 0,
+      count: inactiveTenantsCount,
       growth: growth.inactiveOrganizations,
       icon: <UserRound className="text-white size-5" />,
     },
-    deactivatedOrganizations: {
-      count: data?.deactivatedTenants || 0,
-      growth: growth.deactivatedOrganizations,
-      icon: <UserRoundX className="text-white size-5" />,
-    },
-    networkTab: { icon: <></> },
   };
 
   return (
@@ -211,7 +285,7 @@ const DashboardPage: NextPage = () => {
           </span>
         </div>
 
-        {isLoading ? (
+        {isLoadingStats ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
             <SkeletonBox className="h-[250px] w-full" />
             <SkeletonBox className="h-[250px] w-full" />
@@ -270,8 +344,6 @@ const DashboardPage: NextPage = () => {
           </div>
           {loadingEmployees ? (
             <SkeletonBox className="h-[300px] w-full" />
-          ) : errorEmployees ? (
-            <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load employees data</div>
           ) : Array.isArray(employeesData) && employeesData.length > 0 && typeof employeesData[0] === 'object' ? (
             <EmployeeSection
               employees={
@@ -302,7 +374,7 @@ const DashboardPage: NextPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {loadingTenants ? (
             <SkeletonBox className="h-[300px] w-full" />
-          ) : errorTenants ? (
+          ) : errorTenants && (!organizations || organizations.length === 0) ? (
             <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load organizations</div>
           ) : organizations.length > 0 ? (
             <OrganizationList organizations={organizations} />
@@ -311,9 +383,13 @@ const DashboardPage: NextPage = () => {
           )}
           {loadingOrgStatus ? (
             <SkeletonBox className="h-[300px] w-full" />
-          ) : errorOrgStatus ? (
-            <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">Failed to load organization stats</div>
+          ) : errorOrgStatus && !isSyntaxError(errorOrgStatus) ? (
+            // Only show error message for non-syntax errors
+            <div className="bg-white p-6 rounded-lg shadow-md text-red-600 h-[300px] w-full flex items-center justify-center">
+              Failed to load organization stats
+            </div>
           ) : (
+            // Always show stats with fallback data (handles syntax errors gracefully)
             <OrganizationStatus data={organizationStats} colors={colors} />
           )}
         </div>

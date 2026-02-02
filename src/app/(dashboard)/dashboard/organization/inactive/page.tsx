@@ -207,7 +207,7 @@ function PageContent() {
                     <TableCell><SkeletonBox className="h-4 w-12" /></TableCell>
                   </TableRow>
                 ))
-              ) : tenantsError ? (
+              ) : tenantsError && (!tenantsData || (Array.isArray(tenantsData) && tenantsData.length === 0)) ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">

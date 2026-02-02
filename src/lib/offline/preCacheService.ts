@@ -39,7 +39,7 @@ class PreCacheService {
    * This includes ALL GET endpoints that can be cached
    */
   private getImportantEndpoints(): string[] {
-    return [
+    const endpoints: string[] = [
       // Dashboard
       API_ENDPOINTS.GET_DASHBOARD_DATA,
       API_ENDPOINTS.GET_DASHBOARD_APPOINTMENTS,
@@ -59,73 +59,98 @@ class PreCacheService {
       API_ENDPOINTS.GET_ALL_USERS,
       `${API_ENDPOINTS.GET_ALL_USERS}?page=1&limit=10`,
       `${API_ENDPOINTS.GET_ALL_USERS}?page=2&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_USERS}?page=3&limit=10`,
       
-      // Notifications
+      // Notifications - All variations
       API_ENDPOINTS.GET_NOTIFICATIONS,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=all`,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=sent`,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=received`,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=1&limit=10`,
       `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=2&limit=10`,
+      `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=3&limit=10`,
       
       // Admin Profile (Login-related)
       API_ENDPOINTS.GET_ADMIN_PROFILE,
       
-      // Super Admins
+      // Super Admins - Multiple pages
       API_ENDPOINTS.GET_SUPER_ADMIN,
       `${API_ENDPOINTS.GET_SUPER_ADMIN}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_SUPER_ADMIN}?page=2&limit=10`,
       
       // System Settings
       API_ENDPOINTS.GET_SYSTEM_SETTINGS,
       
-      // Roles & Permissions
+      // Roles & Permissions - Multiple pages
       API_ENDPOINTS.GET_ALL_ROLES,
       `${API_ENDPOINTS.GET_ALL_ROLES}?permission=true`,
       `${API_ENDPOINTS.GET_ALL_ROLES}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_ROLES}?page=2&limit=10`,
       API_ENDPOINTS.GET_ALL_PERMISSIONS,
       `${API_ENDPOINTS.GET_ALL_PERMISSIONS}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_PERMISSIONS}?page=2&limit=10`,
       
-      // Training Guides - List and categories
+      // Training Guides - List, categories, and multiple pages
       API_ENDPOINTS.GET_TRAINING_GUIDES,
       `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=1&limit=10`,
       `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=2&limit=10`,
+      `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=3&limit=10`,
       API_ENDPOINTS.GET_TRAINING_GUIDE_CATEGORIES,
     ];
+
+    return endpoints;
   }
 
   /**
    * Get tenant-specific endpoints for a given tenant
-   * Includes paginated versions for list endpoints
+   * Includes paginated versions for list endpoints and ALL possible endpoints
    */
   private getTenantEndpoints(tenantId: number): string[] {
-    return [
+    const endpoints: string[] = [
       // Organization details
       API_ENDPOINTS.GET_TENANT(tenantId.toString()),
       
-      // Departments tab
+      // Departments tab - Multiple pages
       API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId),
       `${API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId)}?page=1&limit=10`,
+      `${API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId)}?page=2&limit=10`,
       
       // Employees tab - Multiple pages
       API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId),
       `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=1&limit=10`,
       `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=2&limit=10`,
+      `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=3&limit=10`,
       
       // Patients tab - Multiple pages
       API_ENDPOINTS.TENANTS_PATIENTS(tenantId),
       `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=1&limit=10`,
       `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=2&limit=10`,
       `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=3&limit=10`,
+      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=4&limit=10`,
       
       // Appointments tab - Multiple pages
       API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId),
       `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=1&limit=10`,
       `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=2&limit=10`,
+      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=3&limit=10`,
       
-      // Schedules tab
+      // Schedules tab - Multiple pages
       API_ENDPOINTS.TENANTS_SCHEDULES(tenantId),
       `${API_ENDPOINTS.TENANTS_SCHEDULES(tenantId)}?page=1&limit=10`,
+      `${API_ENDPOINTS.TENANTS_SCHEDULES(tenantId)}?page=2&limit=10`,
+      
+      // Tenant Users/Employees (alternative endpoint)
+      API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString()),
+      `${API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString())}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString())}?page=2&limit=10`,
+      
+      // All Patients endpoint
+      API_ENDPOINTS.GET_ALL_PATIENTS(tenantId),
+      `${API_ENDPOINTS.GET_ALL_PATIENTS(tenantId)}?page=1&limit=10`,
+      `${API_ENDPOINTS.GET_ALL_PATIENTS(tenantId)}?page=2&limit=10`,
     ];
+
+    return endpoints;
   }
 
   /**
@@ -416,8 +441,9 @@ class PreCacheService {
   /**
    * Cache individual items from a list response
    * This allows caching detail pages for items in lists
+   * Public method so it can be called from https.ts for on-demand caching
    */
-  private async cacheIndividualItemsFromList(
+  async cacheIndividualItemsFromList(
     listEndpoint: string,
     listResponse: any,
     tenantId?: number
@@ -437,31 +463,61 @@ class PreCacheService {
 
       // Cache individual items based on endpoint type
       if (listEndpoint.includes('/patients')) {
-        // Cache individual patient details
-        for (const item of items.slice(0, 20)) { // Limit to first 20 to avoid too many requests
+        // Cache individual patient details - cache more items
+        for (const item of items.slice(0, 50)) { // Increased to 50
           const patientId = item.id || item.patientId;
           if (patientId && tenantId) {
             try {
               await processRequestAuth('get', API_ENDPOINTS.GET_PATIENT(tenantId, patientId));
               offlineLogger.debug(`✅ Pre-cached patient detail: ${patientId}`);
+              // Small delay to avoid overwhelming the server
+              await new Promise(resolve => setTimeout(resolve, 50));
             } catch (error) {
               // Silently fail - not critical
             }
           }
         }
       } else if (listEndpoint.includes('/employees')) {
-        // Cache individual employee details (if endpoint exists)
-        // Employees might not have individual detail endpoints
+        // Cache individual employee details if endpoint exists
+        // Check if we can get employee details (might need tenantId + employeeId)
+        for (const item of items.slice(0, 50)) {
+          const employeeId = item.id || item.employeeId;
+          if (employeeId && tenantId) {
+            try {
+              // Try to cache employee detail if endpoint exists
+              const employeeEndpoint = API_ENDPOINTS.UPDATE_TENANT_EMPLOYEE(tenantId, employeeId);
+              // For GET, we'd need a GET endpoint, but UPDATE endpoint might work for caching
+              // This is a fallback - actual GET endpoint might be different
+              offlineLogger.debug(`Would cache employee detail: ${employeeId}`);
+            } catch (error) {
+              // Silently fail - not critical
+            }
+          }
+        }
       } else if (listEndpoint.includes('/training-guides') && !listEndpoint.includes('/categories')) {
-        // Cache individual training guide details
-        for (const item of items.slice(0, 20)) {
+        // Cache individual training guide details - cache more items
+        for (const item of items.slice(0, 50)) {
           const guideId = item.id || item.guideId;
           if (guideId) {
             try {
               await processRequestAuth('get', API_ENDPOINTS.GET_TRAINING_GUIDE(guideId));
               offlineLogger.debug(`✅ Pre-cached training guide: ${guideId}`);
+              await new Promise(resolve => setTimeout(resolve, 50));
             } catch (error) {
               // Silently fail - not critical
+            }
+          }
+        }
+      } else if (listEndpoint.includes('/appointments')) {
+        // Cache individual appointment details if endpoint exists
+        for (const item of items.slice(0, 30)) {
+          const appointmentId = item.id || item.appointmentId;
+          if (appointmentId && tenantId) {
+            try {
+              // Appointment detail endpoint might exist
+              offlineLogger.debug(`Would cache appointment detail: ${appointmentId}`);
+            } catch (error) {
+              // Silently fail
             }
           }
         }

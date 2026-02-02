@@ -44,8 +44,11 @@ export default function Page({ slug }: { slug: string }) {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  
+  const orgId = slug && !isNaN(parseInt(slug)) ? parseInt(slug) : null;
+  
   const { data, isLoading, error, mutate } = useSWR(
-    API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(slug)),
+    orgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
     authFectcher
   );
 
@@ -170,7 +173,7 @@ export default function Page({ slug }: { slug: string }) {
                   Loading employees...
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : error && (!data || (Array.isArray(data) && data.length === 0)) ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   No employees found
@@ -231,8 +234,12 @@ export default function Page({ slug }: { slug: string }) {
                     </button>
                     {openDropdownId === employee.id && (
                       <div 
-                        className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                        className={`absolute right-0 z-[100] min-w-[120px] overflow-visible rounded-md border bg-white p-1 shadow-lg ${
+                          // Show above if it's the last item, last 2 items, or if there's only 1 item
+                          index >= filteredEmployees.length - 2 || filteredEmployees.length === 1 ? 'bottom-10' : 'top-10'
+                        }`}
                         onClick={(e) => e.stopPropagation()}
+                        style={{ position: 'absolute' }}
                       >
                         <div
                           onClick={(e) => {

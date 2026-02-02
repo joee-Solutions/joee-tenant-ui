@@ -18,7 +18,6 @@ import Link from "next/link";
 import { formatDateFn } from "@/lib/utils";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
-import PatientStepper from "./PatientStepper";
 
 // Helper function to validate and normalize image URLs
 function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): string | any {
@@ -67,8 +66,6 @@ export default function PatientList({ org }: { org: string }) {
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<any | null>(null);
   const { data, isLoading, error, mutate } = useSWR(
@@ -117,17 +114,6 @@ export default function PatientList({ org }: { org: string }) {
     }
   };
 
-  const handleEditClick = (patient: any) => {
-    setSelectedPatientId(patient.id);
-    setEditModalOpen(true);
-    setOpenDropdownId(null);
-  };
-
-  const handleEditDone = () => {
-    setEditModalOpen(false);
-    setSelectedPatientId(null);
-    mutate();
-  };
 
   return (
     <section className=" mb-10">
@@ -155,20 +141,20 @@ export default function PatientList({ org }: { org: string }) {
                   Loading patients...
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            ) : error && (!data || (Array.isArray(data) && data.length === 0)) ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No patients found
                 </TableCell>
               </TableRow>
             ) : Array.isArray(patients) && patients.length > 0 ? (
-              patients.map((patient) => {
+              patients.map((patient, index) => {
                 return (
                   <TableRow
                     key={patient.id}
                     className="px-3 odd:bg-white even:bg-gray-50  hover:bg-gray-100"
                   >
-                    <TableCell>{patient.id}</TableCell>
+                    <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="py-[21px]">
                       <div className="flex items-center gap-[10px]">
                         <span className="w-[42px] h-[42px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
@@ -214,19 +200,18 @@ export default function PatientList({ org }: { org: string }) {
                         </button>
                         {openDropdownId === patient.id && (
                           <div 
-                            className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                            className={`absolute right-0 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md ${
+                              index >= patients.length - 3 ? 'bottom-10' : 'top-10'
+                            }`}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditClick(patient);
-                              }}
+                            <Link
+                              href={`/dashboard/organization/${org}/patients/${patient.id}/edit`}
                               className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
-                            </div>
+                            </Link>
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -262,39 +247,6 @@ export default function PatientList({ org }: { org: string }) {
           />
         </section>
       </>
-
-      {/* Edit Patient Modal */}
-      {editModalOpen && selectedPatientId && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
-          onClick={() => {
-            setEditModalOpen(false);
-            setSelectedPatientId(null);
-          }}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-black">Edit Patient</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setEditModalOpen(false);
-                  setSelectedPatientId(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <PatientStepper slug={org} />
-            {/* PatientStepper currently handles create flow; edit PATCH support will be wired separately */}
-          </div>
-        </div>
-      )}
 
       {/* Delete Warning Modal */}
       {showDeleteWarning && patientToDelete && (

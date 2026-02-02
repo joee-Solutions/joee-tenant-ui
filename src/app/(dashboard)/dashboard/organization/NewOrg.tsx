@@ -15,6 +15,7 @@ import { z } from "zod";
 import { toast } from "react-toastify";
 import { Country, State, City } from "country-state-city";
 import { useMemo, useEffect } from "react";
+import { useSWRConfig } from "swr";
 
 const NewOrganizationSchema = z.object({
   name: z.string().min(1, "This field is required"),
@@ -160,6 +161,7 @@ const handleOrganizationError = (
 
 export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
   const router = useRouter();
+  const { mutate: globalMutate } = useSWRConfig();
   const form = useForm<NewOrganizationSchemaType>({
     resolver: zodResolver(NewOrganizationSchema),
     mode: "onChange",
@@ -336,6 +338,21 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         toast.success("Organization created successfully!", {
           toastId: "org-create-success",
         });
+        
+        // Invalidate and revalidate SWR cache to update the table
+        globalMutate(
+          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS),
+          undefined,
+          { revalidate: true }
+        );
+        
+        // Also invalidate dashboard data to update stat cards
+        globalMutate(
+          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_DASHBOARD_DATA),
+          undefined,
+          { revalidate: true }
+        );
+        
         // Close the form and show the organization list after a short delay
         setTimeout(() => {
           setIsAddOrg("none");
@@ -374,6 +391,21 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         toast.success("Organization created successfully!", {
           toastId: "org-create-success",
         });
+        
+        // Invalidate and revalidate SWR cache to update the table
+        globalMutate(
+          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS),
+          undefined,
+          { revalidate: true }
+        );
+        
+        // Also invalidate dashboard data to update stat cards
+        globalMutate(
+          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_DASHBOARD_DATA),
+          undefined,
+          { revalidate: true }
+        );
+        
         setTimeout(() => {
           setIsAddOrg("none");
           form.reset();

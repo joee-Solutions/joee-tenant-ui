@@ -17,7 +17,7 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Role } from "@/lib/types";
-import PermissionsManager from "./PermissionsManager";
+import AccessControlManager from "./AccessControlManager";
 
 interface OrganizationUser {
   id: number;
@@ -266,20 +266,6 @@ export default function OrgDetails({ slug }: { slug: string }) {
                           </div>
                         )}
 
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUserClick(user);
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View Roles
-                          </Button>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -391,7 +377,7 @@ export default function OrgDetails({ slug }: { slug: string }) {
         </TabsContent>
 
         <TabsContent value="permissions">
-          <PermissionsManager slug={slug} />
+          <AccessControlManager slug={slug} />
         </TabsContent>
       </Tabs>
     </div>

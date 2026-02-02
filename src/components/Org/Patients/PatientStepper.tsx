@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,10 +16,12 @@ import { surgeryHistorySchema } from "./MedicalInformation/SurgeryInformation";
 import { immunizationHistorySchema } from "./MedicalInformation/ImmunizationHistory";
 import { famHistorySchema } from "./MedicalInformation/FamilyHistory";
 import { lifestyleSchema } from "./MedicalInformation/SocialHistory";
-import { processRequestAuth } from "@/framework/https";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Check, ChevronRight, ArrowLeft, RotateCcw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateLocal } from "@/lib/utils";
+import useSWR from "swr";
+import { authFectcher } from "@/hooks/swr";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import Link from "next/link";
 import {
   AlertDialog,
@@ -32,6 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { usePatientForm } from "@/hooks/usePatientForm";
 
 // Import form components
 import PatientDemographicsForm from "./PersonalInformation/PatientDemographicsForm";
@@ -46,13 +49,12 @@ import ImmunizationForm from "./MedicalInformation/ImmunizationHistory";
 import FamilyHistoryForm from "./MedicalInformation/FamilyHistory";
 import LifestyleForm from "./MedicalInformation/SocialHistory";
 import VitalSignsForm, { vitalSignsSchema } from "./MedicalInformation/VitalsForm";
-import MedicalSymptomForm from "./MedicalInformation/ReviewOfSystem";
-import MedicalSymptomsForm from "./MedicalInformation/AdditionalReview";
+import MedicalSymptomForm, { reviewOfSystemSchema } from "./MedicalInformation/ReviewOfSystem";
+import MedicalSymptomsForm, { additionalReviewSchema } from "./MedicalInformation/AdditionalReview";
 import MedicationForm, { prescriptionSchema } from "./MedicalInformation/Prescriptions";
 import MedicalVisitForm, { visitEntrySchema } from "./MedicalInformation/Visit";
 import DiagnosisHistoryForm, { diagnosisHistorySchema } from "./MedicalInformation/DiagnosisHistory";
 import { toast } from "react-toastify";
-import { API_ENDPOINTS } from "@/framework/api-endpoints";
 
 
 export const formSchema = z.object({
@@ -71,6 +73,8 @@ export const formSchema = z.object({
   visits: visitEntrySchema,
   prescriptions: prescriptionSchema,
   vitalSigns: vitalSignsSchema,
+  reviewOfSystem: reviewOfSystemSchema,
+  additionalReview: additionalReviewSchema,
 }).partial();
 
 export type FormDataStepper = z.infer<typeof formSchema>;
@@ -199,114 +203,165 @@ const steps = [
   },
 ];
 
-export default function PatientStepper({ slug }: { slug: string }): React.ReactElement {
+interface PatientStepperProps {
+  slug: string;
+  patientId?: number | null;
+  onSaveComplete?: () => void;
+}
+
+// Helper function to map API patient data to form structure
+const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
+  if (!patientData) return {};
+  
+  const data = patientData?.data || patientData;
+  
+  // Extract contact_info if it exists
+  const contactInfo = data.contact_info || {};
+  
+  // Extract emergencyInfo if it exists
+  const emergencyInfo = data.emergencyInfo || {};
+  
+  console.log("=== MAPPING PATIENT DATA ===");
+  console.log("data:", data);
+  console.log("contactInfo:", contactInfo);
+  console.log("emergencyInfo:", emergencyInfo);
+  
+  return {
+    demographic: {
+      firstName: data.firstname || data.first_name || '',
+      lastName: data.lastname || data.last_name || '',
+      middleName: data.middlename || data.middle_name || '',
+      preferredName: data.preferred_name || '',
+      dateOfBirth: data.date_of_birth ? formatDateLocal(new Date(data.date_of_birth)) : '',
+      sex: data.sex || data.gender || '',
+      suffix: data.suffix || '',
+      maritalStatus: data.marital_status || '',
+      race: data.race || '',
+      ethnicity: data.ethnicity || '',
+      preferredLanguage: data.preferred_language || '',
+      interpreterRequired: data.interpreter_required ? (data.interpreter_required === true || data.interpreter_required === 'Yes' ? 'Yes' : 'No') : '',
+      religion: data.religion || '',
+      genderIdentity: data.gender_identity || '',
+      sexualOrientation: data.sexual_orientation || '',
+      patientImage: data.image || data.patient_image || '',
+    },
+    addDemographic: {
+      country: contactInfo.country || data.country || '',
+      state: contactInfo.state || data.state || '',
+      city: contactInfo.city || data.city || '',
+      postal: contactInfo.zip_code || contactInfo.postal_code || data.postal_code || data.postal || '',
+      email: contactInfo.email || data.email || '',
+      workEmail: contactInfo.email_work || contactInfo.work_email || data.work_email || '',
+      homePhone: contactInfo.phone_number_home || contactInfo.phone_number_home || data.phone_number_home || data.home_phone || '',
+      mobilePhone: contactInfo.phone_number_mobile || contactInfo.phone_number_mobile || data.phone_number_mobile || data.mobile_phone || data.phone_number || '',
+      address: contactInfo.address || data.address || '',
+      addressFrom: contactInfo.lived_address_from ? formatDateLocal(new Date(contactInfo.lived_address_from)) : (data.lived_address_from ? formatDateLocal(new Date(data.lived_address_from)) : ''),
+      addressTo: contactInfo.lived_address_to ? formatDateLocal(new Date(contactInfo.lived_address_to)) : (data.lived_address_to ? formatDateLocal(new Date(data.lived_address_to)) : ''),
+      currentAddress: contactInfo.current_address || data.current_address || '',
+      contactMethod: contactInfo.method_of_contact || contactInfo.contact_method || data.contact_method || data.method_of_contact || '',
+      livingSituation: contactInfo.current_living_situation || contactInfo.living_situation || data.living_situation || data.current_living_situation || '',
+      referralSource: contactInfo.referral_source || data.referral_source || '',
+      occupationStatus: contactInfo.occupational_status || contactInfo.occupation_status || data.occupation_status || data.occupational_status || '',
+      industry: contactInfo.industry || data.industry || '',
+      householdSize: contactInfo.household_size || data.household_size || '',
+      notes: contactInfo.notes || data.notes || '',
+    },
+    emergency: emergencyInfo.emergency_contact_name || data.emergencyInfo ? {
+      name: emergencyInfo.emergency_contact_name || data.emergencyInfo?.emergency_contact_name || '',
+      phone: emergencyInfo.emergency_contact_phone_number || emergencyInfo.emergency_contact_phone || data.emergencyInfo?.emergency_contact_phone_number || data.emergencyInfo?.emergency_contact_phone || '',
+      email: emergencyInfo.emergency_contact_email || data.emergencyInfo?.emergency_contact_email || '',
+      relationship: emergencyInfo.emergency_contact_relationship || data.emergencyInfo?.emergency_contact_relationship || '',
+      permission: emergencyInfo.contact_emergency_contact === true || emergencyInfo.permission_to_contact === true || emergencyInfo.permission_to_contact === 'Yes' || data.emergencyInfo?.contact_emergency_contact === true || data.emergencyInfo?.permission_to_contact === true || data.emergencyInfo?.permission_to_contact === 'Yes' ? 'Yes' : 'No',
+    } : undefined,
+    children: data.guardian_info ? {
+      fullName: data.guardian_info.Guardian_full_name || data.guardian_info.guardian_full_name || '',
+      email: data.guardian_info.Guardian_email || data.guardian_info.guardian_email || '',
+      phone: data.guardian_info.Guardian_phone_number || data.guardian_info.guardian_phone_number || '',
+      relationship: data.guardian_info.Guardian_relationship || data.guardian_info.guardian_relationship || '',
+      sex: data.guardian_info.Guardian_sex || data.guardian_info.guardian_sex || '',
+    } : undefined,
+    allergies: data.allergies || [],
+    medHistory: data.medHistory || data.medicalHistories || data.medical_history || [],
+    diagnosisHistory: data.diagnosisHistory || data.diagnosis_history || [],
+    surgeryHistory: data.surgeryHistory || data.surgeries || data.surgery_history || [],
+    immunizationHistory: data.immunizationHistory || data.immunizations || data.immunization_history || [],
+    famhistory: data.famhistory || data.familyHistory || data.family_history || [],
+    visits: data.visits || [],
+    prescriptions: data.prescriptions || [],
+    vitalSigns: data.vitalSigns || data.vital_signs || [],
+    patientStatus: data.patientStatus || data.status ? {
+      dischargeEntries: (data.patientStatus || data.status)?.dischargeEntries || (data.patientStatus || data.status)?.discharge_entries || []
+    } : { dischargeEntries: [] },
+    reviewOfSystem: data.reviewOfSystem || data.review_of_system || {},
+    additionalReview: data.additionalReview || data.additional_review || {},
+    lifeStyle: data.lifeStyle || data.lifestyle || data.socialHistory || data.social_history || {},
+  };
+};
+
+export default function PatientStepper({ slug, patientId: propPatientId, onSaveComplete }: PatientStepperProps): React.ReactElement {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showNavigationWarning, setShowNavigationWarning] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [patientId, setPatientId] = useState<number | null>(propPatientId || null);
+  const [isSavedToAPI, setIsSavedToAPI] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  
+  // Detect if this is a new patient page (not edit mode)
+  const isNewPatient = pathname?.includes('/patients/new') || pathname?.endsWith('/new');
+  
+  // Extract patient ID from URL if editing (e.g., /patients/[patientId]/edit)
+  // Or use propPatientId if provided (for modal edit)
+  useEffect(() => {
+    if (propPatientId) {
+      setPatientId(propPatientId);
+    } else if (!isNewPatient && pathname) {
+      const patientIdMatch = pathname.match(/\/patients\/(\d+)/);
+      if (patientIdMatch) {
+        setPatientId(Number(patientIdMatch[1]));
+      }
+    }
+  }, [pathname, isNewPatient, propPatientId]);
+
+  // Fetch patient data if patientId is provided (for edit mode)
+  const { data: patientData, isLoading: isLoadingPatient, error: patientDataError } = useSWR(
+    patientId && slug ? API_ENDPOINTS.GET_PATIENT(Number(slug), patientId) : null,
+    authFectcher
+  );
+
+  // Debug logging
+  console.log("=== PATIENT STEPPER DEBUG ===");
+  console.log("patientId:", patientId);
+  console.log("slug:", slug);
+  console.log("patientData:", patientData);
+  console.log("isLoadingPatient:", isLoadingPatient);
+  console.log("patientDataError:", patientDataError);
+  console.log("API Endpoint:", patientId && slug ? API_ENDPOINTS.GET_PATIENT(Number(slug), patientId) : "null");
 
   const methods = useForm<FormDataStepper>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
       patientStatus: {
-        dischargeEntries: [{
-          patientStatus: "",
-          dischargedDate: "",
-          reasonForDischarge: ""
-        }]
+        dischargeEntries: []
       },
-      allergies: [{
-        allergy: "",
-        otherAllergy: "",
-        startDate: "",
-        endDate: "",
-        severity: "",
-        reactions: "",
-        comments: ""
-      }],
-      medHistory: [{
-        date: new Date().toISOString().split('T')[0],
-        condition: "",
-        onsetDate: "",
-        endDate: "",
-        comments: "",
-        medComments: "",
-        medDosage: "",
-        medEndDate: "",
-        medFrequency: "",
-        medMedication: "",
-        medPrescribersName: "",
-        medRoute: "",
-        medStartDate: "",
-      }],
-      diagnosisHistory: [{
-        date: new Date().toISOString().split('T')[0],
-        condition: "",
-        onsetDate: "",
-        endDate: "",
-        comments: "",
-      }],
-      surgeryHistory: [{
-        surgeryType: "",
-        date: "",
-        additionalInfo: ""
-      }],
-      immunizationHistory: [{
-        immunizationType: "",
-        date: "",
-        additionalInfo: ""
-      }],
-      famhistory: [{
-        date: new Date().toISOString().split('T')[0],
-        relative: "",
-        conditions: "",
-        ageOfDiagnosis: "",
-        currentAge: ""
-      }],
-      visits: [{
-        visitCategory: "",
-        dateOfService: new Date(),
-        duration: "",
-        chiefComplaint: "",
-        hpiOnsetDate: new Date(),
-        hpiDuration: "",
-        severity: "",
-        quality: "",
-        aggravatingFactors: "",
-        diagnosis: "",
-        diagnosisOnsetDate: new Date(),
-        treatmentPlan: "",
-        providerName: "",
-        providerSignature: "",
-      }],
-      prescriptions: [{
-        checkedDrugFormulary: false,
-        controlledSubstance: false,
-        startDate: new Date(),
-        prescriberName: "",
-        dosage: "",
-        directions: "",
-        notes: "",
-        addToMedicationList: "yes",
-      }],
-      vitalSigns: [{
-        date: new Date().toISOString().split('T')[0],
-        temperature: "",
-        systolic: "",
-        diastolic: "",
-        heartRate: "",
-        respiratoryRate: "",
-        oxygenSaturation: "",
-        glucose: "",
-        height: "",
-        weight: "",
-        bmi: "",
-        painScore: "",
-      }],
+      allergies: [],
+      medHistory: [],
+      diagnosisHistory: [],
+      surgeryHistory: [],
+      immunizationHistory: [],
+      famhistory: [],
+      visits: [],
+      prescriptions: [],
+      vitalSigns: [],
+      reviewOfSystem: {},
+      additionalReview: {},
     }
   });
 
@@ -314,70 +369,224 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     setCompletedSteps(prev => new Set([...prev, stepIndex]));
   };
 
-  // Auto-save progress whenever form data changes
+  // Track if patient data has been loaded to prevent re-loading
+  const patientDataLoadedRef = useRef<number | null>(null);
+
+  // Load patient data into form when fetched
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let saveCount = 0;
-    
-    const subscription = methods.watch(() => {
-      // Clear previous timeout
-      clearTimeout(timeoutId);
+    // Reset ref when patientId changes (including when modal opens with new patientId)
+    if (patientId !== patientDataLoadedRef.current) {
+      patientDataLoadedRef.current = null;
+    }
+
+    if (patientData && patientId && !isLoadingPatient && patientDataLoadedRef.current !== patientId) {
+      patientDataLoadedRef.current = patientId;
       
-      // Debounce auto-save to avoid too frequent saves
-      timeoutId = setTimeout(() => {
-        const formData = methods.getValues();
-        try {
-          localStorage.setItem(`patient-${slug}`, JSON.stringify({
+      console.log("=== LOADING PATIENT DATA ===");
+      console.log("patientData:", patientData);
+      
+      // Try different response structures
+      let actualData = patientData;
+      if (patientData?.data?.data) {
+        actualData = patientData.data.data;
+        console.log("Using patientData.data.data");
+      } else if (patientData?.data) {
+        actualData = patientData.data;
+        console.log("Using patientData.data");
+      } else {
+        console.log("Using patientData directly");
+      }
+      
+      console.log("actualData:", actualData);
+      
+      const mappedData = mapPatientDataToForm(actualData);
+      console.log("mappedData:", mappedData);
+      console.log("mappedData keys:", Object.keys(mappedData || {}));
+      
+      if (mappedData && Object.keys(mappedData).length > 0) {
+        methods.reset(mappedData);
+        setIsSavedToAPI(true); // Data is loaded from API, so it's already saved
+        setHasUnsavedChanges(false);
+        console.log("Patient data loaded successfully into form");
+        toast.success("Patient data loaded successfully", { autoClose: 2000 });
+      } else {
+        console.warn("Mapped data is empty or invalid");
+        toast.warning("Patient data structure may be different than expected", { autoClose: 3000 });
+      }
+    }
+    
+    if (patientDataError) {
+      console.error("=== PATIENT DATA ERROR ===");
+      console.error("Error:", patientDataError);
+      console.error("patientId:", patientId);
+      console.error("slug:", slug);
+    }
+  }, [patientData, patientId, isLoadingPatient, methods, setIsSavedToAPI, setHasUnsavedChanges]);
+
+  // Use the patient form hook for save and auto-save logic
+  const { saveToLocalStorage, handleSave } = usePatientForm({
+    methods,
+    slug,
+    patientId,
             currentStep,
-            completedSteps: Array.from(completedSteps),
-            data: formData
-          }));
-          saveCount++;
-          // Show notification every 5 saves to avoid spam
-          if (saveCount % 5 === 0) {
-            toast.success("Patient data auto-saved", { 
-              toastId: "auto-save",
-              autoClose: 2000 
-            });
-          }
-        } catch (error) {
-          toast.error("Failed to save patient data", { 
-            toastId: "auto-save-error",
-            autoClose: 3000 
-          });
-        }
-      }, 1000); // Save 1 second after last change
-    });
+    completedSteps,
+    setPatientId,
+    setLoading,
+    setError,
+    setHasUnsavedChanges,
+    setIsSavedToAPI,
+    setCurrentStep,
+    onSaveSuccess: onSaveComplete,
+  });
+  
+  // Update isSavedToAPI when patientId changes or when save succeeds
+  useEffect(() => {
+    if (patientId && !hasUnsavedChanges) {
+      setIsSavedToAPI(true);
+    }
+  }, [patientId, hasUnsavedChanges]);
+  
+  // Check if form has any data entered (not just saved to API)
+  const hasFormData = useCallback(() => {
+    const formData = methods.getValues();
+    // Check if any field has been filled
+    return !!(
+      (formData.demographic?.firstName && formData.demographic.firstName.trim() !== '') ||
+      (formData.demographic?.lastName && formData.demographic.lastName.trim() !== '') ||
+      (formData.demographic?.dateOfBirth && formData.demographic.dateOfBirth.trim() !== '') ||
+      (formData.demographic?.sex && formData.demographic.sex.trim() !== '') ||
+      (formData.addDemographic?.email && formData.addDemographic.email.trim() !== '') ||
+      (formData.addDemographic?.address && formData.addDemographic.address.trim() !== '') ||
+      (formData.allergies && formData.allergies.length > 0) ||
+      (formData.medHistory && formData.medHistory.length > 0) ||
+      (formData.visits && formData.visits.length > 0) ||
+      (formData.prescriptions && formData.prescriptions.length > 0) ||
+      (formData.vitalSigns && formData.vitalSigns.length > 0) ||
+      (formData.patientStatus?.dischargeEntries && formData.patientStatus.dischargeEntries.length > 0) ||
+      Object.keys(formData.reviewOfSystem || {}).some(key => {
+        const value = (formData.reviewOfSystem as any)?.[key];
+        return value !== undefined && value !== null && value !== '' && value !== false;
+      }) ||
+      Object.keys(formData.additionalReview || {}).some(key => {
+        const value = (formData.additionalReview as any)?.[key];
+        return value !== undefined && value !== null && value !== '';
+      })
+    );
+  }, [methods]);
+  
+  // Navigation warning when user tries to navigate away with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Check if there's form data AND it hasn't been saved to API
+      const hasData = hasFormData();
+      if (hasData && !isSavedToAPI) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Please click "Save" to save your data before leaving.';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasFormData, isSavedToAPI]);
+  
+  // Intercept navigation attempts (for back button and other navigation)
+  const handleNavigationAttempt = useCallback((url: string) => {
+    const hasData = hasFormData();
+    // Show warning if there's form data AND it hasn't been saved to API
+    if (hasData && !isSavedToAPI) {
+      setPendingNavigation(url);
+      setShowNavigationWarning(true);
+      return false; // Prevent navigation
+    } else {
+      router.push(url);
+    }
+  }, [hasFormData, isSavedToAPI, router]);
+  
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const hasData = hasFormData();
+      if (hasData && !isSavedToAPI) {
+        // Prevent back navigation
+        e.preventDefault();
+        window.history.pushState(null, '', window.location.href);
+        setShowNavigationWarning(true);
+        setPendingNavigation(window.location.pathname);
+      }
+    };
+    
+    // Push a state to track navigation
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
 
     return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
+      window.removeEventListener('popstate', handlePopState);
     };
-  }, [methods, currentStep, completedSteps, slug]);
+  }, [hasFormData, isSavedToAPI]);
+  
+  const handleConfirmNavigation = () => {
+    if (pendingNavigation) {
+      setHasUnsavedChanges(false);
+      setShowNavigationWarning(false);
+      router.push(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+  
+  const handleCancelNavigation = () => {
+    setShowNavigationWarning(false);
+    setPendingNavigation(null);
+  };
 
-  // Only load from localStorage if editing existing patient, not for new patient
+  // Auto-save when step changes
   useEffect(() => {
-    // Check if we're in edit mode (patient ID in URL or props)
-    const isEditMode = false; // TODO: Add logic to detect edit mode
-    if (isEditMode) {
-      const patientData = localStorage.getItem(`patient-${slug}`);
-      if (patientData) {
-        const parsedData = JSON.parse(patientData);
-        methods.reset(parsedData.data);
-        setCurrentStep(parsedData.currentStep);
-        setCompletedSteps(new Set(parsedData.completedSteps));
-        toast.success("Patient data loaded successfully");
-      }
-    } else {
-      // For new patient, clear localStorage and start fresh
+    saveToLocalStorage();
+  }, [currentStep, saveToLocalStorage]);
+
+  // Load from localStorage on mount - only if not a new patient page
+  useEffect(() => {
+    if (isNewPatient) {
+      // For new patient page, clear localStorage and start fresh
       localStorage.removeItem(`patient-${slug}`);
       setCurrentStep(0);
       setCompletedSteps(new Set());
+      setPatientId(null);
       methods.reset();
+    } else {
+      // For existing patient or when returning to form, try to load saved data
+      const patientData = localStorage.getItem(`patient-${slug}`);
+      if (patientData) {
+        try {
+        const parsedData = JSON.parse(patientData);
+          // Load patient ID if it exists
+          if (parsedData.patientId) {
+            setPatientId(parsedData.patientId);
+            setIsSavedToAPI(true); // If patient ID exists, it was saved to API
+          }
+          if (parsedData.data) {
+        methods.reset(parsedData.data);
+            if (parsedData.currentStep !== undefined) {
+        setCurrentStep(parsedData.currentStep);
+            }
+            if (parsedData.completedSteps) {
+        setCompletedSteps(new Set(parsedData.completedSteps));
+            }
+            toast.success("Patient data loaded successfully", { autoClose: 2000 });
+          }
+        } catch (error) {
+          console.error("Failed to load patient data:", error);
+        }
+      }
     }
-  }, [slug, methods]);
+  }, [slug, methods, isNewPatient]);
 
   const handleNext = () => {
+    // Save before moving to next step
+    saveToLocalStorage();
+    
     // Mark current step as completed
     handleStepComplete(currentStep);
 
@@ -387,6 +596,9 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   };
 
   const handlePrevious = () => {
+    // Save before moving to previous step
+    saveToLocalStorage();
+    
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
@@ -394,6 +606,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
 
   const handleStepClick = (stepIndex: number) => {
     if (canProceedToStep(stepIndex)) {
+      // Save before navigating to step
+      saveToLocalStorage();
       setCurrentStep(stepIndex);
     }
   };
@@ -403,171 +617,26 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
     return true;
   };
 
-  // Helper function to format phone numbers for backend validation
-  // Backend expects E.164 format (e.g., +1234567890 or +2349023893815)
-  function formatPhoneNumber(phone: string | undefined): string | undefined {
-    if (!phone || !phone.trim()) return undefined;
-    
-    // Remove all spaces, dashes, parentheses, and other formatting
-    let cleaned = phone.trim().replace(/[\s\-\(\)]/g, '');
-    
-    // If already starts with +, validate and return
-    if (cleaned.startsWith('+')) {
-      // Ensure it's a valid international format (at least + and digits)
-      if (/^\+\d{10,15}$/.test(cleaned)) {
-        return cleaned;
-      }
-      // If invalid format, try to fix it
-      cleaned = cleaned.replace(/[^\d+]/g, '');
-      if (/^\+\d{10,15}$/.test(cleaned)) {
-        return cleaned;
-      }
-    }
-    
-    // If starts with 0 (Nigerian local format), convert to +234
-    if (cleaned.startsWith('0') && cleaned.length >= 10) {
-      return '+234' + cleaned.substring(1);
-    }
-    
-    // If starts with 234 (Nigerian country code without +), add +
-    if (cleaned.startsWith('234') && cleaned.length >= 13) {
-      return '+' + cleaned;
-    }
-    
-    // If it's all digits (10-15 digits), assume it needs country code
-    // For Nigerian numbers, add +234 if it's 10-11 digits
-    if (/^\d{10,11}$/.test(cleaned)) {
-      // Assume Nigerian number if it starts with 0 or is 10-11 digits
-      if (cleaned.startsWith('0')) {
-        return '+234' + cleaned.substring(1);
-      }
-      // If 10 digits and starts with 0-9, assume Nigerian
-      return '+234' + cleaned;
-    }
-    
-    // If it's already in a valid format (10-15 digits with country code), add + if missing
-    if (/^\d{10,15}$/.test(cleaned)) {
-      return '+' + cleaned;
-    }
-    
-    // If contains non-digit characters (except +), clean and try again
-    cleaned = cleaned.replace(/[^\d+]/g, '');
-    if (cleaned.startsWith('+') && /^\+\d{10,15}$/.test(cleaned)) {
-      return cleaned;
-    }
-    
-    // Last resort: return cleaned value (backend will validate)
-    return cleaned.length > 0 ? cleaned : undefined;
-  }
 
-  function mapFormDataToPatientDto(formData: FormDataStepper) {
-    const { demographic, addDemographic, children, emergency, patientStatus, allergies, medHistory, diagnosisHistory, surgeryHistory, immunizationHistory, famhistory, lifeStyle, visits, prescriptions, vitalSigns } = formData ;
-
-    // Map to match backend CreatePatientDto structure
-    return {
-      // Primary info fields
-      suffix: demographic?.suffix,
-      first_name: demographic?.firstName,
-      middle_name: demographic?.middleName,
-      last_name: demographic?.lastName,
-      preferred_name: demographic?.preferredName, // Note: typo in schema
-      sex: demographic?.sex,
-      date_of_birth: new Date(demographic?.dateOfBirth || "").toISOString(),
-      marital_status: demographic?.maritalStatus,
-      race: demographic?.race,
-      ethnicity: demographic?.ethnicity,
-      interpreter_required: demographic?.interpreterRequired === "Yes",
-      religion: demographic?.religion,
-      gender_identity: demographic?.genderIdentity,
-      sexual_orientation: demographic?.sexualOrientation,
-      image: demographic?.patientImage,
-
-      // Contact info - build object without phone numbers first, then conditionally add them
-      contact_info: (() => {
-        const contactInfo: any = {
-          country: addDemographic?.country || "",
-          state: addDemographic?.state || "",
-          city: addDemographic?.city || "",
-          zip_code: addDemographic?.postal || "",
-          email: addDemographic?.email || "",
-          email_work: addDemographic?.workEmail || "",
-          address: addDemographic?.address || "",
-          current_address: addDemographic?.currentAddress || "",
-          method_of_contact: addDemographic?.contactMethod || "",
-          lived_address_from: addDemographic?.addressFrom || "",
-          lived_address_to: addDemographic?.addressTo || "",
-          current_living_situation: addDemographic?.livingSituation || "",
-          referral_source: addDemographic?.referralSource || "",
-          occupational_status: addDemographic?.occupationStatus || "",
-          industry: addDemographic?.industry || "",
-          household_size: addDemographic?.householdSize || 0,
-          notes: addDemographic?.notes || "",
-        };
-        
-        // Only add phone numbers if they have valid, non-empty values
-        // Format phone numbers before adding
-        const mobilePhone = formatPhoneNumber(addDemographic?.mobilePhone);
-        if (mobilePhone && mobilePhone.length > 0) {
-          contactInfo.phone_number_mobile = mobilePhone;
-        }
-        
-        const homePhone = formatPhoneNumber(addDemographic?.homePhone);
-        if (homePhone && homePhone.length > 0) {
-          contactInfo.phone_number_home = homePhone;
-        }
-        
-        return contactInfo;
-      })(),
-
-      // Emergency info - build object without phone number first, then conditionally add it
-      emergencyInfo: (() => {
-        const emergencyInfo: any = {
-          emergency_contact_name: emergency?.name || "",
-          emergency_contact_relationship: emergency?.relationship || "",
-          emergency_contact_email: emergency?.email || "",
-          contact_emergency_contact: emergency?.permission === "Yes",
-        };
-        
-        // Only add phone number if it has a valid, non-empty value
-        // Format phone number before adding
-        const phone = formatPhoneNumber(emergency?.phone);
-        if (phone && phone.length > 0) {
-          emergencyInfo.emergency_contact_phone_number = phone;
-        }
-        
-        return emergencyInfo;
-      })(),
-
-      // Guardian info
-      guardian_info: {
-        Guardian_full_name: children?.fullName,
-        Guardian_email: children?.email,
-        Guardian_phone_number: children?.phone,
-        Guardian_relationship: children?.relationship,
-        Guardian_sex: children?.sex,
-      },
-
-      // Medical data arrays
-      allergies: allergies || [],
-      medicalHistories: medHistory || [],
-      diagnosisHistory: diagnosisHistory || [],
-      surgeries: surgeryHistory || [],
-      immunizations: immunizationHistory || [],
-      familyHistory: famhistory || [],
-      surgeryHistory: surgeryHistory || [],
-      status: patientStatus || {},
-      socialHistory: lifeStyle || {},
-      visits: visits || [],
-      prescriptions: prescriptions || [],
-      vitalSigns: vitalSigns || [],
-    };
-  }
-
-  console.log("data", methods.formState.errors)
   // Reset form function
   const handleReset = () => {
-    // Reset form to default values
-    methods.reset();
+    // Reset form to default empty values
+    methods.reset({
+      patientStatus: {
+        dischargeEntries: []
+      },
+      allergies: [],
+      medHistory: [],
+      diagnosisHistory: [],
+      surgeryHistory: [],
+      immunizationHistory: [],
+      famhistory: [],
+      visits: [],
+      prescriptions: [],
+      vitalSigns: [],
+      reviewOfSystem: {},
+      additionalReview: {},
+    });
     
     // Clear localStorage
     localStorage.removeItem(`patient-${slug}`);
@@ -585,46 +654,8 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
   };
 
   const onSubmit = async (data: FormDataStepper) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      // Validate required fields
-      if (!data.demographic?.firstName || !data.demographic?.lastName || !data.demographic?.dateOfBirth) {
-        setError("Please fill in all required fields: First Name, Last Name, and Date of Birth");
-        return;
-      }
-
-      const mappedData = mapFormDataToPatientDto(data);
-      console.log("Submitting patient data:", mappedData);
-      // return
-      const res = await processRequestAuth(
-        "post",
-        API_ENDPOINTS.CREATE_PATIENT(Number(slug)),
-        mappedData
-      );
-
-      console.log("API Response:", res);
-
-      if (res && (res.status === true || res.status === 200 || res.success)) {
-        setSuccess(true);
-          router.push(`/dashboard/organization/${slug}/patients`);
-        // clear local storage
-        localStorage.removeItem(`patient-${slug}`);
-      } else {
-        setError(res?.message || res?.error || "Failed to add patient. Please try again.");
-      }
-    } catch (err: unknown) {
-      console.error("Patient submission error:", err);
-      const errorMessage = err instanceof Error ? err.message :
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err as { message?: string })?.message ||
-        "Failed to add patient. Please check your connection and try again.";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    // Use handleSave from the hook instead
+    await handleSave();
   };
 
   const CurrentStepComponent = steps[currentStep]?.component;
@@ -722,16 +753,15 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-4">
-              <Link href={`/dashboard/organization/${slug}/patients`}>
                 <Button
                   type="button"
                   variant="outline"
+                onClick={() => handleNavigationAttempt(`/dashboard/organization/${slug}/patients`)}
                   className="h-[60px] border border-[#003465] text-[#003465] hover:bg-[#003465] hover:text-white font-medium text-base px-6"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
-              </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   {steps[currentStep].title}
@@ -831,6 +861,15 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
 
                 <div className="flex gap-3">
                   {currentStep < steps.length - 1 ? (
+                    <>
+                      <Button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="font-normal text-base text-white bg-green-600 hover:bg-green-700 h-[60px] px-6 flex items-center"
+                      >
+                        {loading ? "Saving..." : "Save"}
+                      </Button>
                     <Button
                       type="button"
                       onClick={handleNext}
@@ -839,29 +878,64 @@ export default function PatientStepper({ slug }: { slug: string }): React.ReactE
                       Next Step
                       <ChevronRight className="ml-2 w-4 h-4" />
                     </Button>
+                    </>
                   ) : (
                     <div className="flex flex-col items-end gap-2">
-                      <p className="text-xs text-gray-500">Data is auto-saved as you enter information</p>
                       <Button
-                        type="submit"
+                        type="button"
+                        onClick={handleSave}
                         disabled={loading}
-                        className="font-normal text-base text-white bg-[#003465] h-[60px] px-6 disabled:opacity-50 flex items-center"
+                        className="font-normal text-base text-white bg-green-600 hover:bg-green-700 h-[60px] px-6 flex items-center"
                       >
-                        {loading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Submitting...
-                          </>
-                        ) : (
-                          "Submit Patient"
-                        )}
+                        {loading ? "Saving..." : "Save"}
                       </Button>
+                      <p className="text-xs text-gray-500">Data is auto-saved as you enter information</p>
                     </div>
                   )}
                 </div>
               </div>
             </form>
           </FormProvider>
+          
+          {/* Navigation Warning Dialog */}
+          <AlertDialog open={showNavigationWarning} onOpenChange={setShowNavigationWarning}>
+            <AlertDialogContent className="bg-white">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+                  Unsaved Changes
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-base text-gray-600 mt-2">
+                  <p className="mb-3">
+                    You have unsaved changes. Please click the <strong>"Save"</strong> button to save your data to the server before leaving. Your data is auto-saved locally, but it won't be saved to the server until you click "Save".
+                  </p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-3">
+                    <p className="text-sm font-semibold text-yellow-800 mb-1">⚠️ Required fields before saving:</p>
+                    <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                      <li>First Name</li>
+                      <li>Last Name</li>
+                      <li>Gender</li>
+                      <li>Email</li>
+                      <li>Address</li>
+                    </ul>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex gap-3 mt-4">
+                <AlertDialogCancel 
+                  onClick={handleCancelNavigation}
+                  className="h-[50px] border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-base px-6"
+                >
+                  Stay on Page
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmNavigation}
+                  className="h-[50px] bg-red-500 hover:bg-red-600 text-white font-medium text-base px-6"
+                >
+                  Leave Without Saving
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

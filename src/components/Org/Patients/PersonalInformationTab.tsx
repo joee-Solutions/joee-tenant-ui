@@ -25,14 +25,6 @@ export default function PersonalInformationTab(): React.ReactElement {
       <AccordionSection title="Emergency Contact Information">
         <EmergencyContact />
       </AccordionSection>
-      <div className="mt-12 mb-4" >
-        <Button
-          type="submit"
-          className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded"
-        >
-          Submit
-        </Button>
-      </div>
     </div>
   );
 }

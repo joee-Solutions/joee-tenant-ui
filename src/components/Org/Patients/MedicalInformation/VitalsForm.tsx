@@ -6,6 +6,7 @@ import { FormDataStepper } from "../PatientStepper";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 export const vitalSignsSchema = z.array(
   z.object({
@@ -51,7 +52,7 @@ export default function VitalSignsForm() {
 
   const handleAddNew = () => {
     append({
-      date: new Date().toISOString().split('T')[0],
+      date: formatDateLocal(new Date()),
       temperature: "",
       systolic: "",
       diastolic: "",
@@ -125,171 +126,169 @@ export default function VitalSignsForm() {
                     <h3 className="text-lg font-semibold">Edit Vital Signs Entry</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {/* Date Field */}
-              <div>
-                      <label className="block text-base text-black font-normal mb-2">Date *</label>
-                      <Controller
-                        name={`vitalSigns.${originalIndex}.date`}
-                        control={control}
-                        render={({ field }) => (
-                <DatePicker
-                            date={field.value ? new Date(field.value) : undefined}
-                            onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-    placeholder="Select date"
-  />
-                        )}
-                      />
-              </div>
+            {/* Date Field - Full Width */}
+            <div className="mb-4">
+              <label className="block text-base text-black font-normal mb-2">Date *</label>
+              <Controller
+                name={`vitalSigns.${originalIndex}.date`}
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
+                    placeholder="Select date"
+                  />
+                )}
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Two fields per row - Responsive */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Temperature (°F/°C)</label>
+                <label className="block text-base text-black font-normal mb-2">Temperature (°F/°C)</label>
                 <Input
                   type="text"
                   placeholder="Temperature"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.temperature`)}
+                  {...register(`vitalSigns.${originalIndex}.temperature`)}
                 />
               </div>
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Systolic (mmHg)</label>
+                <label className="block text-base text-black font-normal mb-2">Systolic (mmHg)</label>
                 <Input
                   type="text"
                   placeholder="Systolic"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.systolic`)}
+                  {...register(`vitalSigns.${originalIndex}.systolic`)}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Diastolic (mmHg)</label>
+                <label className="block text-base text-black font-normal mb-2">Diastolic (mmHg)</label>
                 <Input
                   type="text"
                   placeholder="Diastolic"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.diastolic`)}
+                  {...register(`vitalSigns.${originalIndex}.diastolic`)}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Heart Rate (bpm)</label>
+                <label className="block text-base text-black font-normal mb-2">Heart Rate (bpm)</label>
                 <Input
                   type="text"
                   placeholder="Heart Rate"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.heartRate`)}
+                  {...register(`vitalSigns.${originalIndex}.heartRate`)}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Respiratory Rate (breaths/min)</label>
+                <label className="block text-base text-black font-normal mb-2">Respiratory Rate (breaths/min)</label>
                 <Input
                   type="text"
                   placeholder="Respiratory Rate"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.respiratoryRate`)}
+                  {...register(`vitalSigns.${originalIndex}.respiratoryRate`)}
                 />
               </div>
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Oxygen Saturation (%)</label>
+                <label className="block text-base text-black font-normal mb-2">Oxygen Saturation (%)</label>
                 <Input
                   type="text"
                   placeholder="Oxygen Saturation"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.oxygenSaturation`)}
+                  {...register(`vitalSigns.${originalIndex}.oxygenSaturation`)}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Glucose</label>
+                <label className="block text-base text-black font-normal mb-2">Glucose</label>
                 <Input
                   type="text"
                   placeholder="Glucose"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
-                        {...register(`vitalSigns.${originalIndex}.glucose`)}
+                  {...register(`vitalSigns.${originalIndex}.glucose`)}
                 />
               </div>
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Height (cm/in)</label>
-                      <Controller
-                        name={`vitalSigns.${originalIndex}.height`}
-                        control={control}
-                        render={({ field }) => (
-                <Input
-                  type="text"
-                  placeholder="Height"
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  {...register(`vitalSigns.${originalIndex}.height`, {
-                    onChange: (e) => {
-                      calculateBMI(originalIndex, "height", e.target.value);
-                    },
-                  })}
-                          />
-                        )}
-                />
-              </div>
-              <div>
-                      <label className="block text-base text-black font-normal mb-2">Weight (kg/lbs)</label>
-                      <Controller
-                        name={`vitalSigns.${originalIndex}.weight`}
-                        control={control}
-                        render={({ field }) => (
-                <Input
-                  type="text"
-                  placeholder="Weight"
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  {...register(`vitalSigns.${originalIndex}.weight`, {
-                    onChange: (e) => {
-                      calculateBMI(originalIndex, "weight", e.target.value);
-                    },
-                  })}
-                          />
-                        )}
+                <label className="block text-base text-black font-normal mb-2">Height (cm/in)</label>
+                <Controller
+                  name={`vitalSigns.${originalIndex}.height`}
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      placeholder="Height"
+                      className="w-full h-14 p-3 border border-[#737373] rounded"
+                      {...register(`vitalSigns.${originalIndex}.height`, {
+                        onChange: (e) => {
+                          calculateBMI(originalIndex, "height", e.target.value);
+                        },
+                      })}
+                    />
+                  )}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div>
-                      <label className="block text-base text-black font-normal mb-2">BMI</label>
-                      <Input
-                  type="text"
-                  className="w-full h-14 p-3 border border-[#737373] rounded"
-                  placeholder="BMI (auto-calculated)"
-                        {...register(`vitalSigns.${originalIndex}.bmi`)}
-                  readOnly
+                <label className="block text-base text-black font-normal mb-2">Weight (kg/lbs)</label>
+                <Controller
+                  name={`vitalSigns.${originalIndex}.weight`}
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      placeholder="Weight"
+                      className="w-full h-14 p-3 border border-[#737373] rounded"
+                      {...register(`vitalSigns.${originalIndex}.weight`, {
+                        onChange: (e) => {
+                          calculateBMI(originalIndex, "weight", e.target.value);
+                        },
+                      })}
+                    />
+                  )}
                 />
               </div>
               <div>
-                      <label className="block text-base text-black font-normal mb-2">Pain Score (0-10)</label>
+                <label className="block text-base text-black font-normal mb-2">BMI</label>
+                <Input
+                  type="text"
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                  placeholder="BMI (auto-calculated)"
+                  {...register(`vitalSigns.${originalIndex}.bmi`)}
+                  readOnly
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-base text-black font-normal mb-2">Pain Score (0-10)</label>
                 <Input
                   type="text"
                   className="w-full h-14 p-3 border border-[#737373] rounded"
                   placeholder="Pain Score"
-                        {...register(`vitalSigns.${originalIndex}.painScore`)}
+                  {...register(`vitalSigns.${originalIndex}.painScore`)}
                 />
               </div>
             </div>
 
-                  {/* Save and Cancel Buttons */}
+                  {/* Cancel Button - Auto-save is enabled */}
                   <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
                     <Button
                       type="button"
                       onClick={handleCancelEdit}
                       className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleSave}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
-                    >
-                      Save
+                      Close
                     </Button>
                   </div>
                 </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 // Define the type for a family history entry
 type FamilyHistoryEntry = {
@@ -55,7 +56,7 @@ export default function FamilyHistoryForm() {
 
   const handleAddNew = () => {
     append({ 
-      date: new Date().toISOString().split('T')[0],
+      date: formatDateLocal(new Date()),
       relative: "", 
       conditions: "", 
       ageOfDiagnosis: "", 
@@ -116,8 +117,8 @@ export default function FamilyHistoryForm() {
                                              control={control}
                                              render={({ field }) => (
                                                <DatePicker
-                                                 date={field.value ? new Date(field.value) : undefined}
-                                                 onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                                                 date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                                                 onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                                                  placeholder="Select date"
                                                />
                                              )}
@@ -198,7 +199,7 @@ export default function FamilyHistoryForm() {
                     </div>
                   </div>
 
-                  {/* Save and Cancel Buttons at Bottom */}
+                  {/* Cancel Button - Auto-save is enabled */}
                   <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
                     <Button
                       type="button"
@@ -206,15 +207,7 @@ export default function FamilyHistoryForm() {
                       className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
                     >
                       <X className="w-4 h-4 mr-2" />
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleSave}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Save
+                      Close
                     </Button>
                   </div>
                 </div>

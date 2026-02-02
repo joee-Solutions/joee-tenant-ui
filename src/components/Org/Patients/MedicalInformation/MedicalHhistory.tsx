@@ -20,6 +20,7 @@ import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
+import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 
 // Define interfaces for our data structures
 interface MedicalCondition {
@@ -112,8 +113,10 @@ export default function MedicalHistoryForm() {
   });
 
   // Fetch employees for prescriber dropdown
+  const orgId = orgSlug && !isNaN(parseInt(orgSlug)) ? parseInt(orgSlug) : null;
+  
   const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useSWR(
-    orgSlug ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(parseInt(orgSlug)) : null,
+    orgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
     authFectcher
   );
 
@@ -139,7 +142,7 @@ export default function MedicalHistoryForm() {
   const handleAddNew = () => {
                         append({
                           id: Date.now(),
-      date: new Date().toISOString().split('T')[0],
+      date: formatDateLocal(new Date()),
                           condition: "",
                           onsetDate: "",
                           endDate: "",
@@ -218,8 +221,8 @@ export default function MedicalHistoryForm() {
                     control={control}
                     render={({ field }) => (
                       <DatePicker
-                        date={field.value ? new Date(field.value) : undefined}
-                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                         placeholder="Select start date"
                       />
                     )}
@@ -233,8 +236,8 @@ export default function MedicalHistoryForm() {
                     control={control}
                     render={({ field }) => (
                       <DatePicker
-                        date={field.value ? new Date(field.value) : undefined}
-                        onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                        date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                         placeholder="Select end date"
                       />
                     )}
@@ -343,7 +346,7 @@ export default function MedicalHistoryForm() {
                     </div>
                   </div>
 
-                  {/* Save and Cancel Buttons at Bottom */}
+                  {/* Cancel Button - Auto-save is enabled */}
                   <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
                     <Button
                       type="button"
@@ -351,15 +354,7 @@ export default function MedicalHistoryForm() {
                       className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 h-[50px] font-normal text-base"
                     >
                       <X className="w-4 h-4 mr-2" />
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleSave}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 h-[50px] font-normal text-base"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Save
+                      Close
                     </Button>
                   </div>
                 </div>

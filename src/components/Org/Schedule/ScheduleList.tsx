@@ -58,9 +58,16 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
         })),
       };
 
+      // Use employeeId instead of scheduleId for the API endpoint
+      const employeeId = schedule.user?.id || schedule.userId || schedule.employeeId;
+      if (!employeeId) {
+        toast.error("Employee ID not found");
+        return;
+      }
+      
       await processRequestAuth(
         "patch",
-        `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${schedule.id}`,
+        `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`,
         scheduleData
       );
       toast.success("Schedule updated successfully");
@@ -75,12 +82,14 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" 
       onClick={onClose}
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
     >
       <div 
-        className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto" 
+        className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-auto" 
         onClick={(e) => e.stopPropagation()}
+        style={{ margin: '0 auto' }}
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-black">Edit Schedule</h2>
@@ -127,7 +136,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
                         <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                           <SelectValue placeholder="Select day" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10000] bg-white">
                           {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
                             <SelectItem key={day} value={day}>
                               {day}
@@ -149,7 +158,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
                         <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                           <SelectValue placeholder="Select start time" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10000] bg-white">
                           {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"].map((time) => (
                             <SelectItem key={time} value={time}>
                               {time}
@@ -171,7 +180,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
                         <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                           <SelectValue placeholder="Select end time" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10000] bg-white">
                           {["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"].map((time) => (
                             <SelectItem key={time} value={time}>
                               {time}
@@ -190,8 +199,9 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
             type="button"
             variant="outline"
             onClick={() => append({ day: "", startTime: "", endTime: "" })}
-            className="mt-4"
+            className="mt-4 w-full sm:w-auto bg-[#003465] hover:bg-[#00254a] text-white border-[#003465] font-medium px-6 py-2"
           >
+            <Plus className="w-4 h-4 mr-2" />
             Add Another Day
           </Button>
 
@@ -298,9 +308,17 @@ export default function Page({ slug }: { slug: string }) {
     if (!scheduleToDelete) return;
     setDeletingId(scheduleToDelete.id);
     try {
+      // Use employeeId instead of scheduleId for the API endpoint
+      const employeeId = scheduleToDelete.user?.id || scheduleToDelete.userId || scheduleToDelete.employeeId;
+      if (!employeeId) {
+        toast.error("Employee ID not found");
+        setDeletingId(null);
+        return;
+      }
+      
       await processRequestAuth(
         "delete",
-        `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${scheduleToDelete.id}`
+        `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`
       );
       toast.success("Schedule deleted successfully");
       mutate();
@@ -349,25 +367,32 @@ export default function Page({ slug }: { slug: string }) {
 
 
         </header>
-        <DataTable tableDataObj={ScheduleList[0]} showAction>
+        <DataTable tableDataObj={{
+          sn: "S/N",
+          employee: "Employee",
+          department: "Department",
+          day: "Day",
+          start_time: "Start Time",
+          end_time: "End Time"
+        }} showAction>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                 Loading schedules...
               </TableCell>
             </TableRow>
-          ) : error ? (
+          ) : error && (!schedules || (Array.isArray(schedules) && schedules.length === 0)) ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                 No schedules found
               </TableCell>
             </TableRow>
           ) : paginatedSchedules.length > 0 ? (
-            paginatedSchedules.map((scheduleItem: any) => {
+            paginatedSchedules.map((scheduleItem: any, index: number) => {
               const { day, dropdownKey } = scheduleItem;
                 return (
                   <TableRow key={dropdownKey} className="px-3 odd:bg-white even:bg-gray-50 hover:bg-gray-100">
-                  <TableCell>{scheduleItem.id}</TableCell>
+                  <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
                   <TableCell className="py-[21px]">
                     <div className="flex items-center gap-[10px]">
                       <p className="font-medium text-xs text-black">
@@ -400,8 +425,12 @@ export default function Page({ slug }: { slug: string }) {
                         </button>
                         {openDropdownId === dropdownKey && (
                           <div 
-                            className="absolute right-0 top-10 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md"
+                            className={`absolute right-0 z-[100] min-w-[120px] overflow-visible rounded-md border bg-white p-1 shadow-lg ${
+                              // Show above if it's the last item, last 2 items, or if there's only 1 item
+                              index >= paginatedSchedules.length - 2 || paginatedSchedules.length === 1 ? 'bottom-10' : 'top-10'
+                            }`}
                             onClick={(e) => e.stopPropagation()}
+                            style={{ position: 'absolute' }}
                           >
                             <div
                               onClick={(e) => {
@@ -450,7 +479,8 @@ export default function Page({ slug }: { slug: string }) {
       {/* Delete Warning Modal */}
       {showDeleteWarning && scheduleToDelete && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} 
           onClick={() => {
             setShowDeleteWarning(false);
             setScheduleToDelete(null);
@@ -495,7 +525,7 @@ export default function Page({ slug }: { slug: string }) {
                 variant="destructive"
                 onClick={handleDeleteConfirm}
                 disabled={deletingId !== null}
-                className="px-6"
+                className="px-6 bg-red-600 hover:bg-red-700 text-white"
               >
                 {deletingId !== null ? "Deleting..." : "Delete"}
               </Button>

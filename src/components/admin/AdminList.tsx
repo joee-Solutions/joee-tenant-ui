@@ -56,7 +56,7 @@ export default function AdminList() {
     );
   }
 
-  if (error) {
+  if (error && (!adminUsers || (Array.isArray(adminUsers) && adminUsers.length === 0))) {
     return (
       <section className="px-[30px] mb-10">
         <div className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">

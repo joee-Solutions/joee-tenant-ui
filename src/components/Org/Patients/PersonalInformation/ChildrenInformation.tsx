@@ -106,7 +106,7 @@ export default function GuardianInfoForm() {
                   onValueChange={(value) => field.onChange(value)}
                 >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder={`Select Country`} />
+                    <SelectValue placeholder={`Select Gender`} />
 
                   </SelectTrigger>
                   <SelectContent className="z-10 bg-white">

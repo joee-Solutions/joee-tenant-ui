@@ -1,97 +1,65 @@
-import { useState, useEffect, useRef } from "react";
+import { Controller, useFormContext } from "react-hook-form";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { usePathname } from "next/navigation";
+import { z } from "zod";
+import { FormDataStepper } from "../PatientStepper";
 
-// Define the type for form data
-type FormData = {
-  [key: string]: boolean | string;
-};
-
-export default function MedicalSymptomForm() {
-  const pathname = usePathname();
-  const slug = pathname?.split('/organization/')[1]?.split('/')[0] || '';
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(`review-system-${slug}`);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          setFormData(parsed);
-        }
-      } catch (e) {
-        console.error("Error loading review system from localStorage:", e);
-      }
-    }
-  }, [slug]);
-
-  const [formData, setFormData] = useState<FormData>({
+// Define the validation schema
+export const reviewOfSystemSchema = z.object({
     // Genitourinary
-    urinaryFrequency: false,
-    dysuria: false,
-    incontinence: false,
-    genitourinaryDetails: "",
+  urinaryFrequency: z.boolean().default(false).optional(),
+  dysuria: z.boolean().default(false).optional(),
+  incontinence: z.boolean().default(false).optional(),
+  genitourinaryDetails: z.string().optional(),
 
     // Musculoskeletal
-    jointPain: false,
-    muscleWeakness: false,
-    stiffness: false,
-    musculoskeletalDetails: "",
+  jointPain: z.boolean().default(false).optional(),
+  muscleWeakness: z.boolean().default(false).optional(),
+  stiffness: z.boolean().default(false).optional(),
+  musculoskeletalDetails: z.string().optional(),
 
     // Neurological
-    headaches: false,
-    dizziness: false,
-    numbnessWeakness: false,
-    seizures: false,
-    neurologicalDetails: "",
+  headaches: z.boolean().default(false).optional(),
+  dizziness: z.boolean().default(false).optional(),
+  numbnessWeakness: z.boolean().default(false).optional(),
+  seizures: z.boolean().default(false).optional(),
+  neurologicalDetails: z.string().optional(),
 
     // Psychiatric
-    depression: false,
-    anxiety: false,
-    sleepingDisturbances: false,
-    psychiatricDetails: "",
+  depression: z.boolean().default(false).optional(),
+  anxiety: z.boolean().default(false).optional(),
+  sleepingDisturbances: z.boolean().default(false).optional(),
+  psychiatricDetails: z.string().optional(),
 
     // Endocrine
-    heatColdIntolerance: false,
-    excessiveThirstHunger: false,
-    endocrineDetails: "",
+  heatColdIntolerance: z.boolean().default(false).optional(),
+  excessiveThirstHunger: z.boolean().default(false).optional(),
+  endocrineDetails: z.string().optional(),
 
     // Haematologic/Lymphatic
-    easyBruising: false,
-    bleedingTendencies: false,
-    haematologicDetails: "",
+  easyBruising: z.boolean().default(false).optional(),
+  bleedingTendencies: z.boolean().default(false).optional(),
+  haematologicDetails: z.string().optional(),
 
     // Allergic/Immunologic
-    frequentInfections: false,
-    allergicReactions: false,
-    allergicDetails: "",
-  });
+  frequentInfections: z.boolean().default(false).optional(),
+  allergicReactions: z.boolean().default(false).optional(),
+  allergicDetails: z.string().optional(),
+}).optional();
 
-  // Auto-save to localStorage
-  const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  useEffect(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      localStorage.setItem(`review-system-${slug}`, JSON.stringify(formData));
-    }, 1000);
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [formData, slug]);
+export type ReviewOfSystemData = z.infer<typeof reviewOfSystemSchema>;
 
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData({ ...formData, [name]: checked });
-  };
+export default function MedicalSymptomForm() {
+  const {
+    control,
+    register,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useFormContext<Pick<FormDataStepper, 'reviewOfSystem'>>();
 
-  const handleTextChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-  };
+  // Watch all form values
+  const formData = watch("reviewOfSystem") || {};
 
   const SymptomSection = ({
     title,
@@ -106,39 +74,45 @@ export default function MedicalSymptomForm() {
       <h3 className="font-medium text-gray-800 mb-4">{title}:</h3>
       <div className="flex flex-wrap gap-8 mb-4">
         {checkboxes.map(({ name, label }) => (
-          <label key={name} className="flex items-center space-x-2 ">
+          <Controller
+            key={name}
+            name={`reviewOfSystem.${name}` as any}
+            control={control}
+            render={({ field }) => (
+              <label className="flex items-center space-x-2">
             <Checkbox
             className="accent-green-600 w-6 h-6 rounded"
-              checked={!!formData[name]}
-              onCheckedChange={(checked) =>
-                handleCheckboxChange(name, !!checked)
-              }
+                  checked={!!field.value}
+                  onCheckedChange={(checked) => {
+                    field.onChange(!!checked);
+                    setValue(`reviewOfSystem.${name}` as any, !!checked);
+                  }}
             />
             <span className="text-gray-700">{label}</span>
           </label>
+            )}
+          />
         ))}
       </div>
       <div>
         <p className="text-gray-700 mb-2">Details</p>
+        <Controller
+          name={`reviewOfSystem.${detailsName}` as any}
+          control={control}
+          render={({ field }) => (
         <Textarea
-          name={detailsName}
-          value={String(formData[detailsName] || "")}
-          onChange={(e) => handleTextChange(detailsName, e.target.value)}
+              {...field}
           className="w-full border border-[#737373] rounded p-2 h-32 focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+            />
+          )}
         />
       </div>
     </div>
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form Data Submitted:", formData);
-    // Handle form submission logic here
-  };
-
   return (
     <div className=" mb-8">
-      <form onSubmit={handleSubmit}>
+      <form>
         <SymptomSection
           title="Genitourinary"
           checkboxes={[
