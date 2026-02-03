@@ -73,10 +73,10 @@ class OfflineAuthService {
       };
 
       if (existing) {
-        await db.offlineCredentials.update(existing.id!, credentialData);
+        await db.offlineCredentials.update(existing.id!, credentialData as any);
         offlineLogger.debug('Updated offline credentials for', { email });
       } else {
-        await db.offlineCredentials.add(credentialData);
+        await db.offlineCredentials.add(credentialData as any);
         offlineLogger.debug('Stored offline credentials for', { email });
       }
     } catch (error: any) {

@@ -104,7 +104,7 @@ function PageContent() {
       key: "inactiveTenants" as const,
       title: "Inactive Organizations",
       value: dashboardData?.inactiveTenants || 0,
-      growth: dashboardData?.totalTenants
+      growth: dashboardData?.totalTenants && dashboardData?.inactiveTenants !== undefined
         ? parseFloat(
             ((dashboardData.inactiveTenants * 100) / dashboardData.totalTenants).toFixed(2)
           )

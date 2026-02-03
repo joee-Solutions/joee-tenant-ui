@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTenantsData, useAllUsersData, useAllPatientsData } from "@/hooks/swr";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
@@ -8,7 +8,10 @@ import { Building2, Users, UserCircle, Briefcase } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function SearchPage() {
+// Force dynamic rendering to prevent prerendering issues with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams?.get("q") || "";
@@ -278,6 +281,23 @@ export default function SearchPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen w-full mb-10">
+        <main className="container mx-auto py-6 px-[30px]">
+          <div className="flex flex-col items-center justify-center gap-4 py-12">
+            <SkeletonBox className="h-8 w-64" />
+            <SkeletonBox className="h-4 w-96" />
+          </div>
+        </main>
+      </div>
+    }>
+      <SearchPageContent />
+    </Suspense>
   );
 }
 

@@ -72,13 +72,13 @@ export default function ViewEditAppointmentModal({
 
   const patients = useMemo(() => {
     // Try different data structures like AddAppointment does
-    let result = [];
+    let result: any[] = [];
     if (Array.isArray(patientsData?.data?.data)) {
       result = patientsData.data.data;
     } else if (Array.isArray(patientsData?.data)) {
       result = patientsData.data;
     } else if (Array.isArray(patientsData)) {
-      result = patientsData;
+      result = patientsData as any[];
     }
     console.log("=== PATIENTS DEBUG ===");
     console.log("patientsData:", patientsData);
@@ -89,7 +89,7 @@ export default function ViewEditAppointmentModal({
 
   const providers = useMemo(() => {
     // Try different data structures like AddAppointment does
-    let result = [];
+    let result: any[] = [];
     if (Array.isArray(employeesData?.data)) {
       result = employeesData.data;
     } else if (Array.isArray(employeesData)) {
@@ -469,8 +469,8 @@ export default function ViewEditAppointmentModal({
                   let dateValue: Date | undefined = undefined;
                   if (field.value) {
                     try {
-                      // Try parsing as ISO string first
-                      dateValue = parseISOStringToLocalDate(field.value);
+                      // field.value is always a string from the form
+                      dateValue = parseISOStringToLocalDate(String(field.value));
                       // If that fails, try creating a new Date directly
                       if (isNaN(dateValue.getTime())) {
                         dateValue = new Date(field.value);

@@ -348,8 +348,8 @@ function PageContent() {
           if (!currentData) return currentData;
           
           // Handle different response structures
-          let data = [];
-          let metaData = null;
+          let data: any[] = [];
+          let metaData: any = null;
           
           if (Array.isArray(currentData)) {
             data = currentData;

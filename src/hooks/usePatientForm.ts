@@ -85,7 +85,7 @@ export function usePatientForm({
             );
           } else {
             // Check if patient with this email already exists before creating
-            const patientEmail = formData.addDemographic?.email || formData.demographic?.email;
+            const patientEmail = formData.addDemographic?.email;
             if (patientEmail) {
               try {
                 // Fetch all patients to check for duplicate email

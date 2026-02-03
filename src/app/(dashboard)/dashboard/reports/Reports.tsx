@@ -139,7 +139,7 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{dashboardData?.totalUsers || 0}</div>
+                    <div className="text-2xl font-bold text-gray-900">{0}</div>
                     <p className="text-xs text-green-600 font-semibold">
                       +8% <span className="text-gray-500 font-normal">from last month</span>
                     </p>
@@ -162,7 +162,7 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{dashboardData?.totalPatients || 0}</div>
+                    <div className="text-2xl font-bold text-gray-900">{0}</div>
                     <p className="text-xs text-green-600 font-semibold">
                       +15% <span className="text-gray-500 font-normal">from last month</span>
                     </p>
@@ -185,7 +185,7 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{dashboardData?.totalAppointments || 0}</div>
+                    <div className="text-2xl font-bold text-gray-900">{0}</div>
                     <p className="text-xs text-green-600 font-semibold">
                       +5% <span className="text-gray-500 font-normal">from last month</span>
                     </p>

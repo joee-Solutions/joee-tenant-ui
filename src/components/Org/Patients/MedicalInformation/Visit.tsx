@@ -181,7 +181,7 @@ export default function MedicalVisitForm() {
                 Date of Service *
                 </label>
                 <DatePicker
-                date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                date={field.value ? parseISOStringToLocalDate(String(field.value)) : undefined}
                 onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                   placeholder="Select date of service"
                 />
@@ -247,7 +247,7 @@ export default function MedicalVisitForm() {
                   HPI Onset Date
                   </label>
                   <DatePicker
-                  date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                  date={field.value ? parseISOStringToLocalDate(String(field.value)) : undefined}
                   onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                     placeholder="Select onset date"
                   />
@@ -393,7 +393,7 @@ export default function MedicalVisitForm() {
                   Diagnosis Onset Date
                   </label>
                   <DatePicker
-                  date={field.value ? parseISOStringToLocalDate(field.value) : undefined}
+                  date={field.value ? parseISOStringToLocalDate(String(field.value)) : undefined}
                   onDateChange={(date) => field.onChange(date ? formatDateLocal(date) : '')}
                   placeholder="Select onset date"
                   />
