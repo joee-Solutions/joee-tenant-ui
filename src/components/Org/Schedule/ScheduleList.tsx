@@ -21,6 +21,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/icons/Spinner";
+import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 
 const ScheduleEditSchema = z.object({
   availableDays: z.array(z.object({
@@ -367,14 +368,15 @@ export default function Page({ slug }: { slug: string }) {
 
 
         </header>
-        <DataTable tableDataObj={{
-          sn: "S/N",
-          employee: "Employee",
-          department: "Department",
-          day: "Day",
-          start_time: "Start Time",
-          end_time: "End Time"
-        }} showAction>
+        <div className="mt-6">
+          <DataTable tableDataObj={{
+            sn: "S/N",
+            employee: "Employee",
+            department: "Department",
+            day: "Day",
+            start_time: "Start Time",
+            end_time: "End Time"
+          }} showAction>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-gray-500">
@@ -467,6 +469,7 @@ export default function Page({ slug }: { slug: string }) {
             </TableRow>
           )}
         </DataTable>
+        </div>
         <Pagination
           dataLength={flattenedSchedules.length || 0}
           numOfPages={Math.max(1, Math.ceil((flattenedSchedules.length || 0) / pageSize))}
@@ -478,60 +481,17 @@ export default function Page({ slug }: { slug: string }) {
 
       {/* Delete Warning Modal */}
       {showDeleteWarning && scheduleToDelete && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} 
-          onClick={() => {
+        <DeleteWarningModal
+          title="Delete Schedule"
+          message="Are you sure you want to delete the schedule for"
+          itemName={`${scheduleToDelete.user?.firstname} ${scheduleToDelete.user?.lastname}`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => {
             setShowDeleteWarning(false);
             setScheduleToDelete(null);
           }}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md mx-auto" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-black">Delete Schedule</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowDeleteWarning(false);
-                  setScheduleToDelete(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to delete the schedule for{" "}
-              <span className="font-semibold">
-                {scheduleToDelete.user?.firstname} {scheduleToDelete.user?.lastname}
-              </span>? This action cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteWarning(false);
-                  setScheduleToDelete(null);
-                }}
-                className="px-6"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteConfirm}
-                disabled={deletingId !== null}
-                className="px-6 bg-red-600 hover:bg-red-700 text-white"
-              >
-                {deletingId !== null ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
+          isDeleting={deletingId !== null}
+        />
       )}
 
       {/* Edit Schedule Modal */}

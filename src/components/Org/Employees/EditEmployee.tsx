@@ -89,22 +89,22 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
   const choosenDepartment = form.watch("department");
   const deptId = departments.find((d) => d.name === choosenDepartment)?.id;
 
-  // load employee
+  // Load single employee using the specific endpoint
   const { data: employeeRes, isLoading } = useSWR(
-    isValidOrgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
+    isValidOrgId && isValidEmployeeId ? API_ENDPOINTS.GET_TENANT_EMPLOYEE(orgId, employeeId) : null,
     authFectcher
   );
   const employee = useMemo(() => {
-    if (!Array.isArray(employeeRes?.data)) {
-      console.log("Employee data is not an array:", employeeRes);
-      return undefined;
-    }
-    const found = employeeRes.data.find((e: any) => e.id === employeeId);
-    console.log("Looking for employee with ID:", employeeId);
-    console.log("Found employee:", found);
-    console.log("All employees:", employeeRes.data.map((e: any) => ({ id: e.id, name: `${e.firstname} ${e.lastname}` })));
-    return found;
-  }, [employeeRes, employeeId]);
+    if (!employeeRes) return undefined;
+    // Handle different response structures
+    const employeeData = employeeRes?.data?.data || employeeRes?.data || employeeRes;
+    return employeeData;
+  }, [employeeRes]);
+
+  // Reset hasPopulated when employeeId changes
+  useEffect(() => {
+    hasPopulated.current = false;
+  }, [employeeId]);
 
   useEffect(() => {
     // Wait for both employee and departments to be loaded
@@ -271,19 +271,19 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
         email: data.email,
         phone_number: data.phone_number,
         designation: data.designation,
-      department: deptId,
+        department: deptId,
         status: statusToSend, // "active" or "inactive" string
       };
       
-      // Only include optional fields if they have values
-      if (data.address) payload.address = data.address;
-      if (data.region) payload.region = data.region;
+      // Include all fields to return all employee data
+      payload.address = data.address || "";
+      payload.region = data.region || "";
       if (data.date_of_birth instanceof Date) payload.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
-      if (data.specialty) payload.specialty = data.specialty;
-      if (data.gender) payload.gender = data.gender;
-      if (data.image_url) payload.image_url = data.image_url;
+      payload.specialty = data.specialty || "";
+      payload.gender = data.gender || "";
+      payload.image_url = data.image_url || "";
       if (data.hire_date instanceof Date) payload.hire_date = data.hire_date.toISOString().split('T')[0];
-      if (data.about) payload.about = data.about;
+      payload.about = data.about || "";
       
       const res = await processRequestAuth(
         "put",
@@ -471,7 +471,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
                 <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
+                <SelectContent className="z-[10000] bg-white">
                   {departments.map((d) => (
                     <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
                   ))}
@@ -492,7 +492,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded flex justify-between items-center">
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
+                <SelectContent className="z-[10000] bg-white">
                   {genders.map((g) => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}

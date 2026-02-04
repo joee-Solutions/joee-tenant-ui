@@ -18,6 +18,7 @@ import Link from "next/link";
 import { formatDateFn } from "@/lib/utils";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
+import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 
 // Helper function to validate and normalize image URLs
 function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): string | any {
@@ -116,9 +117,8 @@ export default function PatientList({ org }: { org: string }) {
 
 
   return (
-    <section className=" mb-10">
-      <>
-        <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
+    <section className="mb-10">
+      <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
           <header className="flex justify-between items-center border-b-2  py-4 mb-8">
             <h2 className="font-semibold text-xl text-black">Patient List</h2>
 
@@ -134,7 +134,8 @@ export default function PatientList({ org }: { org: string }) {
               onSearch={(query) => console.log("Searching:", query)}
             />
           </header>
-          <DataTable tableDataObj={PatientData[0]} showAction>
+          <div className="mt-6">
+            <DataTable tableDataObj={PatientData[0]} showAction>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-gray-500">
@@ -200,18 +201,24 @@ export default function PatientList({ org }: { org: string }) {
                         </button>
                         {openDropdownId === patient.id && (
                           <div 
-                            className={`absolute right-0 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md ${
-                              index >= patients.length - 3 ? 'bottom-10' : 'top-10'
+                            className={`absolute right-0 z-[100] min-w-[120px] overflow-visible rounded-md border bg-white p-1 shadow-lg ${
+                              // Show above if it's the last item, last 2 items, or if there's only 1 item
+                              index >= patients.length - 2 || patients.length === 1 ? 'bottom-10' : 'top-10'
                             }`}
                             onClick={(e) => e.stopPropagation()}
+                            style={{ position: 'absolute' }}
                           >
-                            <Link
-                              href={`/dashboard/organization/${org}/patients/${patient.id}/edit`}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Navigate to edit page
+                                window.location.href = `/dashboard/organization/${org}/patients/${patient.id}/edit`;
+                              }}
                               className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
-                            </Link>
+                            </div>
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -238,6 +245,7 @@ export default function PatientList({ org }: { org: string }) {
               </TableRow>
             )}
           </DataTable>
+          </div>
           <Pagination
             dataLength={data?.data?.meta?.total || 0}
             numOfPages={data?.data?.meta?.totalPages || 1}
@@ -246,59 +254,20 @@ export default function PatientList({ org }: { org: string }) {
             setCurrentPage={setCurrentPage}
           />
         </section>
-      </>
 
       {/* Delete Warning Modal */}
       {showDeleteWarning && patientToDelete && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
-          onClick={() => {
+        <DeleteWarningModal
+          title="Delete Patient"
+          message="Are you sure you want to delete"
+          itemName={`${patientToDelete.firstname} ${patientToDelete.lastname}`}
+          onConfirm={handleDelete}
+          onCancel={() => {
             setShowDeleteWarning(false);
             setPatientToDelete(null);
           }}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md mx-auto my-auto" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-red-600">Delete Patient</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowDeleteWarning(false);
-                  setPatientToDelete(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to delete{" "}
-              <strong>{patientToDelete.firstname} {patientToDelete.lastname}</strong>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteWarning(false);
-                  setPatientToDelete(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDelete}
-                disabled={deletingId !== null}
-                className="bg-red-600 text-white hover:bg-red-700"
-              >
-                {deletingId !== null ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
+          isDeleting={deletingId !== null}
+        />
       )}
     </section>
   );

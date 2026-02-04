@@ -15,6 +15,9 @@ import {
   List,
   Trash2,
   Plus,
+  Edit,
+  MoreVertical,
+  X,
 } from "lucide-react";
 
 import { AppointmentData } from "@/components/shared/table/data";
@@ -41,6 +44,9 @@ import AppointmentsCalendar, {
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
+import { formatDateFn } from "@/lib/utils";
+import EditAppointmentModal from "./EditAppointmentModal";
+import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 
 /* ---------------- schema ---------------- */
 
@@ -74,6 +80,9 @@ export default function Page({ slug }: { slug: string }) {
   const [search, setSearch] = useState("");
   const [filterProvider, setFilterProvider] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<any | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
   /* ---------------- data ---------------- */
 
@@ -212,20 +221,58 @@ export default function Page({ slug }: { slug: string }) {
 
   /* ---------------- actions ---------------- */
 
-  const del = async (id: number) => {
-    if (!orgId) {
-      toast.error("Invalid organization ID");
+  const handleDeleteClick = (appointment: any) => {
+    setAppointmentToDelete(appointment);
+    setShowDeleteWarning(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!appointmentToDelete || !orgId) {
+      toast.error("Invalid appointment or organization ID");
       return;
     }
-    setDeletingId(id);
+    setDeletingId(appointmentToDelete.id);
+    try {
     await processRequestAuth(
       "delete",
-      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${id}`
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointmentToDelete.id}`
     );
-    toast.success("Deleted");
+      toast.success("Appointment deleted successfully");
     mutate();
+      setShowDeleteWarning(false);
+      setAppointmentToDelete(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete appointment");
+    } finally {
     setDeletingId(null);
+    }
   };
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+
+  const handleEditClick = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setEditModalOpen(true);
+    setOpenDropdownId(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId !== null) {
+        setOpenDropdownId(null);
+      }
+    };
+    if (openDropdownId !== null) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [openDropdownId]);
 
   /* ---------------- render ---------------- */
 
@@ -343,38 +390,81 @@ export default function Page({ slug }: { slug: string }) {
 
       {viewMode === "list" && (
         <>
-          <DataTable tableDataObj={AppointmentData[0]} showAction>
-            {paginated.map((a: any) => (
+          <div className="mt-6">
+            <DataTable tableDataObj={AppointmentData[0]}>
+            {paginated.map((a: any, index: number) => (
               <TableRow key={a.id}>
-                <TableCell>{a.id}</TableCell>
+                <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
                 <TableCell>
                   <div className="flex gap-2 items-center">
                     <Image
                       src={imgSrc(
                         a.patient?.image,
-                        AppointmentData[0].appointment.image
+                        AppointmentData[0].Patient.image
                       )}
                       alt=""
                       width={42}
                       height={42}
                       className="rounded-full"
                     />
-                    {a.patient?.first_name} {a.patient?.last_name}
+                    {a.patient?.first_name || a.patient?.firstname} {a.patient?.last_name || a.patient?.lastname}
                   </div>
                 </TableCell>
-                <TableCell>{a.user?.firstname}</TableCell>
-                <TableCell>{a.date}</TableCell>
+                <TableCell>{a.date ? formatDateFn(a.date) : a.date}</TableCell>
+                <TableCell>
+                  {a.user?.firstname} {a.user?.lastname}
+                  {a.user?.department?.name && ` - ${a.user.department.name}`}
+                </TableCell>
                 <TableCell>
                   {a.startTime} - {a.endTime}
                 </TableCell>
                 <TableCell>
-                  <button onClick={() => del(a.id)}>
-                    {deletingId === a.id ? "..." : <Trash2 />}
+                  <div className="relative">
+                    <button
+                      className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-gray-100 rounded flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenDropdownId(openDropdownId === a.id ? null : a.id);
+                      }}
+                    >
+                      <MoreVertical className="h-4 w-4" />
                   </button>
+                    {openDropdownId === a.id && (
+                      <div 
+                        className={`absolute right-0 z-[100] min-w-[120px] overflow-visible rounded-md border bg-white p-1 shadow-lg ${
+                          index >= paginated.length - 2 || paginated.length === 1 ? 'bottom-10' : 'top-10'
+                        }`}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ position: 'absolute' }}
+                      >
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(a);
+                          }}
+                          className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </div>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(a);
+                          }}
+                          className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </DataTable>
+          </div>
 
           <Pagination
             dataLength={filtered.length}
@@ -386,6 +476,20 @@ export default function Page({ slug }: { slug: string }) {
         </>
       )}
 
+      {/* Delete Warning Modal */}
+      {showDeleteWarning && appointmentToDelete && (
+        <DeleteWarningModal
+          title="Delete Appointment"
+          message="Are you sure you want to delete this appointment for"
+          itemName={`${appointmentToDelete.patient?.first_name || appointmentToDelete.patient?.firstname} ${appointmentToDelete.patient?.last_name || appointmentToDelete.patient?.lastname}`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => {
+            setShowDeleteWarning(false);
+            setAppointmentToDelete(null);
+          }}
+          isDeleting={deletingId !== null}
+        />
+      )}
     </section>
   );
 }

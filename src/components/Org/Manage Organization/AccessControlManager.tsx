@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import { Role } from "@/lib/types";
 
 interface Permission {
   key: string;
@@ -419,6 +420,8 @@ const defaultPermissions: Record<string, Record<string, boolean>> = {
 };
 
 export default function AccessControlManager({ slug }: { slug: string }) {
+  const [rolesData, setRolesData] = useState<Role[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(true);
   const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>(() => {
     // Initialize with default permissions
     const initial: Record<string, Record<string, boolean>> = {};
@@ -440,6 +443,92 @@ export default function AccessControlManager({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(permissionCategories[0].key);
 
+  // Fetch roles to get their IDs
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        const response = await processRequestAuth("get", `${API_ENDPOINTS.GET_ALL_ROLES}?permission=true`);
+        
+        if (response && typeof response === 'object' && 'success' in response) {
+          if (response.success && response.data) {
+            const fetchedRoles = Array.isArray(response.data) ? response.data : [];
+            setRolesData(fetchedRoles);
+            
+            // Load existing permissions from roles if available
+            if (fetchedRoles.length > 0) {
+              const loadedPermissions: Record<string, Record<string, boolean>> = {};
+              
+              fetchedRoles.forEach((role: Role) => {
+                // Map role name to role key
+                const roleNameLower = role.name.toLowerCase().replace(/\s+/g, '_');
+                let mappedRoleKey = '';
+                
+                if (roleNameLower.includes('super') && roleNameLower.includes('admin')) {
+                  mappedRoleKey = 'super_admin';
+                } else if (roleNameLower === 'admin' || roleNameLower.includes('admin') && !roleNameLower.includes('super') && !roleNameLower.includes('tenant')) {
+                  mappedRoleKey = 'admin';
+                } else if (roleNameLower.includes('tenant') && roleNameLower.includes('admin')) {
+                  mappedRoleKey = 'tenant_admin';
+                } else if (roleNameLower.includes('tenant') && roleNameLower.includes('user')) {
+                  mappedRoleKey = 'tenant_user';
+                } else {
+                  // Try direct match
+                  const directMatch = roles.find(r => r.key === roleNameLower);
+                  mappedRoleKey = directMatch ? directMatch.key : '';
+                }
+                
+                if (!mappedRoleKey) return;
+                
+                // Load permissions from role
+                if (role.permissions && Array.isArray(role.permissions)) {
+                  role.permissions.forEach((perm: any) => {
+                    const permName = perm.name || perm.key || String(perm);
+                    // Find matching permission key in our categories
+                    permissionCategories.forEach((category) => {
+                      category.permissions.forEach((p) => {
+                        // Check if permission name matches (handle cases like "manage_appointment / update_appointment")
+                        const permNames = p.name.split('/').map(n => n.trim().toLowerCase());
+                        if (permNames.some(n => n === permName.toLowerCase() || permName.toLowerCase().includes(n))) {
+                          if (!loadedPermissions[p.key]) {
+                            loadedPermissions[p.key] = {};
+                          }
+                          loadedPermissions[p.key][mappedRoleKey] = true;
+                        }
+                      });
+                    });
+                  });
+                }
+              });
+              
+              // Merge loaded permissions with defaults
+              setPermissions((prev) => {
+                const merged = { ...prev };
+                Object.keys(loadedPermissions).forEach((permKey) => {
+                  if (merged[permKey]) {
+                    Object.keys(loadedPermissions[permKey]).forEach((roleKey) => {
+                      merged[permKey][roleKey] = loadedPermissions[permKey][roleKey];
+                    });
+                  }
+                });
+                return merged;
+              });
+            }
+          }
+        } else {
+          setRolesData(response?.data?.roles || response || []);
+        }
+      } catch (error) {
+        console.error("Error fetching roles:", error);
+        toast.error("Failed to load roles");
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
   const handlePermissionChange = (
     permissionKey: string,
     roleKey: string,
@@ -457,12 +546,62 @@ export default function AccessControlManager({ slug }: { slug: string }) {
   const handleSaveChanges = async () => {
     try {
       setLoading(true);
-      // TODO: Implement API call to save permissions
-      // await processRequestAuth("put", API_ENDPOINTS.UPDATE_ORGANIZATION_PERMISSIONS(slug), {
-      //   permissions
-      // });
       
-      toast.success("Permissions updated successfully");
+      // Map role keys to role names for API
+      const roleNameMap: Record<string, string> = {
+        'super_admin': 'Super_Admin',
+        'admin': 'Admin',
+        'tenant_admin': 'Tenant_Admin',
+        'tenant_user': 'Tenant_User',
+      };
+      
+      // For each role, collect all enabled permissions and update
+      const updatePromises = roles.map(async (role) => {
+        // Find the role in fetched roles data
+        const roleData = rolesData.find((r: Role) => 
+          r.name === roleNameMap[role.key] || 
+          r.name.toLowerCase().replace(/_/g, '_') === role.key ||
+          r.name.toLowerCase().replace(/\s/g, '_') === role.key
+        );
+        
+        if (!roleData || !roleData.id) {
+          console.warn(`Role not found: ${role.key}`);
+          return;
+        }
+        
+        // Collect all permissions enabled for this role
+        const enabledPermissions: string[] = [];
+        Object.keys(permissions).forEach((permissionKey) => {
+          if (permissions[permissionKey]?.[role.key]) {
+            // Get the permission name from the category
+            const category = permissionCategories.find(cat => 
+              cat.permissions.some(p => p.key === permissionKey)
+            );
+            if (category) {
+              const permission = category.permissions.find(p => p.key === permissionKey);
+              if (permission) {
+                // Use the permission name (which may contain multiple names separated by /)
+                const permissionNames = permission.name.split('/').map(n => n.trim());
+                enabledPermissions.push(...permissionNames);
+              }
+            }
+          }
+        });
+        
+        // Update the role with new permissions
+        try {
+          await processRequestAuth("put", API_ENDPOINTS.UPDATE_ROLE(roleData.id), {
+            permissions: enabledPermissions,
+          });
+        } catch (error) {
+          console.error(`Error updating role ${role.label}:`, error);
+          throw error;
+        }
+      });
+      
+      await Promise.all(updatePromises);
+      
+      toast.success("Access control permissions updated successfully!");
     } catch (error) {
       console.error("Error saving permissions:", error);
       toast.error("Failed to save permissions");
@@ -470,6 +609,18 @@ export default function AccessControlManager({ slug }: { slug: string }) {
       setLoading(false);
     }
   };
+
+  if (loadingRoles) {
+    return (
+      <div className="w-full max-w-7xl mx-auto">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-gray-500">Loading roles and permissions...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto">
@@ -483,17 +634,13 @@ export default function AccessControlManager({ slug }: { slug: string }) {
 
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="border-b overflow-x-auto relative">
-              {/* Gradient overlay to indicate more tabs on the right */}
-              <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white via-white to-transparent pointer-events-none z-10"></div>
-              {/* Scroll indicator on the left if scrolled */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white via-white to-transparent pointer-events-none z-10 opacity-0 data-[scrolled]:opacity-100" data-scrolled={activeTab !== permissionCategories[0].key ? "true" : "false"}></div>
-              <TabsList className="h-auto bg-gray-50 p-1 w-full justify-start flex-nowrap min-w-max pb-1 rounded-t-lg [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="border-b relative">
+              <TabsList className="h-auto bg-gray-50 p-1 w-full justify-start flex-wrap gap-2 pb-1 rounded-t-lg">
                 {permissionCategories.map((category) => (
                   <TabsTrigger
                     key={category.key}
                     value={category.key}
-                    className="px-4 py-3 text-xs sm:text-sm font-medium rounded-md bg-transparent data-[state=active]:bg-[#003465] data-[state=active]:text-white data-[state=inactive]:text-gray-600 data-[state=inactive]:bg-white data-[state=inactive]:hover:bg-gray-100 whitespace-nowrap transition-all flex-shrink-0"
+                    className="px-4 py-3 text-xs sm:text-sm font-medium rounded-md bg-gray-100 data-[state=active]:bg-[#003465] data-[state=active]:text-white data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 whitespace-nowrap transition-all"
                   >
                     {category.title}
                   </TabsTrigger>

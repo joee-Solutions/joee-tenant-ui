@@ -31,6 +31,19 @@ const AppointmentSchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   description: z.string().optional(),
+}).refine((data) => {
+  // Validate that startTime is less than endTime
+  if (data.startTime && data.endTime) {
+    const [startHour, startMin] = data.startTime.split(':').map(Number);
+    const [endHour, endMin] = data.endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    return startMinutes < endMinutes;
+  }
+  return true;
+}, {
+  message: "Start time must be earlier than end time",
+  path: ["endTime"],
 });
 
 type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;

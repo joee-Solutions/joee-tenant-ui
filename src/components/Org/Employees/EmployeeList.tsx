@@ -18,6 +18,7 @@ import { MoreVertical, Edit, Trash2, X } from "lucide-react";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import EditEmployee from "./EditEmployee";
+import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 
 // Define Employee type
 interface Employee {
@@ -142,9 +143,8 @@ export default function Page({ slug }: { slug: string }) {
   };
 
   return (
-    <section className=" mb-10">
-      <>
-        <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
+    <section className="mb-10">
+      <section className="px-6 py-8 shadow-[0px_0px_4px_1px_#0000004D]">
           <header className="flex justify-between items-center border-b-2  py-4 mb-8">
             <h2 className="font-semibold text-xl text-black">Employee List</h2>
 
@@ -166,7 +166,8 @@ export default function Page({ slug }: { slug: string }) {
               />
             </div>
           </header>
-          <DataTable tableDataObj={EmployeesData[0]} showAction>
+          <div className="mt-6">
+            <DataTable tableDataObj={EmployeesData[0]} showAction>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
@@ -277,6 +278,7 @@ export default function Page({ slug }: { slug: string }) {
               </TableRow>
             )}
           </DataTable>
+          </div>
           <Pagination
             dataLength={filteredEmployees?.length || 0}
             numOfPages={Math.ceil((filteredEmployees?.length || 0) / pageSize)}
@@ -285,72 +287,36 @@ export default function Page({ slug }: { slug: string }) {
             setCurrentPage={setCurrentPage}
           />
         </section>
-      </>
 
       {/* Delete Warning Modal */}
       {showDeleteWarning && employeeToDelete && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
-          onClick={() => {
+        <DeleteWarningModal
+          title="Delete Employee"
+          message="Are you sure you want to delete"
+          itemName={`${employeeToDelete.firstname} ${employeeToDelete.lastname}`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => {
             setShowDeleteWarning(false);
             setEmployeeToDelete(null);
           }}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md mx-auto my-auto" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-red-600">Delete Employee</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowDeleteWarning(false);
-                  setEmployeeToDelete(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to delete <strong>{employeeToDelete.firstname} {employeeToDelete.lastname}</strong>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteWarning(false);
-                  setEmployeeToDelete(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteConfirm}
-                disabled={deletingId !== null}
-                className="bg-red-600 text-white hover:bg-red-700"
-              >
-                {deletingId !== null ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
+          isDeleting={deletingId !== null}
+        />
       )}
 
       {/* Edit Employee Modal */}
       {editModalOpen && selectedEmployeeId && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" 
           onClick={() => {
             setEditModalOpen(false);
             setSelectedEmployeeId(null);
           }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
           <div 
-            className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-auto my-auto" 
+            className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-auto" 
             onClick={(e) => e.stopPropagation()}
+            style={{ margin: '0 auto' }}
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-black">Edit Employee</h2>

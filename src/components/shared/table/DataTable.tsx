@@ -19,6 +19,8 @@ const getColumnHeaders = function (data: Record<string, any>) {
         return "S/N";
       }
       return "ID";
+    } else if (key === "S/N") {
+      return "S/N";
     } else if (key === "created_at") {
       return "Date Created";
     } else if (key === "location") {
@@ -36,7 +38,8 @@ const getColumnHeaders = function (data: Record<string, any>) {
 
       return c.join(" ");
     }
-    return key[0].toUpperCase() + key.slice(1);
+    // Return key as-is if it's already properly formatted (e.g., "S/N", "Patient", "Date", "Provider", "Time", "Action")
+    return key;
   });
 
   return headers;

@@ -195,88 +195,81 @@ export const AdminListData: {
 ];
 
 export const AppointmentData: {
-  ID: string;
-  appointment: {
+  "S/N": string;
+  Patient: {
     patient_name: string;
     image: StaticImageData;
   };
-  age: number;
-  doctor_name: string;
-  department: string;
-  date: string;
-  time: string;
+  Date: string;
+  Provider: string;
+  Time: string;
+  Action: string;
 }[] = [
   {
-    ID: "JOE101",
-    appointment: {
+    "S/N": "1",
+    Patient: {
       patient_name: "Jenifa ",
       image: orgPlaceholder,
     },
-    age: 43,
-    doctor_name: "Daniel James",
-    department: "Nephrology",
-    date: "11 Dec 2022",
-    time: "10am-12am",
+    Date: "11 Dec 2022",
+    Provider: "Daniel James",
+    Time: "10am-12am",
+    Action: "",
   },
   {
-    ID: "JOE102",
-    appointment: {
+    "S/N": "2",
+    Patient: {
       patient_name: " David  ",
       image: orgPlaceholder,
     },
-    age: 52,
-    doctor_name: "Kishane Josh",
-    department: "Cardiology",
-    date: "15 Dec 2022",
-    time: "10am-12am",
+    Date: "15 Dec 2022",
+    Provider: "Kishane Josh",
+    Time: "10am-12am",
+    Action: "",
   },
   {
-    ID: "JOE103",
-    appointment: {
+    "S/N": "3",
+    Patient: {
       patient_name: " Newton",
       image: orgPlaceholder,
     },
-    age: 49,
-    doctor_name: "Aminu Umar ",
-    department: "Oncology",
-    date: "13 Dec 2022",
-    time: "10am-12am",
+    Date: "13 Dec 2022",
+    Provider: "Aminu Umar ",
+    Time: "10am-12am",
+    Action: "",
   },
   {
-    ID: "JOE104",
-    appointment: {
+    "S/N": "4",
+    Patient: {
       patient_name: "  Gloria",
       image: orgPlaceholder,
     },
-    age: 71,
-    doctor_name: "Jimmy Carl ",
-    department: "Neurology",
-    date: "9 Dec 2022",
-    time: "10am-12am",
+    Date: "9 Dec 2022",
+    Provider: "Jimmy Carl ",
+    Time: "10am-12am",
+    Action: "",
   },
   {
-    ID: "JOE105",
-    appointment: {
+    "S/N": "5",
+    Patient: {
       patient_name: "  Oluwaseun",
       image: orgPlaceholder,
     },
-    age: 38,
-    doctor_name: "Jamie York ",
-    department: "Orthopedics",
-    date: "5 Dec 2022",
-    time: "10am-12am",
+    Date: "5 Dec 2022",
+    Provider: "Jamie York ",
+    Time: "10am-12am",
+    Action: "",
   },
   {
-    ID: "JOE106",
-    appointment: {
+    "S/N": "6",
+    Patient: {
       patient_name: " Joshua",
       image: orgPlaceholder,
     },
-    age: 49,
-    doctor_name: "Palmer David ",
-    department: "Gynaecology",
-    date: "2 Dec 2022",
-    time: "10am-12am",
+    Date: "2 Dec 2022",
+    Provider: "Palmer David ",
+    Time: "10am-12am",
+    Action: "",
   },
 ];
 

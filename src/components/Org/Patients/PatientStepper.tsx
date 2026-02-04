@@ -255,8 +255,8 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
       homePhone: contactInfo.phone_number_home || contactInfo.phone_number_home || data.phone_number_home || data.home_phone || '',
       mobilePhone: contactInfo.phone_number_mobile || contactInfo.phone_number_mobile || data.phone_number_mobile || data.mobile_phone || data.phone_number || '',
       address: contactInfo.address || data.address || '',
-      addressFrom: contactInfo.lived_address_from ? formatDateLocal(new Date(contactInfo.lived_address_from)) : (data.lived_address_from ? formatDateLocal(new Date(data.lived_address_from)) : ''),
-      addressTo: contactInfo.lived_address_to ? formatDateLocal(new Date(contactInfo.lived_address_to)) : (data.lived_address_to ? formatDateLocal(new Date(data.lived_address_to)) : ''),
+      addressFrom: contactInfo.lived_address_from ? (typeof contactInfo.lived_address_from === 'string' ? formatDateLocal(new Date(contactInfo.lived_address_from)) : formatDateLocal(contactInfo.lived_address_from)) : (data.lived_address_from ? (typeof data.lived_address_from === 'string' ? formatDateLocal(new Date(data.lived_address_from)) : formatDateLocal(data.lived_address_from)) : ''),
+      addressTo: contactInfo.lived_address_to ? (typeof contactInfo.lived_address_to === 'string' ? formatDateLocal(new Date(contactInfo.lived_address_to)) : formatDateLocal(contactInfo.lived_address_to)) : (data.lived_address_to ? (typeof data.lived_address_to === 'string' ? formatDateLocal(new Date(data.lived_address_to)) : formatDateLocal(data.lived_address_to)) : ''),
       currentAddress: contactInfo.current_address || data.current_address || '',
       contactMethod: contactInfo.method_of_contact || contactInfo.contact_method || data.contact_method || data.method_of_contact || '',
       livingSituation: contactInfo.current_living_situation || contactInfo.living_situation || data.living_situation || data.current_living_situation || '',
@@ -282,19 +282,139 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
     } : undefined,
     allergies: data.allergies || [],
     medHistory: data.medHistory || data.medicalHistories || data.medical_history || [],
-    diagnosisHistory: data.diagnosisHistory || data.diagnosis_history || [],
+    // diagnosisHistory removed - not in backend schema
     surgeryHistory: data.surgeryHistory || data.surgeries || data.surgery_history || [],
     immunizationHistory: data.immunizationHistory || data.immunizations || data.immunization_history || [],
     famhistory: data.famhistory || data.familyHistory || data.family_history || [],
     visits: data.visits || [],
     prescriptions: data.prescriptions || [],
-    vitalSigns: data.vitalSigns || data.vital_signs || [],
+    // Transform vitals object back to vitalSigns array
+    vitalSigns: (() => {
+      if (data.vitalSigns && Array.isArray(data.vitalSigns)) {
+        return data.vitalSigns;
+      }
+      if (data.vital_signs && Array.isArray(data.vital_signs)) {
+        return data.vital_signs;
+      }
+      // Backend returns vitals as object, transform to array
+      if (data.vitals && typeof data.vitals === 'object') {
+        const vitals = data.vitals;
+        return [{
+          id: vitals.id || undefined,
+          date: vitals.date || formatDateLocal(new Date()),
+          temperature: vitals.temperature || "",
+          systolic: vitals.blood_pressure_systolic || "",
+          diastolic: vitals.blood_pressure_diastolic || "",
+          heartRate: vitals.heart_rate || "",
+          respiratoryRate: vitals.respiratory_rate || "",
+          oxygenSaturation: vitals.oxygen_saturation || "",
+          glucose: vitals.glucose || "",
+          height: vitals.height ? String(vitals.height) : "",
+          weight: vitals.weight ? String(vitals.weight) : "",
+          bmi: vitals.bmi ? String(vitals.bmi) : "",
+          painScore: vitals.pain_score ? String(vitals.pain_score) : "",
+        }];
+      }
+      return [];
+    })(),
     patientStatus: data.patientStatus || data.status ? {
       dischargeEntries: (data.patientStatus || data.status)?.dischargeEntries || (data.patientStatus || data.status)?.discharge_entries || []
     } : { dischargeEntries: [] },
-    reviewOfSystem: data.reviewOfSystem || data.review_of_system || {},
-    additionalReview: data.additionalReview || data.additional_review || {},
-    lifeStyle: data.lifeStyle || data.lifestyle || data.socialHistory || data.social_history || {},
+    // Transform reviewOfSystems nested structure back to reviewOfSystem flat structure
+    reviewOfSystem: (() => {
+      if (data.reviewOfSystem && typeof data.reviewOfSystem === 'object') {
+        return data.reviewOfSystem;
+      }
+      if (data.review_of_system && typeof data.review_of_system === 'object') {
+        return data.review_of_system;
+      }
+      // Backend returns reviewOfSystems as nested object, transform to flat structure
+      if (data.reviewOfSystems && typeof data.reviewOfSystems === 'object') {
+        const ros = data.reviewOfSystems;
+        return {
+          // Neurological
+          headaches: ros.neurological?.headache || false,
+          dizziness: ros.neurological?.dizziness || false,
+          numbnessWeakness: ros.neurological?.weakness || false,
+          seizures: ros.neurological?.seizures || false,
+          neurologicalDetails: ros.neurological?.notes || "",
+          // Psychiatric
+          depression: ros.psychiatric?.depression || false,
+          anxiety: ros.psychiatric?.anxiety || false,
+          sleepingDisturbances: ros.psychiatric?.sleeping_disturbance || false,
+          psychiatricDetails: ros.psychiatric?.notes || "",
+          // Endocrine
+          heatColdIntolerance: ros.endocrine?.heat_cold_intolerance || false,
+          excessiveThirstHunger: ros.endocrine?.excessive_thirst_hunger || false,
+          endocrineDetails: ros.endocrine?.notes || "",
+          // Haematologic/Lymphatic
+          easyBruising: ros.haematologic_lymphatic?.easy_bruising || false,
+          bleedingTendencies: ros.haematologic_lymphatic?.bleeding_tendencies || false,
+          haematologicDetails: ros.haematologic_lymphatic?.notes || "",
+          // Allergic/Immunologic
+          frequentInfections: ros.allergic_immunologic?.frequent_infections || false,
+          allergicReactions: ros.allergic_immunologic?.allergic_reactions || false,
+          allergicDetails: ros.allergic_immunologic?.notes || "",
+          // Genitourinary (if exists in backend)
+          urinaryFrequency: ros.genitourinary?.urinary_frequency || false,
+          dysuria: ros.genitourinary?.dysuria || false,
+          incontinence: ros.genitourinary?.incontinence || false,
+          genitourinaryDetails: ros.genitourinary?.notes || "",
+          // Musculoskeletal (if exists in backend)
+          jointPain: ros.musculoskeletal?.joint_pain || false,
+          muscleWeakness: ros.musculoskeletal?.muscle_weakness || false,
+          stiffness: ros.musculoskeletal?.stiffness || false,
+          musculoskeletalDetails: ros.musculoskeletal?.notes || "",
+        };
+      }
+      return {};
+    })(),
+    // additionalReview removed - not in backend schema
+    // Transform socialHistory back to lifeStyle structure
+    lifeStyle: (() => {
+      if (data.lifeStyle && typeof data.lifeStyle === 'object') {
+        return data.lifeStyle;
+      }
+      if (data.lifestyle && typeof data.lifestyle === 'object') {
+        return data.lifestyle;
+      }
+      // Backend returns socialHistory, transform to lifeStyle
+      if (data.socialHistory && typeof data.socialHistory === 'object') {
+        const sh = data.socialHistory;
+        return {
+          tobaccoUse: sh.tobacco_use || "",
+          tobaccoQuantity: sh.tobacco_quantity ? String(sh.tobacco_quantity) : "",
+          tobaccoDuration: sh.years ? String(sh.years) : "",
+          alcoholUse: sh.alcohol_use || "",
+          alcoholInfo: sh.alcohol_info || "",
+          drugUse: sh.illicit_drugs === true ? "yes" : (sh.illicit_drugs === false ? "no" : ""),
+          drugInfo: sh.illicit_drugs_info || "",
+          dietExercise: sh.diet_and_exercise || "",
+          dietExerciseInfo: sh.diet_and_exercise_info || "",
+          partners: sh.partners || "",
+          protection: sh.protection || "",
+          comment: sh.comment || sh.notes || "",
+        };
+      }
+      if (data.social_history && typeof data.social_history === 'object') {
+        const sh = data.social_history;
+        return {
+          tobaccoUse: sh.tobacco_use || "",
+          tobaccoQuantity: sh.tobacco_quantity ? String(sh.tobacco_quantity) : "",
+          tobaccoDuration: sh.years ? String(sh.years) : "",
+          alcoholUse: sh.alcohol_use || "",
+          alcoholInfo: sh.alcohol_info || "",
+          drugUse: sh.illicit_drugs === true ? "yes" : (sh.illicit_drugs === false ? "no" : ""),
+          drugInfo: sh.illicit_drugs_info || "",
+          dietExercise: sh.diet_and_exercise || "",
+          dietExerciseInfo: sh.diet_and_exercise_info || "",
+          partners: sh.partners || "",
+          protection: sh.protection || "",
+          comment: sh.comment || sh.notes || "",
+        };
+      }
+      return {};
+    })(),
   };
 };
 
