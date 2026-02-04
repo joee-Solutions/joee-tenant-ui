@@ -360,7 +360,7 @@ export default function Page({ slug }: { slug: string }) {
           </div>
         </header>
         <div className="mt-6">
-          <DataTable tableDataObj={DepartmentList[0]} showAction>
+        <DataTable tableDataObj={DepartmentList[0]} showAction>
           {Array.isArray(filteredDepartments) && filteredDepartments.length > 0 ? (
             filteredDepartments.map((data: Department, index: number) => {
               return (
@@ -486,8 +486,8 @@ export default function Page({ slug }: { slug: string }) {
                   setEditModalOpen(false);
                   setSelectedDept(null);
             mutate();
-          }}
-        />
+                      }}
+                    />
       )}
     </section>
   );

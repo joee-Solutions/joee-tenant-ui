@@ -13,7 +13,6 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     patientStatus, 
     allergies, 
     medHistory, 
-    diagnosisHistory,
     surgeryHistory, 
     immunizationHistory, 
     famhistory, 
@@ -22,7 +21,6 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     prescriptions, 
     vitalSigns,
     reviewOfSystem,
-    additionalReview,
   } = formData;
 
   // Map to match backend CreatePatientDto structure
@@ -56,7 +54,7 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     religion: demographic?.religion || '',
     gender_identity: demographic?.genderIdentity || '',
     sexual_orientation: demographic?.sexualOrientation || '',
-    // image: demographic?.patientImage || '', // Commented out until backend is ready
+    // image field removed - not in backend schema
 
     // Contact info - build object without phone numbers first, then conditionally add them
     contact_info: (() => {
@@ -167,63 +165,13 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
 
     // Medical data arrays
     allergies: allergies || [],
-    // Filter out empty entries from medicalHistories
-    medicalHistories: Array.isArray(medHistory) ? medHistory.filter((item: any) => {
-      // Keep entries that have at least one non-empty field
-      return item && (
-        (item.condition && item.condition.trim() !== '') ||
-        (item.onsetDate && item.onsetDate.trim() !== '') ||
-        (item.endDate && item.endDate.trim() !== '') ||
-        (item.comments && item.comments.trim() !== '')
-      );
-    }) : [],
-    // diagnosisHistory as separate array with its own data - Commented out until backend is ready
-    /* diagnosisHistory: Array.isArray(diagnosisHistory) ? diagnosisHistory.map((item: any) => ({
-      id: item.id || undefined,
-      date: item.date || "",
-      condition: item.condition || "",
-      onsetDate: item.onsetDate || "",
-      endDate: item.endDate || "",
-      comments: item.comments || "",
-    })).filter((item: any) => {
-      // Filter out completely empty entries
-      return item.condition || item.date || item.onsetDate || item.endDate || item.comments;
-    }) : [], */
-    // Fix surgeries - map surgeryHistory correctly
-    surgeries: Array.isArray(surgeryHistory) ? surgeryHistory.map((item: any) => ({
-      id: item.id || undefined,
-      surgery_name: item.surgeryType || "",
-      surgery_date: item.date ? (() => {
-        try {
-          const dateStr = item.date;
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            return new Date(dateStr).toISOString();
-          }
-          const date = new Date(item.date);
-          return !isNaN(date.getTime()) ? date.toISOString() : "";
-        } catch {
-          return "";
-        }
-      })() : "",
-      details: item.additionalInfo || "",
-    })).filter((item: any) => {
-      // Filter out completely empty entries
-      return item.surgery_name || item.surgery_date || item.details;
-    }) : [],
+    medicalHistories: medHistory || [],
+    // diagnosisHistory removed - not in backend schema
+    surgeries: surgeryHistory || [],
     immunizations: immunizationHistory || [],
     familyHistory: famhistory || [],
     status: patientStatus || {},
-    // socialHistory as array format - Commented out until backend is ready
-    /* socialHistory: lifeStyle ? [{
-      tobacco_use: lifeStyle.tobaccoUse || "",
-      tobacco_quantity: lifeStyle.tobaccoQuantity ? Number(lifeStyle.tobaccoQuantity) || 0 : 0,
-      years: lifeStyle.tobaccoDuration ? Number(lifeStyle.tobaccoDuration) || 0 : 0,
-      alcohol_use: lifeStyle.alcoholUse || "",
-      alcohol_info: lifeStyle.alcoholInfo || "",
-      illicit_drugs: lifeStyle.drugUse === "yes" || lifeStyle.drugUse === "Yes" || false,
-      illicit_drugs_info: lifeStyle.drugInfo || "",
-      diet_and_exercise: lifeStyle.dietExercise || "",
-    }] : [], */
+    // socialHistory removed - not in backend Patient model (causes 500 error)
     visits: visits || [],
     prescriptions: prescriptions || [],
     // Transform vitalSigns array to vitals object (take first/latest entry)
@@ -262,64 +210,8 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
         pain_score: latest.painScore ? Number(latest.painScore) || 0 : 0,
       };
     })(),
-    // reviewOfSystems as array format - Commented out until backend is ready
-    /* reviewOfSystems: reviewOfSystem ? [{
-      neurological: {
-        headache: reviewOfSystem.headaches || false,
-        dizziness: reviewOfSystem.dizziness || false,
-        weakness: reviewOfSystem.numbnessWeakness || false,
-        seizures: reviewOfSystem.seizures || false,
-      },
-      psychiatric: {
-        depression: reviewOfSystem.depression || false,
-        anxiety: reviewOfSystem.anxiety || false,
-        sleeping_disturbance: reviewOfSystem.sleepingDisturbances || false,
-      },
-      endocrine: {
-        heat_cold_intolerance: reviewOfSystem.heatColdIntolerance || false,
-        excessive_thirst_hunger: reviewOfSystem.excessiveThirstHunger || false,
-      },
-      haematologic_lymphatic: {
-        easy_bruising: reviewOfSystem.easyBruising || false,
-        bleeding_tendencies: reviewOfSystem.bleedingTendencies || false,
-      },
-      allergic_immunologic: {
-        frequent_infections: reviewOfSystem.frequentInfections || false,
-        allergic_reactions: reviewOfSystem.allergicReactions || false,
-      },
-      notes: reviewOfSystem.neurologicalDetails || 
-             reviewOfSystem.psychiatricDetails || 
-             reviewOfSystem.endocrineDetails || 
-             reviewOfSystem.haematologicDetails || 
-             reviewOfSystem.allergicDetails || 
-             reviewOfSystem.genitourinaryDetails || 
-             reviewOfSystem.musculoskeletalDetails || 
-             "",
-    }] : [], */
-    // additionalReview as array format - Commented out until backend is ready
-    /* additionalReview: additionalReview ? [{
-      psychiatric: additionalReview.psychiatric ? {
-        depression: additionalReview.psychiatric.depression || false,
-        anxiety: additionalReview.psychiatric.anxiety || false,
-        sleepingDisturbances: additionalReview.psychiatric.sleepingDisturbances || false,
-        details: additionalReview.psychiatric.details || "",
-      } : {},
-      endocrine: additionalReview.endocrine ? {
-        heatColdIntolerance: additionalReview.endocrine.heatColdIntolerance || false,
-        excessiveThirstHunger: additionalReview.endocrine.excessiveThirstHunger || false,
-        details: additionalReview.endocrine.details || "",
-      } : {},
-      haematologic: additionalReview.haematologic ? {
-        easyBruising: additionalReview.haematologic.easyBruising || false,
-        bleedingTendencies: additionalReview.haematologic.bleedingTendencies || false,
-        details: additionalReview.haematologic.details || "",
-      } : {},
-      allergic: additionalReview.allergic ? {
-        frequentInfections: additionalReview.allergic.frequentInfections || false,
-        allergicReactions: additionalReview.allergic.allergicReactions || false,
-        details: additionalReview.allergic.details || "",
-      } : {},
-    }] : [], */
+    // reviewOfSystems removed - not in backend Patient model (causes 500 error)
+    // additionalReview removed - not in backend schema
   };
 }
 
@@ -470,33 +362,14 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
   }
   
   // Ensure arrays are arrays (not undefined or null)
-  mappedData.medicalHistories = Array.isArray(mappedData.medicalHistories) ? mappedData.medicalHistories.filter((item: any) => {
-    // Filter out empty entries
-    return item && (
-      (item.condition && item.condition.trim() !== '') ||
-      (item.onsetDate && item.onsetDate.trim() !== '') ||
-      (item.endDate && item.endDate.trim() !== '') ||
-      (item.comments && item.comments.trim() !== '')
-    );
-  }) : [];
-  // diagnosisHistory normalization - Commented out until backend is ready
-  /* mappedData.diagnosisHistory = Array.isArray(mappedData.diagnosisHistory) ? mappedData.diagnosisHistory.filter((item: any) => {
-    // Filter out empty entries
-    return item && (item.condition || item.date || item.onsetDate || item.endDate || item.comments);
-  }) : []; */
+  mappedData.medicalHistories = Array.isArray(mappedData.medicalHistories) ? mappedData.medicalHistories : [];
   mappedData.immunizations = Array.isArray(mappedData.immunizations) ? mappedData.immunizations : [];
   mappedData.familyHistory = Array.isArray(mappedData.familyHistory) ? mappedData.familyHistory : [];
-  mappedData.surgeries = Array.isArray(mappedData.surgeries) ? mappedData.surgeries.filter((item: any) => {
-    // Filter out empty entries
-    return item && (item.surgery_name || item.surgery_date || item.details);
-  }) : [];
+  mappedData.surgeries = Array.isArray(mappedData.surgeries) ? mappedData.surgeries : [];
   mappedData.allergies = Array.isArray(mappedData.allergies) ? mappedData.allergies : [];
+  // diagnosisHistory removed - not in backend schema
   mappedData.visits = Array.isArray(mappedData.visits) ? mappedData.visits : [];
   mappedData.prescriptions = Array.isArray(mappedData.prescriptions) ? mappedData.prescriptions : [];
-  // Ensure socialHistory, reviewOfSystems, and additionalReview are arrays - Commented out until backend is ready
-  /* mappedData.socialHistory = Array.isArray(mappedData.socialHistory) ? mappedData.socialHistory : [];
-  mappedData.reviewOfSystems = Array.isArray(mappedData.reviewOfSystems) ? mappedData.reviewOfSystems : [];
-  mappedData.additionalReview = Array.isArray(mappedData.additionalReview) ? mappedData.additionalReview : []; */
   // vitalSigns transformed to vitals object - handled in mapFormDataToPatientDto
   
   // Ensure interpreter_required is boolean (default to false if not set)
