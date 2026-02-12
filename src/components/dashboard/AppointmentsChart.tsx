@@ -1,6 +1,7 @@
 "use client";
 
 import { FC, useMemo } from "react";
+import Link from "next/link";
 import {
   BarChart,
   Bar,
@@ -83,7 +84,13 @@ const AppointmentsChart: FC<AppointmentsChartProps> = ({ data }) => {
         <h3 className="font-medium text-lg md:text-xl text-black">
           Appointments
         </h3>
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
+          <Link 
+            href="/dashboard/search"
+            className="text-sm text-[#003465] hover:underline font-medium"
+          >
+            View All
+          </Link>
           <span className="bg-[#FAD900] text-white text-xs font-medium px-2 py-1 rounded-full mr-2">
             This Week
           </span>

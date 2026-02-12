@@ -14,6 +14,12 @@ import { formatDateFn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MoreVertical, Edit, Trash2, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
@@ -392,48 +398,35 @@ export default function Page({ slug }: { slug: string }) {
                     {data?.status}
                   </TableCell>
                   <TableCell>
-                    <div className="relative">
-                      <button
-                        className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-gray-100 rounded flex items-center justify-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenDropdownId(openDropdownId === data.id ? null : data.id);
-                        }}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                    </button>
-                      {openDropdownId === data.id && (
-                        <div 
-                          className={`absolute right-0 z-[100] min-w-[120px] overflow-visible rounded-md border bg-white p-1 shadow-lg ${
-                            // Show above if it's the last item, last 2 items, or if there's only 1 item
-                            index >= filteredDepartments.length - 2 || filteredDepartments.length === 1 ? 'bottom-10' : 'top-10'
-                          }`}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ position: 'absolute' }}
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <button 
+                          type="button"
+                          className="flex items-center justify-center px-2 py-1 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6] hover:bg-[#D9DDE5] transition-colors relative z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                         >
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick(data);
-                            }}
-                            className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </div>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(data);
-                            }}
-                            className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                          <MoreVertical className="text-black size-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
+                        <DropdownMenuItem
+                          onClick={() => handleEditClick(data)}
+                          className="cursor-pointer flex items-center gap-2"
+                        >
+                          <Edit className="size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(data)}
+                          className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );

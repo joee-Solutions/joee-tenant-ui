@@ -7,8 +7,6 @@ import CryptoJS from 'crypto-js';
  * Allows users to login offline using cached credentials
  */
 
-const ENCRYPTION_KEY = 'joee-offline-auth-key'; // In production, use a more secure key
-
 class OfflineAuthService {
   private static instance: OfflineAuthService;
 
@@ -22,6 +20,24 @@ class OfflineAuthService {
   }
 
   /**
+   * Generate per-user encryption key
+   * Uses email + hostname to create a unique key for each user
+   * This ensures that each user's credentials are encrypted with a unique key
+   */
+  private getEncryptionKey(email: string): string {
+    if (typeof window === 'undefined') {
+      // SSR fallback - should not happen in practice
+      return 'default-key-ssr';
+    }
+    // Generate per-user key based on email and hostname
+    // This ensures each user has a unique encryption key
+    const baseKey = `${email}-${window.location.hostname}`;
+    const hashedKey = CryptoJS.SHA256(baseKey).toString();
+    // Use first 32 characters as AES key (AES-256 requires 32 bytes)
+    return hashedKey.substring(0, 32);
+  }
+
+  /**
    * Hash password for storage (one-way hash)
    */
   private hashPassword(password: string): string {
@@ -29,17 +45,19 @@ class OfflineAuthService {
   }
 
   /**
-   * Encrypt sensitive data
+   * Encrypt sensitive data with per-user key
    */
-  private encrypt(data: string): string {
-    return CryptoJS.AES.encrypt(data, ENCRYPTION_KEY).toString();
+  private encrypt(data: string, email: string): string {
+    const key = this.getEncryptionKey(email);
+    return CryptoJS.AES.encrypt(data, key).toString();
   }
 
   /**
-   * Decrypt sensitive data
+   * Decrypt sensitive data with per-user key
    */
-  private decrypt(encryptedData: string): string {
-    const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
+  private decrypt(encryptedData: string, email: string): string {
+    const key = this.getEncryptionKey(email);
+    const bytes = CryptoJS.AES.decrypt(encryptedData, key);
     return bytes.toString(CryptoJS.enc.Utf8);
   }
 
@@ -66,8 +84,8 @@ class OfflineAuthService {
       const credentialData: OfflineCredentials = {
         email,
         passwordHash,
-        token: this.encrypt(token),
-        userData: this.encrypt(JSON.stringify(userData)),
+        token: this.encrypt(token, email),
+        userData: this.encrypt(JSON.stringify(userData), email),
         lastLogin: new Date(),
         expiresAt,
       };
@@ -118,9 +136,9 @@ class OfflineAuthService {
         return { success: false };
       }
 
-      // Decrypt token and user data
-      const token = this.decrypt(credential.token!);
-      const userData = JSON.parse(this.decrypt(credential.userData!));
+      // Decrypt token and user data using user's email for key generation
+      const token = this.decrypt(credential.token!, email);
+      const userData = JSON.parse(this.decrypt(credential.userData!, email));
 
       // Update last login
       await db.offlineCredentials.update(credential.id!, {

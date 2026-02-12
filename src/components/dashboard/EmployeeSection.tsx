@@ -58,9 +58,15 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
         <div className="relative p-6 text-white bg-no-repeat bg-center bg-cover h-[170px]" style={{backgroundImage: "url('/assets/images/employeebg.png')"}}>
           <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
-          <div className="relative z-10 flex justify-between items-center w-full">
-            <h3 className="font-semibold text-lg">Employees - All Organizations</h3>
-          </div>
+      <div className="relative z-10 flex justify-between items-center w-full">
+        <h3 className="font-semibold text-lg">Employees - All Organizations</h3>
+        <Link 
+          href="/dashboard/search?tab=employees"
+          className="text-sm text-white hover:underline font-medium"
+        >
+          View All
+        </Link>
+      </div>
         </div>
         <div className="flex flex-col items-center justify-center p-8 text-center -mt-12">
           <div className="relative w-[180px] h-[180px] rounded-full border-8 border-[#003465] overflow-hidden bg-gray-200 flex items-center justify-center">
@@ -91,6 +97,12 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
        <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
       <div className="relative z-10 flex justify-between items-center w-full ">
         <h3 className="font-semibold text-lg ">Employees - All Organizations</h3>
+        <Link 
+          href="/dashboard/search?tab=employees"
+          className="text-sm text-white hover:underline font-medium"
+        >
+          View All
+        </Link>
         </div>
       </div>
 
@@ -104,12 +116,6 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
         <p className="mt-3 text-md max-w-lg text-[#999999] px-6">
           {mainEmployee?.description}
         </p>
-          <button 
-            onClick={() => handleEmployeeClick(mainEmployee.id, mainEmployee.orgId)}
-            className="my-4 bg-[#003465] text-white px-12 text-lg py-2 rounded-lg shadow hover:bg-[#122a41] cursor-pointer"
-          >
-          View Details
-          </button>
       </div>
 
     

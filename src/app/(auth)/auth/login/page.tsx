@@ -132,19 +132,30 @@ const TenantLoginPage = () => {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
       console.log(rt);
       if (rt) {
-        // Skip OTP verification and route directly to dashboard
-        // Use the token from login response as auth_token (assuming backend allows skipping OTP)
-        if (rt.data?.token || rt.data?.auth_token) {
-          const authToken = rt.data.auth_token || rt.data.token;
-          
+        // Extract token from response - check multiple possible locations
+        const authToken = 
+          rt.tokens?.accessToken || 
+          rt.data?.tokens?.accessToken ||
+          rt.token || 
+          rt.data?.token || 
+          rt.auth_token || 
+          rt.data?.auth_token;
+        
+        if (authToken) {
           // Set auth_token cookie
           Cookies.set("auth_token", authToken, { expires: 1 });
+          
+          // Store refresh token if available
+          const refreshToken = rt.tokens?.refreshToken || rt.data?.tokens?.refreshToken || rt.refreshToken || rt.data?.refreshToken;
+          if (refreshToken) {
+            Cookies.set("refresh_token", refreshToken, { expires: 7 });
+          }
           
           // Remove mfa_token if it exists (no longer needed)
           Cookies.remove("mfa_token");
           
           // Set user data if available in login response
-          const userData = rt.data?.user;
+          const userData = rt.user || rt.data?.user;
           if (userData) {
             Cookies.set("user", JSON.stringify(userData), { expires: 1 });
             setUser(userData);
@@ -162,6 +173,7 @@ const TenantLoginPage = () => {
           router.push("/dashboard");
         } else {
           // If no token is available, show error
+          console.error("Login response structure:", rt);
           toast.error("Login failed: No authentication token received");
         }
       }

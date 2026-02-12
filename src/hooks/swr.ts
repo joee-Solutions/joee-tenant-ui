@@ -238,6 +238,30 @@ export const useDashboardData = () => {
   };
 };
 
+// Helper function to extract nested data from response
+const extractNestedData = (responseData: any): any => {
+  if (!responseData || typeof responseData !== 'object') return null;
+  
+  // If data has success field, it's a standardized response
+  if ('success' in responseData && responseData.success && 'data' in responseData) {
+    // Check if data.data has nested structure
+    if (responseData.data && typeof responseData.data === 'object' && 'data' in responseData.data) {
+      return responseData.data.data;
+    } else {
+      return responseData.data;
+    }
+  } else if ('data' in responseData) {
+    // Check for nested data.data.data structure
+    if (responseData.data && typeof responseData.data === 'object' && 'data' in responseData.data) {
+      return responseData.data.data;
+    } else {
+      return responseData.data;
+    }
+  } else {
+    return responseData;
+  }
+};
+
 // Types for dashboard appointments data
 interface AppointmentsByDay {
   day: string;
@@ -246,14 +270,20 @@ interface AppointmentsByDay {
 }
 
 interface DashboardAppointmentsData {
-  clinic: string;
-  weeklyGrowth: number;
-  appointmentsByDay: AppointmentsByDay[];
+  totalAppointments?: number;
+  latestAppointments?: any[];
+  clinic?: string;
+  weeklyGrowth?: number;
+  appointmentsByDay?: AppointmentsByDay[];
 }
 
 interface DashboardPatientsData {
   totalPatients: number;
-  ageDistribution: AgeGroup[];
+  averageAge?: number;
+  ageGroups?: {
+    [key: string]: number;
+  };
+  ageDistribution?: AgeGroup[];
 }
 // Custom hook for dashboard appointments data
 export const useDashboardAppointments = () => {
@@ -270,8 +300,76 @@ export const useDashboardAppointments = () => {
     }
   );
   
+  const rawData = extractNestedData(data);
+  const extractedData = extractData<DashboardAppointmentsData>(rawData);
+  
+  // Transform latestAppointments to appointmentsByDay if needed
+  let transformedData: DashboardAppointmentsData | null = null;
+  
+  // Ensure extractedData is a single object, not an array
+  const dataObj = Array.isArray(extractedData) ? null : (extractedData as DashboardAppointmentsData);
+  
+  if (dataObj) {
+    transformedData = { ...dataObj };
+    
+    // If we have latestAppointments but no appointmentsByDay, transform it
+    if (dataObj.latestAppointments && Array.isArray(dataObj.latestAppointments) && !dataObj.appointmentsByDay) {
+      // Group appointments by day of week and count by gender
+      const dayMap = new Map<string, { male: number; female: number }>();
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      
+      dataObj.latestAppointments.forEach((appointment: any) => {
+        if (appointment.date || appointment.appointmentDate || appointment.createdAt) {
+          const dateStr = appointment.date || appointment.appointmentDate || appointment.createdAt;
+          const date = new Date(dateStr);
+          const dayName = dayNames[date.getDay()];
+          
+          if (dayName) {
+            const current = dayMap.get(dayName) || { male: 0, female: 0 };
+            const gender = (appointment.gender || appointment.patient?.gender || '').toLowerCase();
+            
+            if (gender === 'male' || gender === 'm') {
+              current.male += 1;
+            } else if (gender === 'female' || gender === 'f') {
+              current.female += 1;
+            }
+            
+            dayMap.set(dayName, current);
+          }
+        }
+      });
+      
+      // Convert map to array format expected by chart
+      transformedData.appointmentsByDay = dayNames.map(day => ({
+        day,
+        male: dayMap.get(day)?.male || 0,
+        female: dayMap.get(day)?.female || 0,
+      }));
+    } else if (!transformedData.appointmentsByDay) {
+      // If no appointmentsByDay and no latestAppointments, use empty array
+      transformedData.appointmentsByDay = [];
+    }
+    
+    // Set defaults for clinic and weeklyGrowth if not present
+    if (!transformedData.clinic) {
+      transformedData.clinic = "All Organizations";
+    }
+    if (transformedData.weeklyGrowth === undefined) {
+      transformedData.weeklyGrowth = 0;
+    }
+  }
+  
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Dashboard Appointments - Raw response:', data);
+    console.log('Dashboard Appointments - Raw data:', rawData);
+    console.log('Dashboard Appointments - Extracted data:', extractedData);
+    console.log('Dashboard Appointments - Transformed data:', transformedData);
+  }
+  
   return {
-    data: extractData<DashboardAppointmentsData>(data?.data?.data),
+    data: transformedData,
+    totalAppointments: transformedData?.totalAppointments || 0,
     isLoading,
     error,
   };
@@ -291,22 +389,74 @@ export const useDashboardPatients = () => {
       revalidateOnReconnect: true,
     }
   );
-  console.log('data patients',data?.data)
-
-  console.log('Raw patients API response:', data);
-  console.log('Extracted patients data:', extractData<DashboardPatientsData>(data?.data?.data));
+  
+  const rawData = extractNestedData(data);
+  const extractedData = extractData<DashboardPatientsData>(rawData);
+  
+  // Transform ageGroups object to ageDistribution array if needed
+  let transformedData: DashboardPatientsData | null = null;
+  
+  // Ensure extractedData is a single object, not an array
+  const dataObj = Array.isArray(extractedData) ? null : (extractedData as DashboardPatientsData);
+  
+  if (dataObj) {
+    transformedData = { ...dataObj };
+    
+    // If we have ageGroups object but no ageDistribution array, transform it
+    if (dataObj.ageGroups && !dataObj.ageDistribution) {
+      const ageGroupColors: { [key: string]: string } = {
+        "0-18": "#003465",
+        "19-25": "#FAD900",
+        "26-50": "#3FA907",
+        "50+": "#EC0909",
+      };
+      
+      const total = dataObj.totalPatients || 0;
+      const ageDistribution: AgeGroup[] = Object.entries(dataObj.ageGroups)
+        .sort(([a], [b]) => {
+          // Sort by age range: 0-18, 19-25, 26-50, 50+
+          const order = ["0-18", "19-25", "26-50", "50+"];
+          const indexA = order.indexOf(a);
+          const indexB = order.indexOf(b);
+          return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+        })
+        .map(([range, count]) => ({
+          range,
+          percentage: total > 0 ? Math.round((Number(count) / total) * 100) : 0,
+          color: ageGroupColors[range] || "#999999",
+        }));
+      
+      transformedData.ageDistribution = ageDistribution;
+    }
+  }
 
   return {
-    data: extractData<DashboardPatientsData>(data?.data?.data),
+    data: transformedData,
     isLoading,
     error,
   };
 };
 
+// Interface for dashboard employees response
+interface DashboardEmployeesResponse {
+  totalTenantUsers: number;
+  latestUsers: Array<{
+    id: number;
+    firstname: string;
+    lastname: string;
+    email: string;
+    image: string | null;
+    tenant: string;
+    designation: string;
+    isActive: boolean;
+    createdAt: string;
+  }>;
+}
+
 // Custom hook for dashboard employees data
 export const useDashboardEmployees = () => {
   const { data, isLoading, error } = useSWR(
-    API_ENDPOINTS.GET_ALL_USERS,
+    API_ENDPOINTS.GET_DASHBOARD_USERS,
     authFectcher,
     {
       onError: (error) => {
@@ -317,8 +467,63 @@ export const useDashboardEmployees = () => {
       revalidateOnReconnect: true,
     }
   );
+  
+  // Handle nested response structure: data.data.data or data.data or data
+  // Check if response has success field (standardized API response)
+  let rawData: any = null;
+  if (data && typeof data === 'object') {
+    // If data has success field, it's a standardized response
+    if ('success' in data && data.success && 'data' in data) {
+      // Check if data.data has nested structure
+      if (data.data && typeof data.data === 'object' && 'data' in data.data) {
+        rawData = data.data.data;
+      } else {
+        rawData = data.data;
+      }
+    } else if ('data' in data) {
+      // Check for nested data.data.data structure
+      if (data.data && typeof data.data === 'object' && 'data' in data.data) {
+        rawData = data.data.data;
+      } else {
+        rawData = data.data;
+      }
+    } else {
+      rawData = data;
+    }
+  }
+  
+  // Extract latestUsers from the response
+  let employeesData: any[] = [];
+  if (rawData && typeof rawData === 'object') {
+    // Check if it has latestUsers array
+    if ('latestUsers' in rawData && Array.isArray(rawData.latestUsers)) {
+      employeesData = rawData.latestUsers;
+    } else if (Array.isArray(rawData)) {
+      // If rawData is already an array, use it directly
+      employeesData = rawData;
+    } else {
+      // Try to extract using extractData
+      const extracted = extractData<any>(rawData);
+      if (Array.isArray(extracted)) {
+        employeesData = extracted;
+      } else if (extracted && typeof extracted === 'object' && 'latestUsers' in extracted) {
+        employeesData = Array.isArray(extracted.latestUsers) ? extracted.latestUsers : [];
+      }
+    }
+  }
+  
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Dashboard Employees - Raw response:', data);
+    console.log('Dashboard Employees - Raw data:', rawData);
+    console.log('Dashboard Employees - Employees data:', employeesData);
+    console.log('Dashboard Employees - Is array:', Array.isArray(employeesData));
+    console.log('Dashboard Employees - Length:', employeesData.length);
+  }
+  
   return {
-    data: extractData<AdminUser[]>(data?.data?.data),
+    data: employeesData,
+    totalUsers: rawData?.totalTenantUsers || 0,
     isLoading,
     error,
   };

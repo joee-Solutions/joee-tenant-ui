@@ -16,6 +16,16 @@ const nextConfig: NextConfig = {
   // },
   // Add empty turbopack config to silence the warning
   turbopack: {},
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'joee.nyc3.digitaloceanspaces.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 export default withPWA(nextConfig);

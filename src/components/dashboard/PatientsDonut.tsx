@@ -16,6 +16,12 @@ const PatientsDonut: FC<PatientsDonutProps> = ({ data }) => {
     <div className=" bg-white p-6 rounded-lg shadow-md h-fit">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg md:text-xl font-medium text-black">Patients</h2>
+        <Link 
+          href="/dashboard/search?tab=patients"
+          className="text-sm text-[#003465] hover:underline font-medium"
+        >
+          View All
+        </Link>
       </div>
 
       <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-center gap-6">

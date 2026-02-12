@@ -223,22 +223,39 @@ const processRequestAuth = async (
     // console.log(rt.data, "rt.data");
     return rt.data;
   } catch (error: any) {
-    if (!refreshingToking && error?.response?.status === 401) {
+    const statusCode = error?.response?.status;
+    const errorMessage = error?.response?.data?.error?.toLowerCase() || error?.message?.toLowerCase() || "";
+    const isUnauthorized = statusCode === 401 || errorMessage.includes("not authorized") || errorMessage.includes("unauthorized");
+    
+    // Only attempt refresh if we haven't already tried and it's an auth error
+    if (!refreshingToking && isUnauthorized) {
       const refreshed = await refreshUser();
       if (refreshed) {
-        return await processRequestAuth(method, path, data, callback);
-      }
-    } else if (
-      !refreshingToking &&
-      error.response?.data?.error?.toLowerCase().includes("not authorized")
-    ) {
-      const refreshed = await refreshUser();
-      if (refreshed) {
-        return await processRequestAuth(method, path, data, callback);
+        // Retry the original request with new token
+        try {
+          return await processRequestAuth(method, path, data, callback);
+        } catch (retryError) {
+          // If retry also fails, don't try to refresh again
+          console.error("Request failed after token refresh:", retryError);
+          if (callback) {
+            callback(path, null, retryError);
+          } else {
+            throw retryError;
+          }
+        }
+      } else {
+        // Refresh failed - tokens are cleared and user should be redirected
+        // Don't throw error here as redirect is happening
+        if (callback) {
+          callback(path, null, error);
+        } else {
+          throw error;
+        }
+        return;
       }
     }
 
-    console.error(error);
+    console.error("API request error:", error);
     if (callback) {
       callback(path, null, error);
     } else {
@@ -250,29 +267,87 @@ const processRequestAuth = async (
 const refreshUser = async () => {
   console.log("token expired, refreshing token");
   try {
-    if (getRefreshToken()) {
-      refreshingToking = true;
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      console.log("No refresh token available");
+      // Clear all tokens and redirect to login
+      Cookies.remove("refresh_token");
+      Cookies.remove("auth_token");
+      Cookies.remove("customer");
+      Cookies.remove("user");
+      if (typeof window !== "undefined") {
+        window.location.href = "/auth/login";
+      }
+      return null;
+    }
+
+    refreshingToking = true;
+    
+    try {
       const tResponse: any = await processRequestNoAuth(
         "post",
         API_ENDPOINTS.REFRESH_TOKEN,
-        { refresh_token: getRefreshToken() }
+        { refresh_token: refreshToken }
       );
-      if (tResponse) {
-        Cookies.set("auth_token", tResponse.token, { expires: 1 / 48 });
-        Cookies.set("customer", JSON.stringify(tResponse.user), {
-          expires: 1 / 48,
-        });
+      
+      // Check if response has token (handle different response structures)
+      const newToken = tResponse?.token || tResponse?.data?.token || tResponse?.tokens?.accessToken || tResponse?.data?.tokens?.accessToken;
+      const userData = tResponse?.user || tResponse?.data?.user;
+      
+      if (newToken) {
+        Cookies.set("auth_token", newToken, { expires: 1 / 48 });
+        
+        // Update refresh token if provided in response
+        const newRefreshToken = tResponse?.refreshToken || tResponse?.data?.refreshToken || tResponse?.tokens?.refreshToken || tResponse?.data?.tokens?.refreshToken;
+        if (newRefreshToken) {
+          Cookies.set("refresh_token", newRefreshToken, { expires: 7 });
+        }
+        
+        if (userData) {
+          Cookies.set("customer", JSON.stringify(userData), {
+            expires: 1 / 48,
+          });
+          Cookies.set("user", JSON.stringify(userData), {
+            expires: 1 / 48,
+          });
+        }
+        
+        console.log("Token refreshed successfully");
         return tResponse;
       } else {
+        console.warn("Refresh token response missing token");
+        throw new Error("Invalid refresh token response");
+      }
+    } catch (error: any) {
+      console.error("Token refresh failed:", error);
+      
+      // Handle 404 or other errors - clear tokens and redirect to login
+      const statusCode = error?.response?.status || error?.statusCode;
+      const is404 = statusCode === 404;
+      const is401 = statusCode === 401;
+      const is400 = statusCode === 400;
+      
+      // If endpoint doesn't exist (404) or token is invalid (401/400), clear everything
+      if (is404 || is401 || is400) {
+        console.log("Refresh token endpoint error or invalid token, clearing session");
         Cookies.remove("refresh_token");
         Cookies.remove("auth_token");
         Cookies.remove("customer");
+        Cookies.remove("user");
+        
+        // Redirect to login after a short delay to allow cleanup
+        if (typeof window !== "undefined") {
+          setTimeout(() => {
+            window.location.href = "/auth/login";
+          }, 100);
+        }
       }
+      
+      return null;
     }
   } finally {
     refreshingToking = false;
   }
-  return null;
 };
 
 export const convertToFormData = (data, files) => {

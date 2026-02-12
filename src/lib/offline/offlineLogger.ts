@@ -34,10 +34,17 @@ class OfflineLogger {
       this.logs.shift();
     }
 
-    // Also log to console with appropriate level
-    const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
-    const prefix = `[OFFLINE ${level.toUpperCase()}]`;
-    console[consoleMethod](prefix, message, data || '');
+    // Only log to console in development or if explicitly enabled
+    // In production, logging is disabled to prevent information leakage
+    const shouldLogToConsole = 
+      process.env.NODE_ENV === 'development' || 
+      (typeof window !== 'undefined' && localStorage.getItem('offline_debug') === 'true');
+    
+    if (shouldLogToConsole) {
+      const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
+      const prefix = `[OFFLINE ${level.toUpperCase()}]`;
+      console[consoleMethod](prefix, message, data || '');
+    }
 
     // Store in localStorage for persistence across page reloads
     if (typeof window !== 'undefined') {

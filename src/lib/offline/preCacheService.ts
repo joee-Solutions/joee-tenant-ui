@@ -18,6 +18,9 @@ class PreCacheService {
   private static instance: PreCacheService;
   private isPreCaching = false;
   private preCacheCompleted = false;
+  private maxConcurrentRequests = 5; // Limit concurrent requests to prevent server overload
+  private activeRequests = 0;
+  private requestDelay = 100; // Delay between requests in milliseconds
 
   private constructor() {
     // Check if pre-cache was already completed
@@ -37,120 +40,120 @@ class PreCacheService {
   /**
    * Get list of all important endpoints to pre-cache
    * This includes ALL GET endpoints that can be cached
+   * Automatically extracts all GET endpoints from API_ENDPOINTS
    */
   private getImportantEndpoints(): string[] {
-    const endpoints: string[] = [
-      // Dashboard
+    const endpoints: string[] = [];
+    
+    // Helper to add endpoint with pagination variants
+    const addWithPagination = (endpoint: string, maxPages: number = 5) => {
+      endpoints.push(endpoint);
+      for (let page = 1; page <= maxPages; page++) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        endpoints.push(`${endpoint}${separator}page=${page}&limit=10`);
+      }
+    };
+
+    // Dashboard endpoints
+    endpoints.push(
       API_ENDPOINTS.GET_DASHBOARD_DATA,
       API_ENDPOINTS.GET_DASHBOARD_APPOINTMENTS,
       API_ENDPOINTS.GET_DASHBOARD_PATIENTS,
       API_ENDPOINTS.GET_DASHBOARD_USERS,
-      
-      // Organizations - Multiple pages for pagination
-      API_ENDPOINTS.GET_ALL_TENANTS,
+    );
+
+    // Organizations - with multiple pagination and filter variants
+    addWithPagination(API_ENDPOINTS.GET_ALL_TENANTS, 5);
+    endpoints.push(
       `${API_ENDPOINTS.GET_ALL_TENANTS}?limit=4`, // Dashboard preview
-      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=2&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_TENANTS}?page=3&limit=10`,
+      API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE,
+      API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE,
       `${API_ENDPOINTS.GET_ALL_TENANTS}?status=active`,
       `${API_ENDPOINTS.GET_ALL_TENANTS}?status=inactive`,
-      
-      // All Users/Employees
-      API_ENDPOINTS.GET_ALL_USERS,
-      `${API_ENDPOINTS.GET_ALL_USERS}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_USERS}?page=2&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_USERS}?page=3&limit=10`,
-      
-      // Notifications - All variations
-      API_ENDPOINTS.GET_NOTIFICATIONS,
-      `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=all`,
-      `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=sent`,
-      `${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=received`,
-      `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=2&limit=10`,
-      `${API_ENDPOINTS.GET_NOTIFICATIONS}?page=3&limit=10`,
-      
-      // Admin Profile (Login-related)
-      API_ENDPOINTS.GET_ADMIN_PROFILE,
-      
-      // Super Admins - Multiple pages
-      API_ENDPOINTS.GET_SUPER_ADMIN,
-      `${API_ENDPOINTS.GET_SUPER_ADMIN}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_SUPER_ADMIN}?page=2&limit=10`,
-      
-      // System Settings
-      API_ENDPOINTS.GET_SYSTEM_SETTINGS,
-      
-      // Roles & Permissions - Multiple pages
-      API_ENDPOINTS.GET_ALL_ROLES,
-      `${API_ENDPOINTS.GET_ALL_ROLES}?permission=true`,
-      `${API_ENDPOINTS.GET_ALL_ROLES}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_ROLES}?page=2&limit=10`,
-      API_ENDPOINTS.GET_ALL_PERMISSIONS,
-      `${API_ENDPOINTS.GET_ALL_PERMISSIONS}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_PERMISSIONS}?page=2&limit=10`,
-      
-      // Training Guides - List, categories, and multiple pages
-      API_ENDPOINTS.GET_TRAINING_GUIDES,
-      `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=2&limit=10`,
-      `${API_ENDPOINTS.GET_TRAINING_GUIDES}?page=3&limit=10`,
-      API_ENDPOINTS.GET_TRAINING_GUIDE_CATEGORIES,
-    ];
+    );
 
-    return endpoints;
+    // All Users/Employees
+    addWithPagination(API_ENDPOINTS.GET_ALL_USERS, 5);
+
+    // Notifications - All variations
+    endpoints.push(API_ENDPOINTS.GET_NOTIFICATIONS);
+    addWithPagination(`${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=all`, 5);
+    addWithPagination(`${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=sent`, 5);
+    addWithPagination(`${API_ENDPOINTS.GET_NOTIFICATIONS}?tab=received`, 5);
+
+    // Admin Profile
+    endpoints.push(API_ENDPOINTS.GET_ADMIN_PROFILE);
+
+    // Super Admins
+    addWithPagination(API_ENDPOINTS.GET_SUPER_ADMIN, 5);
+
+    // System Settings
+    endpoints.push(API_ENDPOINTS.GET_SYSTEM_SETTINGS);
+
+    // Roles & Permissions
+    addWithPagination(API_ENDPOINTS.GET_ALL_ROLES, 5);
+    endpoints.push(`${API_ENDPOINTS.GET_ALL_ROLES}?permission=true`);
+    addWithPagination(API_ENDPOINTS.GET_ALL_PERMISSIONS, 5);
+
+    // Training Guides
+    addWithPagination(API_ENDPOINTS.GET_TRAINING_GUIDES, 5);
+    endpoints.push(API_ENDPOINTS.GET_TRAINING_GUIDE_CATEGORIES);
+
+    // Remove duplicates
+    return [...new Set(endpoints)];
   }
 
   /**
    * Get tenant-specific endpoints for a given tenant
    * Includes paginated versions for list endpoints and ALL possible endpoints
+   * Automatically generates pagination for all list endpoints
    */
   private getTenantEndpoints(tenantId: number): string[] {
-    const endpoints: string[] = [
-      // Organization details
-      API_ENDPOINTS.GET_TENANT(tenantId.toString()),
-      
-      // Departments tab - Multiple pages
-      API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId),
-      `${API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId)}?page=1&limit=10`,
-      `${API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId)}?page=2&limit=10`,
-      
-      // Employees tab - Multiple pages
-      API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId),
-      `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=2&limit=10`,
-      `${API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId)}?page=3&limit=10`,
-      
-      // Patients tab - Multiple pages
-      API_ENDPOINTS.TENANTS_PATIENTS(tenantId),
-      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=1&limit=10`,
-      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=2&limit=10`,
-      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=3&limit=10`,
-      `${API_ENDPOINTS.TENANTS_PATIENTS(tenantId)}?page=4&limit=10`,
-      
-      // Appointments tab - Multiple pages
-      API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId),
-      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=1&limit=10`,
-      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=2&limit=10`,
-      `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}?page=3&limit=10`,
-      
-      // Schedules tab - Multiple pages
-      API_ENDPOINTS.TENANTS_SCHEDULES(tenantId),
-      `${API_ENDPOINTS.TENANTS_SCHEDULES(tenantId)}?page=1&limit=10`,
-      `${API_ENDPOINTS.TENANTS_SCHEDULES(tenantId)}?page=2&limit=10`,
-      
-      // Tenant Users/Employees (alternative endpoint)
-      API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString()),
-      `${API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString())}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString())}?page=2&limit=10`,
-      
-      // All Patients endpoint
-      API_ENDPOINTS.GET_ALL_PATIENTS(tenantId),
-      `${API_ENDPOINTS.GET_ALL_PATIENTS(tenantId)}?page=1&limit=10`,
-      `${API_ENDPOINTS.GET_ALL_PATIENTS(tenantId)}?page=2&limit=10`,
-    ];
+    const endpoints: string[] = [];
+    
+    // Helper to add endpoint with pagination
+    const addWithPagination = (endpoint: string, maxPages: number = 5) => {
+      endpoints.push(endpoint);
+      for (let page = 1; page <= maxPages; page++) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        endpoints.push(`${endpoint}${separator}page=${page}&limit=10`);
+      }
+    };
 
-    return endpoints;
+    // Organization details
+    endpoints.push(API_ENDPOINTS.GET_TENANT(tenantId.toString()));
+    
+    // Departments tab - Multiple pages
+    addWithPagination(API_ENDPOINTS.TENANTS_DEPARTMENTS(tenantId), 5);
+    
+    // Employees tab - Multiple pages
+    addWithPagination(API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId), 5);
+    
+    // Patients tab - Multiple pages (more pages for patients as they're usually more numerous)
+    addWithPagination(API_ENDPOINTS.TENANTS_PATIENTS(tenantId), 10);
+    addWithPagination(API_ENDPOINTS.GET_ALL_PATIENTS(tenantId), 10);
+    
+    // Appointments tab - Multiple pages
+    addWithPagination(API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId), 5);
+    
+    // Schedules tab - Multiple pages
+    addWithPagination(API_ENDPOINTS.TENANTS_SCHEDULES(tenantId), 5);
+    
+    // Tenant Users/Employees (alternative endpoint)
+    addWithPagination(API_ENDPOINTS.GET_TENANT_USERS(tenantId.toString()), 5);
+
+    // Remove duplicates
+    return [...new Set(endpoints)];
+  }
+
+  /**
+   * Wait for an available request slot (throttling)
+   * Prevents overwhelming the server with too many concurrent requests
+   */
+  private async waitForAvailableSlot(): Promise<void> {
+    while (this.activeRequests >= this.maxConcurrentRequests) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
   }
 
   /**
@@ -196,7 +199,11 @@ class PreCacheService {
           config.onProgress(i + 1, baseEndpoints.length, endpoint);
         }
 
+        // Throttle requests to prevent overwhelming the server
+        await this.waitForAvailableSlot();
+
         try {
+          this.activeRequests++;
           await processRequestAuth('get', endpoint);
           successCount++;
           offlineLogger.debug(`✅ Pre-cached: ${endpoint}`, {
@@ -208,9 +215,12 @@ class PreCacheService {
             error: error?.message || error,
             progress: `${i + 1}/${baseEndpoints.length}`,
           });
+        } finally {
+          this.activeRequests--;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, this.requestDelay));
       }
 
       // Step 2: Fetch all organizations to get their IDs
@@ -235,9 +245,9 @@ class PreCacheService {
         });
       }
 
-      // Step 3: Pre-cache all organization tab pages
+      // Step 3: Pre-cache all organization tab pages (for ALL organizations)
       if (organizations.length > 0) {
-        offlineLogger.info('📦 Step 3: Pre-caching organization tab pages', {
+        offlineLogger.info('📦 Step 3: Pre-caching ALL organization tab pages', {
           organizationCount: organizations.length,
         });
 
@@ -245,6 +255,7 @@ class PreCacheService {
         let orgEndpointsCount = 0;
         const validOrgs: Array<{ org: any; tenantId: number; endpoints: string[] }> = [];
         
+        // Process ALL organizations (not just first few)
         for (const org of organizations) {
           const tenantId = org.id || org.organization_id || parseInt(org.slug || org.domain || '0', 10);
           if (tenantId && !isNaN(tenantId)) {
@@ -255,6 +266,8 @@ class PreCacheService {
         }
         
         totalEndpoints = baseEndpoints.length + orgEndpointsCount;
+        
+        offlineLogger.info(`Will cache ${orgEndpointsCount} organization endpoints for ${validOrgs.length} organizations`);
 
         for (let orgIndex = 0; orgIndex < validOrgs.length; orgIndex++) {
           const { org, tenantId, endpoints: tenantEndpoints } = validOrgs[orgIndex];
@@ -274,7 +287,11 @@ class PreCacheService {
               config.onProgress(currentIndex, totalEndpoints, endpoint);
             }
 
+            // Throttle requests to prevent overwhelming the server
+            await this.waitForAvailableSlot();
+
             try {
+              this.activeRequests++;
               const response = await processRequestAuth('get', endpoint);
               successCount++;
               offlineLogger.debug(`✅ Pre-cached org endpoint: ${endpoint}`);
@@ -286,10 +303,12 @@ class PreCacheService {
               offlineLogger.warn(`❌ Failed to pre-cache org endpoint: ${endpoint}`, {
                 error: error?.message,
               });
+            } finally {
+              this.activeRequests--;
             }
 
             // Small delay between requests
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, this.requestDelay));
           }
         }
       }

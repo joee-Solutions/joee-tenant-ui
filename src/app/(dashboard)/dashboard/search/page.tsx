@@ -15,7 +15,15 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams?.get("q") || "";
-  const [activeTab, setActiveTab] = useState<"all" | "organizations" | "employees" | "patients">("all");
+  const tabFromUrl = searchParams?.get("tab") as "all" | "organizations" | "employees" | "patients" | null;
+  const [activeTab, setActiveTab] = useState<"all" | "organizations" | "employees" | "patients">(tabFromUrl || "all");
+  
+  // Update active tab when URL changes
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   // Fetch all data
   const { data: tenantsData, isLoading: loadingTenants } = useTenantsData({ search: query });
@@ -34,7 +42,11 @@ function SearchPageContent() {
   }, [tenantsData, query]);
 
   const filteredEmployees = useMemo(() => {
-    if (!query || !Array.isArray(employeesData)) return [];
+    if (!Array.isArray(employeesData)) return [];
+    // If no query, return all employees when on employees tab or all tab
+    if (!query) {
+      return (activeTab === "employees" || activeTab === "all") ? employeesData : [];
+    }
     const searchLower = query.toLowerCase();
     return employeesData.filter((emp: any) => 
       `${emp.firstname || ''} ${emp.lastname || ''}`.toLowerCase().includes(searchLower) ||
@@ -42,17 +54,21 @@ function SearchPageContent() {
       emp.designation?.toLowerCase().includes(searchLower) ||
       emp.department?.name?.toLowerCase().includes(searchLower)
     );
-  }, [employeesData, query]);
+  }, [employeesData, query, activeTab]);
 
   const filteredPatients = useMemo(() => {
-    if (!query || !Array.isArray(patientsData)) return [];
+    if (!Array.isArray(patientsData)) return [];
+    // If no query, return all patients when on patients tab or all tab
+    if (!query) {
+      return (activeTab === "patients" || activeTab === "all") ? patientsData : [];
+    }
     const searchLower = query.toLowerCase();
     return patientsData.filter((patient: any) => 
       `${patient.first_name || ''} ${patient.last_name || ''}`.toLowerCase().includes(searchLower) ||
       patient.email?.toLowerCase().includes(searchLower) ||
       patient.phone_number?.toLowerCase().includes(searchLower)
     );
-  }, [patientsData, query]);
+  }, [patientsData, query, activeTab]);
 
   const totalResults = filteredOrganizations.length + filteredEmployees.length + filteredPatients.length;
 

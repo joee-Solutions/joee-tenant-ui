@@ -24,6 +24,14 @@ export class OfflineService {
         this.isOnline = false;
         offlineLogger.warn('Device went OFFLINE - requests will use cache or be queued');
       });
+
+      // Cleanup expired cache entries on initialization
+      this.cleanupExpiredCache();
+
+      // Set up periodic cleanup (every hour)
+      setInterval(() => {
+        this.cleanupExpiredCache();
+      }, 60 * 60 * 1000); // 1 hour
     }
   }
 
@@ -196,7 +204,7 @@ export class OfflineService {
   async cacheResponse(endpoint: string, data: any): Promise<void> {
     try {
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // Cache for 24 hours
+      expiresAt.setMonth(expiresAt.getMonth() + 1); // Cache for 1 month (30 days)
 
       await db.apiCache.put({
         endpoint,
@@ -684,6 +692,26 @@ export class OfflineService {
       offlineLogger.error(`Error updating SWR cache for ${endpoint}`, {
         error: error?.message,
       });
+    }
+  }
+
+  // Cleanup expired cache entries
+  async cleanupExpiredCache(): Promise<void> {
+    try {
+      const now = new Date();
+      const expired = await db.apiCache
+        .where('expiresAt')
+        .below(now)
+        .toArray();
+      
+      if (expired.length > 0) {
+        for (const item of expired) {
+          await db.apiCache.delete(item.id!);
+        }
+        offlineLogger.info(`Cleaned up ${expired.length} expired cache entries`);
+      }
+    } catch (error: any) {
+      offlineLogger.error('Error cleaning up expired cache', { error: error?.message });
     }
   }
 

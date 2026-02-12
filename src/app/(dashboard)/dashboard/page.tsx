@@ -130,6 +130,15 @@ const DashboardPage: NextPage = () => {
   const { data: appointmentsData, isLoading: loadingAppointments, error: errorAppointments } = useDashboardAppointments();
   const { data: patientsData, isLoading: loadingPatients, error: errorPatients } = useDashboardPatients();
   const { data: employeesData, isLoading: loadingEmployees, error: errorEmployees } = useDashboardEmployees();
+  
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Dashboard - Appointments Data:', appointmentsData);
+    console.log('Dashboard - Patients Data:', patientsData);
+    console.log('Dashboard - Employees Data:', employeesData);
+    console.log('Dashboard - Employees is Array:', Array.isArray(employeesData));
+    console.log('Dashboard - Employees Length:', Array.isArray(employeesData) ? employeesData.length : 'N/A');
+  }
   const { data: tenantsData, isLoading: loadingTenants, error: errorTenants } = useTenantsData({ limit: 4 });
   const user = useTenantStore(state => state.state.user);
   const fallbackAppointmentsData: DashboardAppointmentsData = {
@@ -159,7 +168,8 @@ const DashboardPage: NextPage = () => {
     !errorAppointments &&
     appointmentsData &&
     !Array.isArray(appointmentsData) &&
-    (appointmentsData as DashboardAppointmentsData)?.appointmentsByDay?.length
+    (appointmentsData as DashboardAppointmentsData)?.appointmentsByDay &&
+    (appointmentsData as DashboardAppointmentsData)?.appointmentsByDay?.length > 0
       ? (appointmentsData as DashboardAppointmentsData)
       : fallbackAppointmentsData;
   const patientsDonutData: DashboardPatientsData =
@@ -223,21 +233,46 @@ const DashboardPage: NextPage = () => {
       },
     }
   );
-  const organizationStats = orgStatusData && typeof orgStatusData === 'object' && orgStatusData.data ? {
-    activeCount: orgStatusData.data.activeTenants || 0,
-    inactiveCount: orgStatusData.data.inactiveTenants || 0,
-    deactivatedCount: orgStatusData.data.deactivatedTenants || 0,
-    totalCount: orgStatusData.data.totalTenants || 0,
-    completionPercentage: orgStatusData.data.totalTenants
-      ? Math.round(((orgStatusData.data.activeTenants || 0) * 100) / orgStatusData.data.totalTenants)
-      : 0,
-  } : {
-    activeCount: 0,
-    inactiveCount: 0,
-    deactivatedCount: 0,
-    totalCount: 0,
-    completionPercentage: 0,
+  
+  // Extract data from nested response structure
+  let statusData: any = null;
+  if (orgStatusData && typeof orgStatusData === 'object') {
+    // Handle nested structure: { success: true, data: { ... } }
+    if ('success' in orgStatusData && orgStatusData.success && 'data' in orgStatusData) {
+      statusData = orgStatusData.data;
+    } else if ('data' in orgStatusData) {
+      statusData = orgStatusData.data;
+    } else {
+      statusData = orgStatusData;
+    }
+  }
+  
+  // Map API response to component expected format
+  // API returns: { total, active, deactivated, activePercentage, deactivatedPercentage }
+  // Note: API's "deactivated" field represents inactive organizations
+  const total = Number(statusData?.total) || 0;
+  const active = Number(statusData?.active) || 0;
+  const inactive = Number(statusData?.deactivated) || 0; // API's "deactivated" = inactive
+  const deactivated = 0; // Not provided by API, set to 0
+  
+  // Parse percentages from API (they come as strings like "83.33%")
+  const activePercentageStr = statusData?.activePercentage || "0%";
+  const activePercentageNum = parseFloat(activePercentageStr.replace('%', '')) || 0;
+  
+  const organizationStats = {
+    activeCount: active,
+    inactiveCount: inactive, // Use API's "deactivated" field as inactive
+    deactivatedCount: deactivated, // Not provided by API
+    totalCount: total,
+    completionPercentage: activePercentageNum, // Use the percentage from API
   };
+  
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Organization Status - Raw response:', orgStatusData);
+    console.log('Organization Status - Extracted data:', statusData);
+    console.log('Organization Status - Mapped stats:', organizationStats);
+  }
 
   // Calculate growth percentages
   const growth = {
@@ -348,7 +383,7 @@ const DashboardPage: NextPage = () => {
             <EmployeeSection
               employees={
                 (employeesData as unknown[])
-                  .filter((u): u is User =>
+                  .filter((u): u is any =>
                     typeof u === 'object' &&
                     u !== null &&
                     'id' in u &&
@@ -358,11 +393,11 @@ const DashboardPage: NextPage = () => {
                   .map((user: any) => ({
                     id: user.id,
                     name: `${user.firstname} ${user.lastname}`.trim(),
-                    role: user.roles && user.roles.length > 0 ? user.roles[0].name : "Employee",
-                    organization: hasTenant(user) && user.tenant && 'name' in user.tenant ? user.tenant.name || "-" : "-",
+                    role: user.designation || "Employee",
+                    organization: user.tenant || "-",
                     description: user.about || "",
-                    image: user.image_url || "/assets/images/employeeprofile.png",
-                    orgId: user.tenant?.id || 0,
+                    image: user.image || "/assets/images/employeeprofile.png",
+                    orgId: user.tenantId || 0, // Note: API doesn't return tenantId, might need to fetch it
                   }))
               }
             />
