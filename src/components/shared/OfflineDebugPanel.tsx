@@ -156,8 +156,8 @@ export default function OfflineDebugPanel() {
               onClick={async () => {
                 preCacheService.resetPreCache();
                 await preCacheService.preCacheAll({
-                  onProgress: (current, total, endpoint) => {
-                    console.log(`Pre-caching ${current}/${total}: ${endpoint}`);
+                  onProgress: (current, total) => {
+                    console.log(`Pre-caching ${current}/${total} endpoints...`);
                   },
                 });
               }}

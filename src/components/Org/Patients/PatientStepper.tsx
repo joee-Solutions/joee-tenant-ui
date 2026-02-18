@@ -282,7 +282,7 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
     } : undefined,
     allergies: data.allergies || [],
     medHistory: data.medHistory || data.medicalHistories || data.medical_history || [],
-    // diagnosisHistory removed - not in backend schema
+    diagnosisHistory: data.diagnosisHistory || [], // Map diagnosisHistory from API
     surgeryHistory: data.surgeryHistory || data.surgeries || data.surgery_history || [],
     immunizationHistory: data.immunizationHistory || data.immunizations || data.immunization_history || [],
     famhistory: data.famhistory || data.familyHistory || data.family_history || [],
@@ -369,7 +369,8 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
       }
       return {};
     })(),
-    // additionalReview removed - not in backend schema
+    // Map additionalReview from API
+    additionalReview: data.additionalReview || {},
     // Transform socialHistory back to lifeStyle structure
     lifeStyle: (() => {
       if (data.lifeStyle && typeof data.lifeStyle === 'object') {
@@ -595,8 +596,14 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
   }, [methods]);
   
   // Navigation warning when user tries to navigate away with unsaved changes
+  // Also auto-save to localStorage before leaving
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Always save to localStorage before leaving (silently)
+      if (hasUnsavedChanges) {
+        saveToLocalStorage(false, false);
+      }
+      
       // Check if there's form data AND it hasn't been saved to API
       const hasData = hasFormData();
       if (hasData && !isSavedToAPI) {
@@ -610,7 +617,7 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasFormData, isSavedToAPI]);
+  }, [hasFormData, isSavedToAPI, hasUnsavedChanges, saveToLocalStorage]);
   
   // Intercept navigation attempts (for back button and other navigation)
   const handleNavigationAttempt = useCallback((url: string) => {

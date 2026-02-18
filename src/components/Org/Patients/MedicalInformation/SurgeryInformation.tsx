@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
+import { FormDataStepper } from "../PatientStepper";
 import {
   Select,
   SelectContent,
@@ -38,10 +39,10 @@ const surgeryTypes = [
 
 // schema.ts
 import { z } from "zod";
-import { FormDataStepper } from "../PatientStepper";
 export const surgeryHistorySchema = z.array(
   z.object({
     surgeryType: z.string().optional(),
+    surgeryTypeOther: z.string().optional(), // Text input when "Other" is selected
     date: z.string().optional(),
     additionalInfo: z.string().optional(),
   })
@@ -69,7 +70,7 @@ export default function SurgeryHistoryForm() {
   }, [surgeryHistory]);
 
   const handleAddNew = () => {
-    append({ surgeryType: "", date: "", additionalInfo: "" });
+    append({ surgeryType: "", surgeryTypeOther: "", date: "", additionalInfo: "" });
     setEditingIndex(fields.length);
   };
 
@@ -119,6 +120,17 @@ export default function SurgeryHistoryForm() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Show text input when "Other" is selected */}
+                    {surgeryHistory[index]?.surgeryType === "Other" && (
+                      <div className="mt-2">
+                        <Input
+                          type="text"
+                          {...register(`surgeryHistory.${index}.surgeryTypeOther`)}
+                          className="w-full h-14 p-3 border border-[#737373] rounded"
+                          placeholder="Please specify the surgery type"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               />

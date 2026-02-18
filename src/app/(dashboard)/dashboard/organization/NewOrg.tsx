@@ -22,10 +22,10 @@ const NewOrganizationSchema = z.object({
   address: z.string().min(1, "This field is required"),
   city: z.string().min(1, "This field is required"),
   state: z.string().min(1, "This field is required"),
-  zipCode: z.string().min(1, "This field is required").optional(),
+  zip: z.string().optional(),
   country: z.string().min(1, "This field is required"),
   phone_number: z.string().min(1, "This field is required"),
-  organizationFax: z.string().optional(),
+  fax: z.string().optional(),
   email: z
     .string()
     .email("Invalid email address")
@@ -41,10 +41,6 @@ const NewOrganizationSchema = z.object({
       message: "Please enter a full name (first and last)",
     }),
   adminPhoneNumber: z.string().min(1, "This field is required"),
-  adminEmail: z
-    .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
   org_type: z.string().min(1, "This field is required"),
   domain: z.string().min(1, "This field is required"),
 });
@@ -168,18 +164,17 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
     defaultValues: {
       name: "",
       address: "",
-      adminEmail: "",
       adminName: "",
       adminPhoneNumber: "",
       city: "",
       country: "",
       email: "",
-      organizationFax: "",
+      fax: "",
       phone_number: "",
       org_type: "",
       state: "",
       website: "",
-      zipCode: "",
+      zip: "",
       domain: ""
     },
   });
@@ -267,11 +262,10 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         address,
         city,
         state,
-        zipCode,
+        zip,
         country,
         adminName,
         adminPhoneNumber,
-        adminEmail,
         ...rest
       } = payload;
       const [firstname, ...lastnameParts] = adminName.split(" ");
@@ -287,14 +281,13 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
           address: address,
           city: city,
           state: stateName,
-          zip_code: zipCode,
+          zip: zip || "",
           country: countryName,
         },
         admin_info: {
           phone_number: adminPhoneNumber,
           firstname: firstname,
           lastname: lastname,
-          email: adminEmail,
         },
       };
 
@@ -499,7 +492,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
                 )}
               </div>
               <FieldBox
-                name="zipCode"
+                name="zip"
                 type="text"
                 control={form.control}
                 labelText="Zip/Post code"
@@ -516,7 +509,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
               />
               <FieldBox
                 type="text"
-                name="organizationFax"
+                name="fax"
                 control={form.control}
                 labelText="Organization Fax"
                 placeholder="Enter here"
@@ -569,22 +562,13 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
                 placeholder="e.g John Doe"
               />
             </div>
-            <div className="flex items-center gap-[30px]">
-              <FieldBox
-                type="text"
-                name="adminPhoneNumber"
-                control={form.control}
-                labelText="Admin Phone number"
-                placeholder="Enter here"
-              />
-              <FieldBox
-                type="text"
-                name="adminEmail"
-                control={form.control}
-                labelText="Admin Email"
-                placeholder="Enter here"
-              />
-            </div>
+            <FieldBox
+              type="text"
+              name="adminPhoneNumber"
+              control={form.control}
+              labelText="Admin Phone number"
+              placeholder="Enter here"
+            />
             <FieldBox
                 type="text"
                 name="domain"

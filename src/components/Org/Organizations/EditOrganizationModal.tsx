@@ -24,10 +24,10 @@ const EditOrganizationSchema = z.object({
   address: z.string().min(1, "This field is required"),
   city: z.string().min(1, "This field is required"),
   state: z.string().min(1, "This field is required"),
-  zipCode: z.string().optional(),
+  zip: z.string().optional(),
   country: z.string().min(1, "This field is required"),
   phone_number: z.string().min(1, "This field is required"),
-  organizationFax: z.string().optional(),
+  fax: z.string().optional(),
   email: z
     .string()
     .email("Invalid email address")
@@ -43,10 +43,6 @@ const EditOrganizationSchema = z.object({
       message: "Please enter a full name (first and last)",
     }),
   adminPhoneNumber: z.string().min(1, "This field is required"),
-  adminEmail: z
-    .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
   org_type: z.string().min(1, "This field is required"),
   domain: z.string().min(1, "This field is required"),
 });
@@ -93,15 +89,14 @@ export default function EditOrganizationModal({
       address: "",
       city: "",
       state: "",
-      zipCode: "",
+      zip: "",
       country: "",
       phone_number: "",
-      organizationFax: "",
+      fax: "",
       email: "",
       website: "",
       adminName: "",
       adminPhoneNumber: "",
-      adminEmail: "",
       org_type: "",
       domain: "",
     },
@@ -194,17 +189,43 @@ export default function EditOrganizationModal({
 
       // Extract address metadata
       const addressMetadata = organization?.address_metadata || {};
-      const adminInfo = organization?.profile || organization?.admin_info || {};
+      
+      // Try multiple paths for admin info
+      const adminInfo = organization?.admin_info || 
+                       organization?.profile || 
+                       organization?.adminInfo ||
+                       organization?.admin ||
+                       {};
 
-      // Combine firstname and lastname for adminName
-      const adminFirstName = adminInfo?.first_name || adminInfo?.firstname || "";
-      const adminLastName = adminInfo?.last_name || adminInfo?.lastname || "";
+      // Combine firstname and lastname for adminName - try multiple field name variations
+      const adminFirstName = adminInfo?.first_name || 
+                             adminInfo?.firstname || 
+                             adminInfo?.firstName ||
+                             "";
+      const adminLastName = adminInfo?.last_name || 
+                           adminInfo?.lastname || 
+                           adminInfo?.lastName ||
+                           "";
       const adminName = `${adminFirstName} ${adminLastName}`.trim() || "";
+
+      // Extract admin contact info - try multiple field name variations
+      const adminPhone = adminInfo?.phone_number || 
+                        adminInfo?.phoneNumber || 
+                        adminInfo?.phone ||
+                        organization?.admin_phone_number ||
+                        "";
 
       const countryValue = String(addressMetadata?.country || "");
       const stateValue = String(addressMetadata?.state || "");
       const cityValue = String(addressMetadata?.city || "");
-      const orgTypeValue = String(organization?.org_type || organization?.organization_type || "");
+      
+      // Try multiple paths for org_type
+      // Note: Backend returns organization_type in update response but may not include it in list responses
+      // Priority: organization_type (from update response) > org_type (legacy) > organizationType (camelCase)
+      const orgTypeValue = String(organization?.organization_type || 
+                                  organization?.org_type || 
+                                  organization?.organizationType ||
+                                  "");
 
       const formData = {
         name: String(organization?.name || ""),
@@ -212,20 +233,30 @@ export default function EditOrganizationModal({
         address: String(addressMetadata?.address || organization?.address || ""),
         city: cityValue,
         state: stateValue,
-        zipCode: String(addressMetadata?.zip_code || addressMetadata?.zipCode || ""),
+        zip: String(addressMetadata?.zip || addressMetadata?.zip_code || addressMetadata?.zipCode || ""),
         country: countryValue,
         phone_number: String(organization?.phone_number || ""),
-        organizationFax: String(organization?.fax_number || organization?.organizationFax || ""),
+        fax: String(organization?.fax || organization?.fax_number || organization?.organizationFax || ""),
         email: String(organization?.email || ""),
         website: String(organization?.website || ""),
-        adminName: adminName,
-        adminPhoneNumber: String(adminInfo?.phone_number || ""),
-        adminEmail: String(adminInfo?.email || ""),
+        adminName: adminName || "",
+        adminPhoneNumber: String(adminPhone || ""),
         org_type: orgTypeValue,
         domain: String(organization?.domain || ""),
       };
       
+      // Debug: Log the extracted data
+      console.log("EditOrganizationModal - Organization data:", {
+        organization,
+        adminInfo,
+        adminName,
+        adminPhone,
+        orgTypeValue,
+        formData
+      });
+      
       // Reset form with the data - this will set all values at once
+      // Use shouldValidate: false to prevent validation errors during reset
       form.reset(formData, {
         keepDefaultValues: false,
         keepErrors: false,
@@ -233,13 +264,46 @@ export default function EditOrganizationModal({
       
       // Use requestAnimationFrame to ensure DOM is updated before setting select values
       requestAnimationFrame(() => {
-        // Set simple select fields with validation
+        // Set select fields that need options to be loaded first
+        // These need delays because the select options might not be ready yet
+        
+        // Set status select
         if (normalizedStatus) {
-          form.setValue("status", normalizedStatus, { shouldValidate: true, shouldDirty: false });
+          setTimeout(() => {
+            form.setValue("status", normalizedStatus, { shouldValidate: false, shouldDirty: false });
+          }, 50);
         }
+        
+        // Set org_type select - needs delay to ensure options are loaded
         if (orgTypeValue) {
-          form.setValue("org_type", orgTypeValue, { shouldValidate: true, shouldDirty: false });
+          setTimeout(() => {
+            // Check if orgTypeValue exists in the orgTypes array
+            const validOrgTypes = [
+              "Hospital", "Clinic", "Medical Center", "Pharmacy", "Laboratory",
+              "Diagnostic Center", "Rehabilitation Center", "Nursing Home",
+              "Urgent Care", "Specialty Clinic", "Dental Clinic", "Eye Clinic",
+              "Mental Health Center", "Other"
+            ];
+            if (validOrgTypes.includes(orgTypeValue)) {
+              form.setValue("org_type", orgTypeValue, { shouldValidate: false, shouldDirty: false });
+            }
+          }, 150);
         }
+        
+        // Re-set admin fields to ensure they're properly set (form.reset might not work for all field types)
+        setTimeout(() => {
+          if (adminName) {
+            form.setValue("adminName", adminName, { shouldValidate: false, shouldDirty: false });
+          }
+          if (adminPhone) {
+            form.setValue("adminPhoneNumber", String(adminPhone), { shouldValidate: false, shouldDirty: false });
+          }
+          
+          // Trigger validation after all fields are set (with a delay to ensure DOM is updated)
+          setTimeout(() => {
+            form.trigger(["adminName", "adminPhoneNumber", "org_type", "status"]);
+          }, 200);
+        }, 100);
         
         // Set country first if value exists in options
         if (countryValue && countryOptions.length > 0) {
@@ -318,17 +382,26 @@ export default function EditOrganizationModal({
         address,
         city,
         state,
-        zipCode,
+        zip,
         country,
         adminName,
         adminPhoneNumber,
-        adminEmail,
         status,
+        org_type, // Exclude org_type from update - backend validation expects status values, not org types
         ...rest
       } = changedFields;
 
       // Build update payload
       const updatePayload: any = { ...rest };
+      
+      // Note: org_type is excluded from updates because:
+      // 1. Backend PUT validation incorrectly expects org_type to be "active" or "deactivated" (status values)
+      // 2. We're sending organization types (Hospital, Clinic, etc.) which don't match status validation
+      // 3. If organization type needs to be updated, use organization_type field instead
+      if (org_type && org_type !== defaults?.org_type) {
+        // Use organization_type instead of org_type to avoid backend validation conflict
+        updatePayload.organization_type = org_type;
+      }
 
       // Handle status
       if (status) {
@@ -342,18 +415,18 @@ export default function EditOrganizationModal({
       }
 
       // Handle address metadata if any address fields changed
-      if (address || city || state || zipCode || country) {
+      if (address || city || state || zip || country) {
         updatePayload.address_metadata = {
           address: address || defaults?.address || "",
           city: city || defaults?.city || "",
           state: state || defaults?.state || "",
-          zip_code: zipCode || defaults?.zipCode || "",
+          zip: zip || defaults?.zip || "",
           country: country || defaults?.country || "",
         };
       }
 
       // Handle admin info if any admin fields changed
-      if (adminName || adminPhoneNumber || adminEmail) {
+      if (adminName || adminPhoneNumber) {
         const [firstname, ...lastnameParts] = (adminName || defaults?.adminName || "").split(" ");
         const lastname = lastnameParts.join(" ") || firstname;
         
@@ -361,15 +434,41 @@ export default function EditOrganizationModal({
           firstname: firstname,
           lastname: lastname,
           phone_number: adminPhoneNumber || defaults?.adminPhoneNumber || "",
-          email: adminEmail || defaults?.adminEmail || "",
         };
       }
 
-      await processRequestAuth(
+      const response = await processRequestAuth(
         "put",
         API_ENDPOINTS.EDIT_ORGANIZATION(String(organization.id)),
         updatePayload
       );
+      
+      // The backend response may not include all fields we sent (like organization_type and admin_info)
+      // So we merge the response with the data we sent to preserve all fields
+      const responseData = response?.data || response;
+      
+      // Merge response with sent data to preserve fields not returned by backend
+      const mergedData = {
+        ...responseData,
+        // Preserve fax field (backend returns fax_number)
+        fax: updatePayload.fax || responseData?.fax || responseData?.fax_number || organization?.fax || "",
+        // Preserve organization_type if we sent it (backend doesn't return it)
+        organization_type: updatePayload.organization_type || organization?.organization_type || organization?.org_type || "",
+        // Preserve admin_info if we sent it (backend doesn't return it)
+        admin_info: updatePayload.admin_info || organization?.admin_info || {},
+        // Ensure address_metadata has all fields
+        address_metadata: {
+          ...(responseData?.address_metadata || {}),
+          ...(updatePayload.address_metadata || {}),
+        },
+      };
+      
+      // Update the organization prop with merged data so form can repopulate if needed
+      // This is a workaround since the backend doesn't return all fields
+      if (organization) {
+        Object.assign(organization, mergedData);
+      }
+      
       toast.success("Organization updated successfully");
 
       onSuccess();
@@ -502,7 +601,7 @@ export default function EditOrganizationModal({
               </div>
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                name="zipCode"
+                name="zip"
                 type="text"
                 control={form.control}
                 labelText="Zip/Post code"
@@ -522,7 +621,7 @@ export default function EditOrganizationModal({
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
                 type="text"
-                name="organizationFax"
+                name="fax"
                 control={form.control}
                 labelText="Organization Fax"
                 placeholder="Enter here"
@@ -567,24 +666,14 @@ export default function EditOrganizationModal({
               />
             </div>
 
-            <div className="flex items-center gap-[30px]">
-              <FieldBox
-                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                type="text"
-                name="adminPhoneNumber"
-                control={form.control}
-                labelText="Admin Phone number"
-                placeholder="Enter here"
-              />
-              <FieldBox
-                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                type="text"
-                name="adminEmail"
-                control={form.control}
-                labelText="Admin Email"
-                placeholder="Enter here"
-              />
-            </div>
+            <FieldBox
+              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+              type="text"
+              name="adminPhoneNumber"
+              control={form.control}
+              labelText="Admin Phone number"
+              placeholder="Enter here"
+            />
 
             <FieldBox
               bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"

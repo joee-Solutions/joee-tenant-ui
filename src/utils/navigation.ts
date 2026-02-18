@@ -82,41 +82,41 @@ export const sideNavigation = [
       },
     ],
   },
-  {
-    name: "Access Control",
-    icon: icons.Shield,
-    href: "/dashboard/roles",
-    showRuler: true,
-    isTitle: true,
+  // {
+  //   name: "Access Control",
+  //   icon: icons.Shield,
+  //   href: "/dashboard/roles",
+  //   showRuler: true,
+  //   isTitle: true,
 
-    children: [
-      {
-        title: "Roles",
-        icon: icons.Shield,
-        href: "/dashboard/roles",
-      },
-      {
-        title: "Permissions",
-        icon: icons.Key,
-        href: "/dashboard/permissions",
-      },
-    ],
-  },
-  {
-    name: "Reports & Analytics",
-    icon: icons.FileChartColumn,
-    href: "/dashboard/reports",
-    showRuler: true,
-    isTitle: true,
+  //   children: [
+  //     {
+  //       title: "Roles",
+  //       icon: icons.Shield,
+  //       href: "/dashboard/roles",
+  //     },
+  //     {
+  //       title: "Permissions",
+  //       icon: icons.Key,
+  //       href: "/dashboard/permissions",
+  //     },
+  //   ],
+  // },
+  // {
+  //   name: "Reports & Analytics",
+  //   icon: icons.FileChartColumn,
+  //   href: "/dashboard/reports",
+  //   showRuler: true,
+  //   isTitle: true,
 
-    children: [
-      {
-        title: "Reports Dashboard",
-        icon: icons.FileChartColumn,
-        href: "/dashboard/reports",
-      },
-    ],
-  },
+  //   children: [
+  //     {
+  //       title: "Reports Dashboard",
+  //       icon: icons.FileChartColumn,
+  //       href: "/dashboard/reports",
+  //     },
+  //   ],
+  // },
   { 
     name: "Settings & Support",
     icon: OrgIcon,

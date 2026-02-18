@@ -6,11 +6,17 @@ import { API_ENDPOINTS } from "./api-endpoints";
 
 let httpNoAuth: any;
 let refreshingToking = false;
+let redirectingToLogin = false; // Flag to prevent multiple redirects
 let controller = new AbortController();
 
 export const resetController = () => {
   controller.abort();
   controller = new AbortController(); // reassign
+};
+
+// Reset the redirecting flag (call this after successful login)
+export const resetRedirectFlag = () => {
+  redirectingToLogin = false;
 };
 console.log("siteConfig.siteUrl-->", siteConfig.siteUrl);
 if (typeof window !== undefined) {
@@ -48,19 +54,11 @@ httpAuth.interceptors.request.use(
   (config) => {
     const token = getToken();
     let authorization;
+    // Only set authorization if we have a valid token
+    // If token is missing or invalid, let the request proceed
+    // The error handler will catch 401 errors and attempt token refresh
     if (typeof token === "string" && token.trim().length > 10) {
       authorization = `Bearer ${token}`;
-    } else {
-      const refreshed = getRefreshToken();
-      if (refreshed) {
-        const token = getToken();
-        if (typeof token === "string" && token.trim().length > 10) {
-          authorization = `Bearer ${token}`;
-        }
-      } else {
-        window.location.href = "/auth/login";
-        return;
-      }
     }
     // attach tenant header if available (for tenant-scoped endpoints guarded by TenantDomainMiddleware)
     let tenantDomain: string | undefined;
@@ -78,7 +76,7 @@ httpAuth.interceptors.request.use(
 
     config.headers = {
       ...config.headers,
-      authorization,
+      ...(authorization ? { authorization } : {}),
       ...(tenantDomain ? { "x-tenant-id": tenantDomain } : {}),
     };
     return config;
@@ -228,7 +226,8 @@ const processRequestAuth = async (
     const isUnauthorized = statusCode === 401 || errorMessage.includes("not authorized") || errorMessage.includes("unauthorized");
     
     // Only attempt refresh if we haven't already tried and it's an auth error
-    if (!refreshingToking && isUnauthorized) {
+    // Also check if we're already redirecting to prevent loops
+    if (!refreshingToking && !redirectingToLogin && isUnauthorized) {
       const refreshed = await refreshUser();
       if (refreshed) {
         // Retry the original request with new token
@@ -246,6 +245,13 @@ const processRequestAuth = async (
       } else {
         // Refresh failed - tokens are cleared and user should be redirected
         // Don't throw error here as redirect is happening
+        // If we're redirecting, just return null to prevent further requests
+        if (redirectingToLogin) {
+          if (callback) {
+            callback(path, null, error);
+          }
+          return null;
+        }
         if (callback) {
           callback(path, null, error);
         } else {
@@ -253,6 +259,12 @@ const processRequestAuth = async (
         }
         return;
       }
+    } else if (redirectingToLogin) {
+      // If we're already redirecting, don't process the error further
+      if (callback) {
+        callback(path, null, error);
+      }
+      return null;
     }
 
     console.error("API request error:", error);
@@ -265,18 +277,49 @@ const processRequestAuth = async (
 };
 
 const refreshUser = async () => {
+  // Prevent multiple simultaneous refresh attempts
+  if (refreshingToking) {
+    console.log("Token refresh already in progress, waiting...");
+    // Wait for the ongoing refresh to complete
+    let waitCount = 0;
+    while (refreshingToking && waitCount < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      waitCount++;
+    }
+    // Check if we got a token while waiting
+    const token = getToken();
+    if (token && typeof token === "string" && token.trim().length > 10) {
+      return { token };
+    }
+    return null;
+  }
+
+  // Prevent redirect loops
+  if (redirectingToLogin) {
+    console.log("Already redirecting to login, skipping refresh");
+    return null;
+  }
+
   console.log("token expired, refreshing token");
   try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
       console.log("No refresh token available");
-      // Clear all tokens and redirect to login
-      Cookies.remove("refresh_token");
-      Cookies.remove("auth_token");
-      Cookies.remove("customer");
-      Cookies.remove("user");
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth/login";
+      // Clear all tokens and redirect to login (only once)
+      if (!redirectingToLogin) {
+        redirectingToLogin = true;
+        Cookies.remove("refresh_token");
+        Cookies.remove("auth_token");
+        Cookies.remove("customer");
+        Cookies.remove("user");
+        if (typeof window !== "undefined") {
+          // Use a more graceful redirect that doesn't cause a hard reload
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith("/auth/login")) {
+            // Only redirect if we're not already on the login page
+            window.location.href = "/auth/login";
+          }
+        }
       }
       return null;
     }
@@ -291,31 +334,45 @@ const refreshUser = async () => {
       );
       
       // Check if response has token (handle different response structures)
-      const newToken = tResponse?.token || tResponse?.data?.token || tResponse?.tokens?.accessToken || tResponse?.data?.tokens?.accessToken;
-      const userData = tResponse?.user || tResponse?.data?.user;
+      // Prioritize nested structure: data.tokens.accessToken (matches login response format)
+      const newToken = 
+        tResponse?.data?.tokens?.accessToken ||  // Primary path: nested in data.tokens
+        tResponse?.tokens?.accessToken ||        // Fallback: direct tokens
+        tResponse?.token || 
+        tResponse?.data?.token;
+      
+      const userData = tResponse?.data?.user || tResponse?.user;
       
       if (newToken) {
-        Cookies.set("auth_token", newToken, { expires: 1 / 48 });
+        // Set token to expire in 1 day (instead of 30 minutes)
+        Cookies.set("auth_token", newToken, { expires: 1 });
         
-        // Update refresh token if provided in response
-        const newRefreshToken = tResponse?.refreshToken || tResponse?.data?.refreshToken || tResponse?.tokens?.refreshToken || tResponse?.data?.tokens?.refreshToken;
+        // Update refresh token if provided in response - prioritize nested structure
+        const newRefreshToken = 
+          tResponse?.data?.tokens?.refreshToken ||  // Primary path: nested in data.tokens
+          tResponse?.tokens?.refreshToken ||        // Fallback: direct tokens
+          tResponse?.refreshToken || 
+          tResponse?.data?.refreshToken;
+        
         if (newRefreshToken) {
           Cookies.set("refresh_token", newRefreshToken, { expires: 7 });
         }
         
         if (userData) {
           Cookies.set("customer", JSON.stringify(userData), {
-            expires: 1 / 48,
+            expires: 1,
           });
           Cookies.set("user", JSON.stringify(userData), {
-            expires: 1 / 48,
+            expires: 1,
           });
         }
         
         console.log("Token refreshed successfully");
+        refreshingToking = false;
         return tResponse;
       } else {
-        console.warn("Refresh token response missing token");
+        console.warn("Refresh token response missing token. Response structure:", JSON.stringify(tResponse, null, 2));
+        refreshingToking = false;
         throw new Error("Invalid refresh token response");
       }
     } catch (error: any) {
@@ -330,21 +387,40 @@ const refreshUser = async () => {
       // If endpoint doesn't exist (404) or token is invalid (401/400), clear everything
       if (is404 || is401 || is400) {
         console.log("Refresh token endpoint error or invalid token, clearing session");
-        Cookies.remove("refresh_token");
-        Cookies.remove("auth_token");
-        Cookies.remove("customer");
-        Cookies.remove("user");
         
-        // Redirect to login after a short delay to allow cleanup
-        if (typeof window !== "undefined") {
-          setTimeout(() => {
-            window.location.href = "/auth/login";
-          }, 100);
+        // Only redirect once to prevent loops
+        if (!redirectingToLogin) {
+          redirectingToLogin = true;
+          Cookies.remove("refresh_token");
+          Cookies.remove("auth_token");
+          Cookies.remove("customer");
+          Cookies.remove("user");
+          
+          // Redirect to login after a short delay to allow cleanup
+          // Only redirect if we're not already on the login page
+          if (typeof window !== "undefined") {
+            const currentPath = window.location.pathname;
+            if (!currentPath.startsWith("/auth/login")) {
+              setTimeout(() => {
+                window.location.href = "/auth/login";
+              }, 100);
+            } else {
+              // If already on login page, just reset the flag after a delay
+              setTimeout(() => {
+                redirectingToLogin = false;
+              }, 1000);
+            }
+          }
         }
       }
       
       return null;
     }
+  } catch (error: any) {
+    // Handle any unexpected errors in the outer try block
+    console.error("Unexpected error in refreshUser:", error);
+    refreshingToking = false;
+    return null;
   } finally {
     refreshingToking = false;
   }
@@ -379,3 +455,35 @@ export {
   processRequestAuth,
   processRequestNoAuth,
 };
+
+/**
+ * Diagnostic function to check authentication status
+ * Call this from browser console: window.checkAuthStatus()
+ */
+if (typeof window !== 'undefined') {
+  (window as any).checkAuthStatus = () => {
+    console.log('=== AUTHENTICATION STATUS DIAGNOSTIC ===');
+    const token = getToken();
+    const refreshToken = getRefreshToken();
+    const user = Cookies.get('user');
+    
+    console.log('Auth Token:', token ? `${token.substring(0, 20)}...` : 'NOT SET');
+    console.log('Refresh Token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'NOT SET');
+    console.log('User Cookie:', user ? 'SET' : 'NOT SET');
+    
+    if (token) {
+      try {
+        // Try to decode JWT to see expiration
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expDate = new Date(payload.exp * 1000);
+        console.log('Token expires at:', expDate.toISOString());
+        console.log('Token is expired:', new Date() > expDate);
+        console.log('Time until expiration:', Math.round((expDate.getTime() - Date.now()) / 1000 / 60), 'minutes');
+      } catch (e) {
+        console.log('Could not decode token');
+      }
+    }
+    
+    console.log('=== END DIAGNOSTIC ===');
+  };
+}

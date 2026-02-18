@@ -126,3 +126,4 @@ location.reload();
 **That's it!** If all checks pass, offline mode is working correctly. 🎉
 
 
+

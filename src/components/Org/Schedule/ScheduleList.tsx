@@ -20,18 +20,22 @@ import { authFectcher } from "@/hooks/swr";
 import { ScheduleList } from "@/components/shared/table/data";
 import AddSchedule from "./AddSchedule";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, parse } from "date-fns";
 
 const ScheduleEditSchema = z.object({
   availableDays: z.array(z.object({
-    day: z.string().min(1, "Day is required"),
+    date: z.date({ required_error: "Date is required" }),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
   })).min(1, "At least one schedule day is required"),
@@ -42,10 +46,29 @@ type ScheduleEditSchemaType = z.infer<typeof ScheduleEditSchema>;
 function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: string; schedule: any; onClose: () => void; onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
 
+  // Helper function to convert day name to a date (next occurrence of that day)
+  const getDateFromDayName = (dayName: string): Date => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayIndex = days.findIndex(d => d.toLowerCase() === dayName.toLowerCase());
+    if (dayIndex === -1) return new Date();
+    
+    const today = new Date();
+    const currentDay = today.getDay();
+    let daysUntil = dayIndex - currentDay;
+    if (daysUntil <= 0) daysUntil += 7; // Next week if today or past
+    const nextDate = new Date(today);
+    nextDate.setDate(today.getDate() + daysUntil);
+    return nextDate;
+  };
+
   const editForm = useForm<ScheduleEditSchemaType>({
     resolver: zodResolver(ScheduleEditSchema),
     defaultValues: {
-      availableDays: schedule.availableDays || [],
+      availableDays: (schedule.availableDays || []).map((day: any) => ({
+        date: day.day ? getDateFromDayName(day.day) : new Date(),
+        startTime: day.startTime || "",
+        endTime: day.endTime || "",
+      })),
     },
   });
 
@@ -59,7 +82,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
     try {
       const scheduleData = {
         availableDays: data.availableDays.map(day => ({
-          day: day.day,
+          day: day.date ? format(day.date, 'EEEE') : '', // Convert date to day name
           startTime: day.startTime,
           endTime: day.endTime,
         })),
@@ -134,69 +157,47 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-base text-black font-normal mb-2">Day</label>
+                  <label className="block text-base text-black font-normal mb-2">Date</label>
                   <Controller
-                    name={`availableDays.${index}.day`}
+                    name={`availableDays.${index}.date`}
                     control={editForm.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select day" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[10000] bg-white">
-                          {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-                            <SelectItem key={day} value={day}>
-                              {day}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <DatePicker
+                        date={field.value}
+                        onDateChange={field.onChange}
+                        placeholder="Pick a date"
+                        className="w-full"
+                      />
                     )}
                   />
                 </div>
 
                 <div>
                   <label className="block text-base text-black font-normal mb-2">Start Time</label>
-                  <Controller
-                    name={`availableDays.${index}.startTime`}
-                    control={editForm.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select start time" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[10000] bg-white">
-                          {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"].map((time) => (
-                            <SelectItem key={time} value={time}>
-                              {time}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <Input
+                    type="time"
+                    {...editForm.register(`availableDays.${index}.startTime`)}
+                    className="w-full p-3 border border-[#737373] h-14 rounded"
                   />
+                  {editForm.formState.errors.availableDays?.[index]?.startTime && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {editForm.formState.errors.availableDays[index]?.startTime?.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-base text-black font-normal mb-2">End Time</label>
-                  <Controller
-                    name={`availableDays.${index}.endTime`}
-                    control={editForm.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select end time" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[10000] bg-white">
-                          {["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"].map((time) => (
-                            <SelectItem key={time} value={time}>
-                              {time}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <Input
+                    type="time"
+                    {...editForm.register(`availableDays.${index}.endTime`)}
+                    className="w-full p-3 border border-[#737373] h-14 rounded"
                   />
+                  {editForm.formState.errors.availableDays?.[index]?.endTime && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {editForm.formState.errors.availableDays[index]?.endTime?.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -205,11 +206,11 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
           <Button
             type="button"
             variant="outline"
-            onClick={() => append({ day: "", startTime: "", endTime: "" })}
+            onClick={() => append({ date: new Date(), startTime: "", endTime: "" })}
             className="mt-4 w-full sm:w-auto bg-[#003465] hover:bg-[#00254a] text-white border-[#003465] font-medium px-6 py-2"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Another Day
+            Add Another Date
           </Button>
 
           <div className="flex gap-3 pt-4">
@@ -236,6 +237,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
 }
 
 export default function Page({ slug }: { slug: string }) {
+  const router = useRouter();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -359,11 +361,12 @@ export default function Page({ slug }: { slug: string }) {
             Schedule List
           </h2>
 
-          <Link href={`/dashboard/organization/${slug}/schedules/new`}>
-            <Button className="h-[60px] bg-[#003465] text-white font-medium text-base px-6">
-              Add Schedule
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => router.push(`/dashboard/organization/${slug}/schedules/new`)}
+            className="h-[60px] bg-[#003465] text-white font-medium text-base px-6"
+          >
+            Add Schedule
+          </Button>
         </header>
         <header className="flex items-center justify-between gap-5 py-6">
           <ListView pageSize={pageSize} setPageSize={setPageSize} />
@@ -376,12 +379,12 @@ export default function Page({ slug }: { slug: string }) {
         </header>
         <div className="mt-6">
           <DataTable tableDataObj={{
-            sn: "S/N",
-            employee: "Employee",
-            department: "Department",
-            day: "Day",
-            start_time: "Start Time",
-            end_time: "End Time"
+            "S/N": "S/N",
+            "Employee": "Employee",
+            "Department": "Department",
+            "Day": "Day",
+            "Start Time": "Start Time",
+            "End Time": "End Time"
           }} showAction>
           {isLoading ? (
             <TableRow>

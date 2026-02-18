@@ -338,13 +338,29 @@ export default function Page({ slug }: { slug: string }) {
         </div>
       )}
 
-      {orgId && appointmentsError && (
+      {orgId && appointmentsError && appointments.length === 0 && (
         <div className="p-8 text-center">
-          <p className="text-red-500">Error loading appointments: {appointmentsError?.message || "Unknown error"}</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Endpoint: {API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}
+          {appointmentsError?.message?.includes("offline") || appointmentsError?.message?.includes("No cached data") || (typeof window !== 'undefined' && !navigator.onLine) ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+              <p className="text-yellow-800 font-medium mb-2">You're currently offline</p>
+              <p className="text-yellow-700 text-sm">
+                No cached appointments available. Please connect to the internet to load appointments, or visit this page while online to cache it for offline use.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+              <p className="text-red-800 font-medium mb-2">Error loading appointments</p>
+              <p className="text-red-700 text-sm">{appointmentsError?.message || "Unknown error"}</p>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {orgId && appointmentsError && appointments.length > 0 && (typeof window !== 'undefined' && !navigator.onLine) && (
+        <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800 text-sm">
+            ⚠️ You're offline. Showing cached appointments. Some data may be outdated.
           </p>
-          <p className="text-sm text-gray-500">Status: {(appointmentsError as any)?.response?.status || "N/A"}</p>
         </div>
       )}
 
@@ -435,7 +451,7 @@ export default function Page({ slug }: { slug: string }) {
                         }}
                       >
                         <MoreVertical className="text-black size-5" />
-                      </button>
+                  </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
                       <DropdownMenuItem

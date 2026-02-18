@@ -13,6 +13,7 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     patientStatus, 
     allergies, 
     medHistory, 
+    diagnosisHistory,
     surgeryHistory, 
     immunizationHistory, 
     famhistory, 
@@ -21,6 +22,7 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     prescriptions, 
     vitalSigns,
     reviewOfSystem,
+    additionalReview,
   } = formData;
 
   // Map to match backend CreatePatientDto structure
@@ -165,15 +167,32 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
 
     // Medical data arrays
     allergies: allergies || [],
-    medicalHistories: medHistory || [],
-    // diagnosisHistory removed - not in backend schema
-    surgeries: surgeryHistory || [],
+    diagnosisHistory: (diagnosisHistory || []).map((item: any) => ({
+      ...item,
+      // Replace "Other" with the custom text if conditionOther is provided
+      condition: item.condition === "Other" && item.conditionOther ? item.conditionOther : item.condition,
+    })),
+    surgeries: (surgeryHistory || []).map((item: any) => ({
+      ...item,
+      // Replace "Other" with the custom text if surgeryTypeOther is provided
+      surgeryType: item.surgeryType === "Other" && item.surgeryTypeOther ? item.surgeryTypeOther : item.surgeryType,
+    })),
     immunizations: immunizationHistory || [],
-    familyHistory: famhistory || [],
+    familyHistory: (famhistory || []).map((item: any) => ({
+      ...item,
+      // Replace "Other" with the custom text if conditionsOther is provided
+      conditions: item.conditions === "Other" && item.conditionsOther ? item.conditionsOther : item.conditions,
+    })),
     status: patientStatus || {},
-    // socialHistory removed - not in backend Patient model (causes 500 error)
-    visits: visits || [],
+    socialHistory: lifeStyle || {}, // Save socialHistory from lifeStyle
+    visits: (visits || []).map((item: any) => ({
+      ...item,
+      // Replace "Other" with the custom text if diagnosisOther is provided
+      diagnosis: item.diagnosis === "Other" && item.diagnosisOther ? item.diagnosisOther : item.diagnosis,
+    })),
     prescriptions: prescriptions || [],
+    reviewOfSystem: reviewOfSystem || {}, // Save reviewOfSystem
+    additionalReview: additionalReview || {}, // Save additionalReview
     // Transform vitalSigns array to vitals object (take first/latest entry)
     vitals: (() => {
       if (!vitalSigns || !Array.isArray(vitalSigns) || vitalSigns.length === 0) {
@@ -362,14 +381,18 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
   }
   
   // Ensure arrays are arrays (not undefined or null)
-  mappedData.medicalHistories = Array.isArray(mappedData.medicalHistories) ? mappedData.medicalHistories : [];
+  mappedData.diagnosisHistory = Array.isArray(mappedData.diagnosisHistory) ? mappedData.diagnosisHistory : [];
   mappedData.immunizations = Array.isArray(mappedData.immunizations) ? mappedData.immunizations : [];
   mappedData.familyHistory = Array.isArray(mappedData.familyHistory) ? mappedData.familyHistory : [];
   mappedData.surgeries = Array.isArray(mappedData.surgeries) ? mappedData.surgeries : [];
   mappedData.allergies = Array.isArray(mappedData.allergies) ? mappedData.allergies : [];
-  // diagnosisHistory removed - not in backend schema
   mappedData.visits = Array.isArray(mappedData.visits) ? mappedData.visits : [];
   mappedData.prescriptions = Array.isArray(mappedData.prescriptions) ? mappedData.prescriptions : [];
+  
+  // Ensure objects are objects (not undefined or null)
+  mappedData.socialHistory = mappedData.socialHistory && typeof mappedData.socialHistory === 'object' ? mappedData.socialHistory : {};
+  mappedData.reviewOfSystem = mappedData.reviewOfSystem && typeof mappedData.reviewOfSystem === 'object' ? mappedData.reviewOfSystem : {};
+  mappedData.additionalReview = mappedData.additionalReview && typeof mappedData.additionalReview === 'object' ? mappedData.additionalReview : {};
   // vitalSigns transformed to vitals object - handled in mapFormDataToPatientDto
   
   // Ensure interpreter_required is boolean (default to false if not set)

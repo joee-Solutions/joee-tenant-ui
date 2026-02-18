@@ -203,8 +203,48 @@ export class OfflineService {
   // Cache API responses (public method so it can be called from https.ts)
   async cacheResponse(endpoint: string, data: any): Promise<void> {
     try {
+      // Ensure database is open before attempting to cache
+      if (!db.isOpen()) {
+        try {
+          if (typeof (db as any).safeOpen === 'function') {
+            await (db as any).safeOpen();
+          } else {
+            await db.open();
+          }
+        } catch (openError: any) {
+          // If database can't be opened, skip caching silently
+          offlineLogger.debug('Database not available for caching', { 
+            endpoint,
+            error: openError?.message || 'Unknown error' 
+          });
+          return;
+        }
+      }
+
       const expiresAt = new Date();
       expiresAt.setMonth(expiresAt.getMonth() + 1); // Cache for 1 month (30 days)
+
+      // Try to serialize data to check if it's too large
+      let dataSize: number;
+      try {
+        const serialized = JSON.stringify(data);
+        dataSize = serialized.length;
+        
+        // Check if data is too large (IndexedDB has limits, typically 50MB per origin)
+        if (dataSize > 10 * 1024 * 1024) { // 10MB threshold
+          offlineLogger.warn(`Response data too large to cache (${(dataSize / 1024 / 1024).toFixed(2)}MB)`, {
+            endpoint,
+            dataSize,
+          });
+          return; // Skip caching very large responses
+        }
+      } catch (serializeError: any) {
+        offlineLogger.warn('Failed to serialize data for caching', {
+          endpoint,
+          error: serializeError?.message || 'Unknown error',
+        });
+        return; // Skip caching if data can't be serialized
+      }
 
       await db.apiCache.put({
         endpoint,
@@ -215,16 +255,74 @@ export class OfflineService {
       
       offlineLogger.debug(`Cached response for ${endpoint}`, {
         expiresAt: expiresAt.toISOString(),
-        dataSize: JSON.stringify(data).length,
+        dataSize,
       });
     } catch (error: any) {
-      offlineLogger.error(`Error caching response for ${endpoint}`, { error: error?.message });
+      // Extract comprehensive error information
+      let errorMessage = 'Unknown error';
+      let errorDetails: any = {};
+
+      if (error instanceof Error) {
+        errorMessage = error.message || 'Unknown error';
+        errorDetails.name = error.name;
+        errorDetails.stack = error.stack?.split('\n').slice(0, 3).join('\n'); // First 3 lines
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.toString) {
+        errorMessage = error.toString();
+      }
+
+      errorDetails.message = errorMessage;
+      errorDetails.errorType = error?.constructor?.name || typeof error;
+      errorDetails.endpoint = endpoint;
+      errorDetails.dbOpen = db.isOpen();
+      
+      // Try to get data size for context
+      try {
+        errorDetails.dataSize = JSON.stringify(data).length;
+      } catch {
+        errorDetails.dataSize = 'Unable to calculate';
+      }
+
+      offlineLogger.error(`Error caching response for ${endpoint}: ${errorMessage}`, errorDetails);
+      
+      // Also log directly to console for visibility
+      console.error('[OFFLINE CACHE] Failed to cache response:', {
+        endpoint,
+        message: errorMessage,
+        errorType: error?.constructor?.name || typeof error,
+        dbOpen: db.isOpen(),
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+        } : String(error),
+      });
     }
   }
 
   // Get cached API response (public method for use in fetchers)
   async getCachedResponse(endpoint: string): Promise<any | null> {
     try {
+      // Ensure database is open before attempting to get cache
+      if (!db.isOpen()) {
+        try {
+          if (typeof (db as any).safeOpen === 'function') {
+            await (db as any).safeOpen();
+          } else {
+            await db.open();
+          }
+        } catch (openError: any) {
+          // If database can't be opened, return null silently
+          offlineLogger.debug('Database not available for cache retrieval', { 
+            endpoint,
+            error: openError?.message || 'Unknown error' 
+          });
+          return null;
+        }
+      }
+
       // Try exact match first
       let cached = await db.apiCache
         .where('endpoint')
@@ -266,7 +364,30 @@ export class OfflineService {
         return null;
       }
     } catch (error: any) {
-      offlineLogger.error(`Error getting cached response for ${endpoint}`, { error: error?.message });
+      // Extract comprehensive error information
+      let errorMessage = 'Unknown error';
+      let errorDetails: any = {};
+
+      if (error instanceof Error) {
+        errorMessage = error.message || 'Unknown error';
+        errorDetails.name = error.name;
+        errorDetails.stack = error.stack?.split('\n').slice(0, 3).join('\n'); // First 3 lines
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.toString) {
+        errorMessage = error.toString();
+      }
+
+      errorDetails.message = errorMessage;
+      errorDetails.errorType = error?.constructor?.name || typeof error;
+      errorDetails.endpoint = endpoint;
+      errorDetails.dbOpen = db.isOpen();
+
+      offlineLogger.error(`Error getting cached response for ${endpoint}: ${errorMessage}`, errorDetails);
+      
+      // Return null on error (don't break the app)
       return null;
     }
   }
@@ -369,10 +490,20 @@ export class OfflineService {
           
           offlineLogger.info(`Successfully synced action: ${item.action} ${item.entity}`, { itemId: item.id });
         } catch (error: any) {
+          // Extract error message more robustly
+          const errorMessage = error?.message || 
+                              error?.toString() || 
+                              (typeof error === 'string' ? error : 'Unknown error');
+          
           offlineLogger.error(`Failed to sync action: ${item.action} ${item.entity}`, {
             itemId: item.id,
-            error: error?.message,
+            error: errorMessage,
             retries: item.retries,
+            endpoint: item.endpoint,
+            ...(error?.response && {
+              status: error.response.status,
+              statusText: error.response.statusText,
+            }),
           });
           
           // Mark as failed if retries exceeded
@@ -381,7 +512,7 @@ export class OfflineService {
             await db.syncQueue.update(item.id!, {
               status: 'failed',
               retries: newRetries,
-              error: error.message || 'Sync failed',
+              error: errorMessage,
             });
             offlineLogger.warn(`Action marked as FAILED after ${newRetries} retries`, { itemId: item.id });
           } else {
@@ -398,7 +529,19 @@ export class OfflineService {
       const remaining = await db.syncQueue.where('status').equals('pending').count();
       offlineLogger.info(`Sync completed. ${remaining} actions still pending`);
     } catch (error: any) {
-      offlineLogger.error('Error syncing pending actions', { error: error?.message });
+      // Extract error information more robustly
+      const errorInfo = {
+        message: error?.message || error?.toString() || 'Unknown error',
+        name: error?.name || 'Error',
+        stack: error?.stack || undefined,
+        ...(error?.response && {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+        }),
+      };
+      
+      offlineLogger.error('Error syncing pending actions', errorInfo);
     } finally {
       this.syncInProgress = false;
     }
@@ -698,20 +841,118 @@ export class OfflineService {
   // Cleanup expired cache entries
   async cleanupExpiredCache(): Promise<void> {
     try {
-      const now = new Date();
-      const expired = await db.apiCache
-        .where('expiresAt')
-        .below(now)
-        .toArray();
+      // Ensure database is open before attempting cleanup - use safeOpen to handle ConstraintError
+      if (!db.isOpen()) {
+        try {
+          if (typeof (db as any).safeOpen === 'function') {
+            await (db as any).safeOpen();
+          } else {
+            await db.open();
+          }
+        } catch (openError: any) {
+          // If database can't be opened, skip cleanup silently
+          offlineLogger.debug('Database not available for cache cleanup', { 
+            error: openError?.message || 'Unknown error' 
+          });
+          return;
+        }
+      }
+
+      // Try to query expired cache entries
+      // If we get a ConstraintError during the query, it means the database schema is inconsistent
+      let expired: any[] = [];
+      try {
+        const now = new Date();
+        expired = await db.apiCache
+          .where('expiresAt')
+          .below(now)
+          .toArray();
+      } catch (queryError: any) {
+        // If query fails with ConstraintError, try to recover the database
+        if (queryError?.name === 'ConstraintError' || queryError?.message?.includes('already exists')) {
+          console.warn('ConstraintError during cache query, attempting database recovery...');
+          try {
+            if (typeof (db as any).safeOpen === 'function') {
+              await (db as any).safeOpen(); // This will attempt recovery
+            }
+            // Retry the query after recovery
+            const now = new Date();
+            expired = await db.apiCache
+              .where('expiresAt')
+              .below(now)
+              .toArray();
+          } catch (retryError: any) {
+            // If retry also fails, skip cleanup for this cycle
+            offlineLogger.warn('Failed to query expired cache after recovery, skipping cleanup', {
+              error: retryError?.message || 'Unknown error',
+            });
+            return;
+          }
+        } else {
+          // For other query errors, rethrow to be caught by outer catch
+          throw queryError;
+        }
+      }
       
       if (expired.length > 0) {
         for (const item of expired) {
-          await db.apiCache.delete(item.id!);
+          try {
+            await db.apiCache.delete(item.id!);
+          } catch (deleteError: any) {
+            // Log individual delete errors but continue with other items
+            offlineLogger.warn('Failed to delete expired cache entry', {
+              id: item.id,
+              endpoint: item.endpoint,
+              error: deleteError?.message || 'Unknown error',
+            });
+          }
         }
         offlineLogger.info(`Cleaned up ${expired.length} expired cache entries`);
       }
     } catch (error: any) {
-      offlineLogger.error('Error cleaning up expired cache', { error: error?.message });
+      // If it's a ConstraintError that we haven't handled, it means recovery failed
+      // Log it but don't treat it as critical - the app can continue without cache cleanup
+      if (error?.name === 'ConstraintError' || error?.message?.includes('already exists')) {
+        // This is a known issue with database schema - log as warning, not error
+        offlineLogger.warn('Database constraint error during cache cleanup (non-critical)', {
+          error: error?.message || 'Unknown error',
+          dbOpen: db.isOpen(),
+        });
+        return; // Exit gracefully - cleanup can be skipped
+      }
+
+      // Extract comprehensive error information for other errors
+      let errorMessage = 'Unknown error';
+      let errorDetails: any = {};
+
+      if (error instanceof Error) {
+        errorMessage = error.message || 'Unknown error';
+        errorDetails.name = error.name;
+        errorDetails.stack = error.stack?.split('\n').slice(0, 3).join('\n'); // First 3 lines
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.toString) {
+        errorMessage = error.toString();
+      }
+
+      errorDetails.message = errorMessage;
+      errorDetails.errorType = error?.constructor?.name || typeof error;
+      errorDetails.dbOpen = db.isOpen();
+
+      offlineLogger.error(`Error cleaning up expired cache: ${errorMessage}`, errorDetails);
+      
+      // Also log directly to console for visibility
+      console.error('[OFFLINE CACHE] Cleanup failed:', {
+        message: errorMessage,
+        errorType: error?.constructor?.name || typeof error,
+        dbOpen: db.isOpen(),
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+        } : String(error),
+      });
     }
   }
 

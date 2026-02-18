@@ -125,13 +125,21 @@ const ResetPasswordOtpClient = ({ token }: { token: string }) => {
         </form>
       </div>
 
-      <div className="extra-details flex justify-center gap-2 text-xs md:text-sm mb-7">
-        Didn&apos;t receive the email?
+      <div className="extra-details flex flex-col items-center gap-3 text-xs md:text-sm mb-7">
+        <div className="flex justify-center gap-2">
+          Didn&apos;t receive the email?
+          <Link
+            href={"/auth/forgot-password"}
+            className="text-brand-400 hover:underline"
+          >
+            Click to resend?
+          </Link>
+        </div>
         <Link
-          href={"/auth/forgot-password"}
-          className="text-brand-400 hover:underline"
+          href={"/auth/login"}
+          className="text-[#FAD900] hover:underline font-medium"
         >
-          Click to resend?
+          ← Back to Login
         </Link>
       </div>
     </div>

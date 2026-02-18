@@ -43,7 +43,40 @@ class OfflineLogger {
     if (shouldLogToConsole) {
       const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
       const prefix = `[OFFLINE ${level.toUpperCase()}]`;
-      console[consoleMethod](prefix, message, data || '');
+      
+      // Handle data more gracefully - filter out undefined/null values
+      let logData: any = '';
+      if (data) {
+        if (typeof data === 'object' && !Array.isArray(data)) {
+          // Filter out undefined/null values from object, but keep empty strings and false values
+          const filtered = Object.fromEntries(
+            Object.entries(data).filter(([_, value]) => value !== undefined && value !== null)
+          );
+          // Only use filtered object if it has keys
+          logData = Object.keys(filtered).length > 0 ? filtered : '';
+        } else {
+          logData = data;
+        }
+      }
+      
+      // Always log the message, and include data if available
+      // For errors, always show data even if it's an empty object (might contain useful info)
+      if (level === 'error') {
+        if (logData && typeof logData === 'object' && Object.keys(logData).length > 0) {
+          console[consoleMethod](prefix, message, logData);
+        } else if (logData && logData !== '') {
+          console[consoleMethod](prefix, message, logData);
+        } else {
+          console[consoleMethod](prefix, message);
+        }
+      } else {
+        // For non-errors, only log data if it exists
+        if (logData && logData !== '') {
+          console[consoleMethod](prefix, message, logData);
+        } else {
+          console[consoleMethod](prefix, message);
+        }
+      }
     }
 
     // Store in localStorage for persistence across page reloads

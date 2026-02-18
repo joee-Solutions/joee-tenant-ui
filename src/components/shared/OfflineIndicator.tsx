@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useOffline } from '@/hooks/useOffline';
-import { Wifi, WifiOff, RefreshCw, AlertCircle, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, AlertCircle, ChevronDown, ChevronUp, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function OfflineIndicator() {
@@ -24,9 +24,26 @@ export default function OfflineIndicator() {
   }, [syncStatus, isOnline, isSyncing]);
 
   // Don't show when online with no pending actions (unless minimized and has sync history)
+  // But respect user preference to hide when synced
+  const hideWhenSynced = typeof window !== 'undefined' && 
+    localStorage.getItem('user_hide_offline_indicator_when_synced') === 'true';
+  
   if (isOnline && syncStatus.pending === 0 && syncStatus.failed === 0 && !isMinimized) {
+    // If user closed it when synced, don't show it again
+    if (hideWhenSynced) {
+      return null;
+    }
+    // Otherwise, auto-hide when synced (default behavior)
     return null;
   }
+  
+  // Show indicator if user closed it but there are new pending/failed actions
+  // Reset the preference when there are new actions
+  useEffect(() => {
+    if ((syncStatus.pending > 0 || syncStatus.failed > 0) && hideWhenSynced) {
+      localStorage.removeItem('user_hide_offline_indicator_when_synced');
+    }
+  }, [syncStatus.pending, syncStatus.failed, hideWhenSynced]);
 
   const getStatusMessage = () => {
     if (!isOnline) {
@@ -155,15 +172,33 @@ export default function OfflineIndicator() {
             </Button>
           )}
           
-          <Button
-            onClick={() => setIsMinimized(true)}
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            title="Minimize"
-          >
-            <ChevronDown className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={() => setIsMinimized(true)}
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              title="Minimize"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            {isOnline && syncStatus.pending === 0 && syncStatus.failed === 0 && (
+              <Button
+                onClick={() => {
+                  // Hide indicator when user closes it (only if synced)
+                  setIsMinimized(true);
+                  // Store preference to hide when synced
+                  localStorage.setItem('user_hide_offline_indicator_when_synced', 'true');
+                }}
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

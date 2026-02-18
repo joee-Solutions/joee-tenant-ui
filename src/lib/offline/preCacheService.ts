@@ -11,7 +11,7 @@ import { processRequestAuth } from '@/framework/https';
 interface PreCacheConfig {
   enabled: boolean;
   endpoints: string[];
-  onProgress?: (current: number, total: number, endpoint: string) => void;
+  onProgress?: (current: number, total: number, endpoint?: string) => void;
 }
 
 class PreCacheService {
@@ -196,7 +196,8 @@ class PreCacheService {
         const endpoint = baseEndpoints[i];
         
         if (config?.onProgress) {
-          config.onProgress(i + 1, baseEndpoints.length, endpoint);
+          // Don't pass endpoint - just show progress
+          config.onProgress(i + 1, baseEndpoints.length);
         }
 
         // Throttle requests to prevent overwhelming the server
@@ -206,12 +207,12 @@ class PreCacheService {
           this.activeRequests++;
           await processRequestAuth('get', endpoint);
           successCount++;
-          offlineLogger.debug(`✅ Pre-cached: ${endpoint}`, {
+          offlineLogger.debug(`✅ Pre-cached endpoint`, {
             progress: `${i + 1}/${baseEndpoints.length}`,
           });
         } catch (error: any) {
           failCount++;
-          offlineLogger.warn(`❌ Failed to pre-cache: ${endpoint}`, {
+          offlineLogger.warn(`❌ Failed to pre-cache endpoint`, {
             error: error?.message || error,
             progress: `${i + 1}/${baseEndpoints.length}`,
           });
@@ -284,7 +285,8 @@ class PreCacheService {
               endpointIndex + 1;
             
             if (config?.onProgress) {
-              config.onProgress(currentIndex, totalEndpoints, endpoint);
+              // Don't pass endpoint - just show progress
+              config.onProgress(currentIndex, totalEndpoints);
             }
 
             // Throttle requests to prevent overwhelming the server
@@ -294,13 +296,13 @@ class PreCacheService {
               this.activeRequests++;
               const response = await processRequestAuth('get', endpoint);
               successCount++;
-              offlineLogger.debug(`✅ Pre-cached org endpoint: ${endpoint}`);
+              offlineLogger.debug(`✅ Pre-cached organization endpoint`);
               
               // Step 4: Cache individual items from lists (patients, employees, appointments, etc.)
               await this.cacheIndividualItemsFromList(endpoint, response, tenantId);
             } catch (error: any) {
               failCount++;
-              offlineLogger.warn(`❌ Failed to pre-cache org endpoint: ${endpoint}`, {
+              offlineLogger.warn(`❌ Failed to pre-cache organization endpoint`, {
                 error: error?.message,
               });
             } finally {

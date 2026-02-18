@@ -9,8 +9,20 @@ import DataTable from "@/components/shared/table/DataTable";
 import Pagination from "@/components/shared/table/pagination";
 import { useAdminUsersData } from "@/hooks/swr";
 import { AdminUser } from "@/lib/types";
-import { Edit, Trash2, User } from "lucide-react";
+import { Edit, Trash2, User, MoreVertical } from "lucide-react";
 import Image from "next/image";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import EditAdminModal from "@/components/admin/EditAdminModal";
+import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { toast } from "react-toastify";
+import { mutate } from "swr";
 
 // Mock table data structure - replace with actual data from API
 const adminTableData = [
@@ -31,6 +43,10 @@ export default function AdminListPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("");
   const [status, setStatus] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Fetch admin users
   const { data: adminsData, isLoading, error } = useAdminUsersData();
@@ -119,6 +135,54 @@ export default function AdminListPage() {
     }
     prevFilters.current = { search, sortBy, status };
   }, [search, sortBy, status]);
+
+  const handleEditClick = (admin: AdminUser) => {
+    setSelectedAdmin(admin);
+    setEditModalOpen(true);
+  };
+
+  const handleDeleteClick = (admin: AdminUser) => {
+    setSelectedAdmin(admin);
+    setDeleteModalOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    // Revalidate admin list data
+    mutate(API_ENDPOINTS.GET_SUPER_ADMIN);
+    setEditModalOpen(false);
+    setSelectedAdmin(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedAdmin?.id) return;
+
+    setDeletingId(selectedAdmin.id);
+    try {
+      // Note: You may need to add a DELETE_ADMIN endpoint to API_ENDPOINTS
+      // For now, using a generic pattern - adjust based on your API
+      await processRequestAuth(
+        "delete",
+        API_ENDPOINTS.DELETE_ADMIN(selectedAdmin.id)
+      );
+      
+      toast.success("Admin deleted successfully");
+      setDeleteModalOpen(false);
+      setSelectedAdmin(null);
+      
+      // Revalidate admin list data
+      mutate(API_ENDPOINTS.GET_SUPER_ADMIN);
+    } catch (error: any) {
+      console.error("Error deleting admin:", error);
+      const errorMessage =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete admin";
+      toast.error(errorMessage);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Handle error state - only show error if we don't have any data (including cached data)
   if (error && (!adminsData || (Array.isArray(adminsData) && adminsData.length === 0))) {
@@ -228,30 +292,35 @@ export default function AdminListPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      {/* <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => {
-                          // Handle edit
-                          console.log('Edit admin:', admin.id);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button> */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        onClick={() => {
-                          // Handle delete
-                          console.log('Delete admin:', admin.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <button 
+                          type="button"
+                          className="flex items-center justify-center px-2 py-1 rounded-[2px] border border-[#BFBFBF] bg-[#EDF0F6] hover:bg-[#D9DDE5] transition-colors relative z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <MoreVertical className="text-black size-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
+                        <DropdownMenuItem
+                          onClick={() => handleEditClick(admin)}
+                          className="cursor-pointer flex items-center gap-2"
+                        >
+                          <Edit className="size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(admin)}
+                          className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
                 );
@@ -274,6 +343,33 @@ export default function AdminListPage() {
           />
         </div>
       </section>
+
+      {/* Edit Admin Modal */}
+      {editModalOpen && selectedAdmin && (
+        <EditAdminModal
+          admin={selectedAdmin}
+          onClose={() => {
+            setEditModalOpen(false);
+            setSelectedAdmin(null);
+          }}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Delete Warning Modal */}
+      {deleteModalOpen && selectedAdmin && (
+        <DeleteWarningModal
+          title="Delete Admin"
+          message="Are you sure you want to delete"
+          itemName={`${selectedAdmin.first_name} ${selectedAdmin.last_name}`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => {
+            setDeleteModalOpen(false);
+            setSelectedAdmin(null);
+          }}
+          isDeleting={deletingId === selectedAdmin.id}
+        />
+      )}
     </div>
   );
 }

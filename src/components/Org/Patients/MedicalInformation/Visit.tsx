@@ -35,6 +35,7 @@ export const visitEntrySchema = z.array(
     quality: z.string().optional(),
     aggravatingFactors: z.string().optional(),
     diagnosis: z.string().optional(),
+    diagnosisOther: z.string().optional(), // Text input when "Other" is selected
     diagnosisOnsetDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
     treatmentPlan: z.string().optional(),
     providerName: z.string().optional(),
@@ -71,6 +72,7 @@ export default function MedicalVisitForm() {
     control,
     watch,
     setValue,
+    register,
   } = useFormContext<Pick<FormDataStepper, 'visits'>>();
 
   const { fields, append, remove } = useFieldArray<Pick<FormDataStepper, 'visits'>>({
@@ -112,6 +114,7 @@ export default function MedicalVisitForm() {
         quality: "",
         aggravatingFactors: "",
         diagnosis: "",
+        diagnosisOther: "", // Add diagnosisOther field
       diagnosisOnsetDate: undefined,
         treatmentPlan: "",
         providerName: "",
@@ -379,6 +382,17 @@ export default function MedicalVisitForm() {
                   triggerClassName="w-full p-3 border border-[#737373] h-14 rounded"
                   contentClassName="z-10 bg-white"
                 />
+                {/* Show text input when "Other" is selected */}
+                {visits[index]?.diagnosis === "Other" && (
+                  <div className="mt-2">
+                    <Input
+                      type="text"
+                      {...register(`visits.${index}.diagnosisOther`)}
+                      className="w-full h-14 p-3 border border-[#737373] rounded"
+                      placeholder="Please specify the condition"
+                    />
+                  </div>
+                )}
                 </div>
             )}
           />

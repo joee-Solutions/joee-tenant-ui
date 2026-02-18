@@ -78,12 +78,12 @@ const ForgetPassword = () => {
             </Button>
           </form>
 
-          <div className="extra-details flex justify-between text-xs md:text-sm mb-7">
+          <div className="extra-details flex justify-center text-xs md:text-sm mb-7">
             <Link
               href={"/auth/login"}
-              className="text-[#FAD900] hover:underline"
+              className="text-[#FAD900] hover:underline font-medium"
             >
-              Login
+              ← Back to Login
             </Link>
           </div>
         </div>

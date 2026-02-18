@@ -9,12 +9,14 @@ import { Edit2, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 export const diagnosisHistorySchema = z.array(
   z.object({
     id: z.number().optional(),
     date: z.string().optional(),
     condition: z.string().optional(),
+    conditionOther: z.string().optional(), // Text input when "Other" is selected
     onsetDate: z.string().optional(),
     endDate: z.string().optional(),
     comments: z.string().optional(),
@@ -27,12 +29,11 @@ export default function DiagnosisHistoryForm() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const { control, register, formState: { errors }, watch } = useFormContext<FormDataStepper>();
+  const diagnosisHistories = watch("diagnosisHistory") || [];
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'diagnosisHistory',
   });
-
-  const diagnosisHistories = watch("diagnosisHistory") || [];
 
   // Sort by date (most recent first)
   const sortedHistories = useMemo(() => {
@@ -51,6 +52,7 @@ export default function DiagnosisHistoryForm() {
       id: Date.now(),
       date: formatDateLocal(new Date()),
       condition: "",
+      conditionOther: "",
       onsetDate: "",
       endDate: "",
       comments: "",
@@ -134,6 +136,17 @@ export default function DiagnosisHistoryForm() {
                       />
                       {errors.diagnosisHistory?.[index]?.condition && (
                         <p className="text-red-500 text-sm mt-1">{errors.diagnosisHistory[index].condition.message}</p>
+                      )}
+                      {/* Show text input when "Other" is selected */}
+                      {diagnosisHistories[index]?.condition === "Other" && (
+                        <div className="mt-2">
+                          <Input
+                            type="text"
+                            {...register(`diagnosisHistory.${index}.conditionOther`)}
+                            className="w-full h-14 p-3 border border-[#737373] rounded"
+                            placeholder="Please specify the condition"
+                          />
+                        </div>
                       )}
                     </div>
 

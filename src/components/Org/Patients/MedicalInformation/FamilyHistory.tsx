@@ -25,6 +25,7 @@ export const famHistorySchema = z.array(
     date: z.string().optional(), // Add date field for list view
     relative: z.string().optional(),
     conditions: z.string().optional(),
+    conditionsOther: z.string().optional(), // Text input when "Other" is selected
     ageOfDiagnosis: z.string().optional(),
     currentAge: z.string().optional(),
   })
@@ -59,6 +60,7 @@ export default function FamilyHistoryForm() {
       date: formatDateLocal(new Date()),
       relative: "", 
       conditions: "", 
+      conditionsOther: "", // Add conditionsOther field
       ageOfDiagnosis: "", 
       currentAge: "" 
     });
@@ -163,6 +165,17 @@ export default function FamilyHistoryForm() {
                       />
                       {errors.famhistory?.[index]?.conditions && (
                         <p className="text-red-500 text-sm mt-1">{errors.famhistory[index].conditions.message}</p>
+                      )}
+                      {/* Show text input when "Other" is selected */}
+                      {watch(`famhistory.${index}.conditions`) === "Other" && (
+                        <div className="mt-2">
+                          <Input
+                            type="text"
+                            {...register(`famhistory.${index}.conditionsOther`)}
+                            className="w-full h-14 p-3 border border-[#737373] rounded"
+                            placeholder="Please specify the condition"
+                          />
+                        </div>
                       )}
                     </div>
 

@@ -128,6 +128,14 @@ export const authFectcher = async (url: string) => {
         }
       }
     }
+    
+    // If offline and error message indicates no cache, modify error message to be more user-friendly
+    if (typeof window !== 'undefined' && !navigator.onLine && error?.message?.includes('No cached data available')) {
+      const friendlyError = new Error('No cached data available. Please connect to the internet to load this page, or visit it while online to cache it for offline use.');
+      (friendlyError as any).isOfflineError = true;
+      throw friendlyError;
+    }
+    
     // Re-throw error if no cached data available
     throw error;
   }

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,7 @@ import Link from "next/link";
 const ScheduleSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
   availableDays: z.array(z.object({
-    day: z.string().min(1, "Day is required"),
+    date: z.date({ required_error: "Date is required" }),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
   })).min(1, "At least one schedule day is required"),
@@ -34,7 +35,13 @@ const ScheduleSchema = z.object({
 
 type ScheduleSchemaType = z.infer<typeof ScheduleSchema>;
 
-export default function ScheduleForm({ slug }: { slug: string }) {
+interface ScheduleFormProps {
+  slug: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +61,7 @@ export default function ScheduleForm({ slug }: { slug: string }) {
       employeeId: "",
       availableDays: [
         {
-          day: "",
+          date: undefined,
           startTime: "",
           endTime: "",
         },
@@ -75,7 +82,7 @@ export default function ScheduleForm({ slug }: { slug: string }) {
     try {
       const scheduleData = {
         availableDays: data.availableDays.map(day => ({
-          day: day.day,
+          day: day.date ? format(day.date, 'EEEE') : '', // Convert date to day name
           startTime: day.startTime,
           endTime: day.endTime,
         })),
@@ -92,13 +99,17 @@ export default function ScheduleForm({ slug }: { slug: string }) {
         form.reset({
           employeeId: "",
           availableDays: [{
-            day: "",
+            date: undefined,
             startTime: "",
             endTime: "",
           }],
         });
         setTimeout(() => {
-          router.push(`/dashboard/organization/${slug}/schedules`);
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            router.push(`/dashboard/organization/${slug}/schedules`);
+          }
         }, 1500);
       } else {
         setError(res?.message || res?.error || "Failed to create schedule. Please try again.");
@@ -122,11 +133,21 @@ export default function ScheduleForm({ slug }: { slug: string }) {
           <h1 className="text-2xl font-bold text-gray-900">Add Schedule</h1>
           <p className="text-sm text-gray-600 mt-1">Create a new schedule for an employee</p>
         </div>
-        <Link href={`/dashboard/organization/${slug}/schedules`}>
-          <Button variant="outline" className="h-[60px] border border-[#003465] text-[#003465] font-medium text-base px-6 hover:bg-[#003465] hover:text-white">
+        {onCancel ? (
+          <Button 
+            variant="outline" 
+            onClick={onCancel}
+            className="h-[60px] border border-[#003465] text-[#003465] font-medium text-base px-6 hover:bg-[#003465] hover:text-white"
+          >
             Back
           </Button>
-        </Link>
+        ) : (
+          <Link href={`/dashboard/organization/${slug}/schedules`}>
+            <Button variant="outline" className="h-[60px] border border-[#003465] text-[#003465] font-medium text-base px-6 hover:bg-[#003465] hover:text-white">
+              Back
+            </Button>
+          </Link>
+        )}
       </div>
 
       {error && (
@@ -216,40 +237,26 @@ export default function ScheduleForm({ slug }: { slug: string }) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                {/* Day Selection */}
+                {/* Date Selection */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
-                    Day
+                    Date <span className="text-red-500">*</span>
                   </label>
                   <Controller
-                    name={`availableDays.${index}.day`}
+                    name={`availableDays.${index}.date`}
                     control={form.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select day" />
-                        </SelectTrigger>
-                        <SelectContent className="z-10 bg-white">
-                          {[
-                            "Monday",
-                            "Tuesday", 
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday",
-                            "Sunday"
-                          ].map((day) => (
-                            <SelectItem key={day} value={day} className="hover:bg-gray-200">
-                              {day}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <DatePicker
+                        date={field.value}
+                        onDateChange={field.onChange}
+                        placeholder="Pick a date"
+                        className="w-full"
+                      />
                     )}
                   />
-                  {form.formState.errors.availableDays?.[index]?.day && (
+                  {form.formState.errors.availableDays?.[index]?.date && (
                     <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.availableDays[index]?.day?.message}
+                      {form.formState.errors.availableDays[index]?.date?.message}
                     </p>
                   )}
                 </div>
@@ -257,36 +264,12 @@ export default function ScheduleForm({ slug }: { slug: string }) {
                 {/* Start Time */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
-                    Start Time
+                    Start Time <span className="text-red-500">*</span>
                   </label>
-                  <Controller
-                    name={`availableDays.${index}.startTime`}
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select start time" />
-                        </SelectTrigger>
-                        <SelectContent className="z-10 bg-white">
-                          {[
-                            "08:00",
-                            "09:00",
-                            "10:00",
-                            "11:00",
-                            "12:00",
-                            "13:00",
-                            "14:00",
-                            "15:00",
-                            "16:00",
-                            "17:00",
-                          ].map((time) => (
-                            <SelectItem key={time} value={time} className="hover:bg-gray-200">
-                              {time}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <Input
+                    type="time"
+                    {...form.register(`availableDays.${index}.startTime`)}
+                    className="w-full p-3 border border-[#737373] h-14 rounded"
                   />
                   {form.formState.errors.availableDays?.[index]?.startTime && (
                     <p className="text-red-500 text-sm mt-1">
@@ -298,36 +281,12 @@ export default function ScheduleForm({ slug }: { slug: string }) {
                 {/* End Time */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
-                    End Time
+                    End Time <span className="text-red-500">*</span>
                   </label>
-                  <Controller
-                    name={`availableDays.${index}.endTime`}
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
-                          <SelectValue placeholder="Select end time" />
-                        </SelectTrigger>
-                        <SelectContent className="z-10 bg-white">
-                          {[
-                            "09:00",
-                            "10:00",
-                            "11:00",
-                            "12:00",
-                            "13:00",
-                            "14:00",
-                            "15:00",
-                            "16:00",
-                            "17:00",
-                            "18:00",
-                          ].map((time) => (
-                            <SelectItem key={time} value={time} className="hover:bg-gray-200">
-                              {time}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <Input
+                    type="time"
+                    {...form.register(`availableDays.${index}.endTime`)}
+                    className="w-full p-3 border border-[#737373] h-14 rounded"
                   />
                   {form.formState.errors.availableDays?.[index]?.endTime && (
                     <p className="text-red-500 text-sm mt-1">
@@ -344,11 +303,11 @@ export default function ScheduleForm({ slug }: { slug: string }) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => append({ day: "", startTime: "", endTime: "" })}
+               onClick={() => append({ date: new Date(), startTime: "", endTime: "" })}
                 className="w-full md:w-auto text-[#003465] border-[#003465] hover:bg-[#003465] hover:text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Another Day
+              Add Another Date
             </Button>
             </div>
           </div>

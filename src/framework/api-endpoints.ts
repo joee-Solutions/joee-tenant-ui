@@ -39,6 +39,8 @@ export const API_ENDPOINTS = {
   //  super admin
   GET_SUPER_ADMIN: "/management/super/admin/all",
   ADD_SUPER_ADMIN: "/auth/super/register",
+  UPDATE_ADMIN: (adminId: number) => `/management/super/admin/${adminId}`,
+  DELETE_ADMIN: (adminId: number) => `/management/super/admin/${adminId}`,
   
   // Training Guides
   GET_TRAINING_GUIDES: "/management/super/training-guides",
@@ -88,4 +90,11 @@ export const API_ENDPOINTS = {
   DELETE_PATIENT: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}`,
   GET_ALL_PATIENTS: (tenantId: number) => `/super/tenants/${tenantId}/patients`,
   GET_PATIENT_APPOINTMENTS: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}/appointments`,
+  
+  // Backup & Restore
+  GET_TENANT_BACKUPS: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
+  CREATE_TENANT_BACKUP: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
+  GET_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  RESTORE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  DELETE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
 };

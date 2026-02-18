@@ -130,23 +130,31 @@ const TenantLoginPage = () => {
     // Online login
     try {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
-      console.log(rt);
+      console.log("Login response:", rt);
       if (rt) {
-        // Extract token from response - check multiple possible locations
+        // Extract token from response - prioritize the nested data structure
+        // Response structure: { success, message, data: { tokens: { accessToken, refreshToken }, user } }
         const authToken = 
-          rt.tokens?.accessToken || 
-          rt.data?.tokens?.accessToken ||
+          rt.data?.tokens?.accessToken ||  // Primary path: nested in data.tokens
+          rt.tokens?.accessToken ||        // Fallback: direct tokens
           rt.token || 
           rt.data?.token || 
           rt.auth_token || 
           rt.data?.auth_token;
         
+        console.log("Extracted auth token:", authToken ? "Found" : "Not found");
+        
         if (authToken) {
           // Set auth_token cookie
           Cookies.set("auth_token", authToken, { expires: 1 });
           
-          // Store refresh token if available
-          const refreshToken = rt.tokens?.refreshToken || rt.data?.tokens?.refreshToken || rt.refreshToken || rt.data?.refreshToken;
+          // Store refresh token if available - prioritize nested structure
+          const refreshToken = 
+            rt.data?.tokens?.refreshToken ||  // Primary path: nested in data.tokens
+            rt.tokens?.refreshToken ||        // Fallback: direct tokens
+            rt.refreshToken || 
+            rt.data?.refreshToken;
+          
           if (refreshToken) {
             Cookies.set("refresh_token", refreshToken, { expires: 7 });
           }
@@ -154,26 +162,49 @@ const TenantLoginPage = () => {
           // Remove mfa_token if it exists (no longer needed)
           Cookies.remove("mfa_token");
           
-          // Set user data if available in login response
-          const userData = rt.user || rt.data?.user;
+          // Set user data if available in login response - prioritize nested structure
+          const userData = rt.data?.user || rt.user;
           if (userData) {
             Cookies.set("user", JSON.stringify(userData), { expires: 1 });
             setUser(userData);
           }
           
           // Store credentials for offline login (encrypted)
-          await offlineAuthService.storeCredentials(
-            data.email,
-            data.password,
-            authToken,
-            userData
-          );
+          // This is optional - login should succeed even if offline storage fails
+          try {
+            await offlineAuthService.storeCredentials(
+              data.email,
+              data.password,
+              authToken,
+              userData
+            );
+            
+            // Verify credentials were stored
+            const hasCredentials = await offlineAuthService.hasOfflineCredentials(data.email);
+            if (hasCredentials) {
+              console.log('✅ Offline credentials verified and stored successfully');
+            } else {
+              console.warn('⚠️ Offline credentials storage may have failed - verification returned false');
+            }
+          } catch (offlineError) {
+            // Log but don't block login - offline credentials are optional
+            console.error("❌ Failed to store offline credentials (login will continue):", offlineError);
+            // Show a non-blocking warning to user
+            toast.warn("Offline login may not be available. Credentials could not be saved.", {
+              toastId: "offline-credentials-warning",
+              autoClose: 3000,
+            });
+          }
+          
+          // Reset redirect flag after successful login
+          const { resetRedirectFlag } = await import("@/framework/https");
+          resetRedirectFlag();
           
           toast.success("Login successful", { toastId: "login-success" });
           router.push("/dashboard");
         } else {
           // If no token is available, show error
-          console.error("Login response structure:", rt);
+          console.error("Login response structure:", JSON.stringify(rt, null, 2));
           toast.error("Login failed: No authentication token received");
         }
       }

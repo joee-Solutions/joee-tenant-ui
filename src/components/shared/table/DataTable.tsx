@@ -75,7 +75,7 @@ export default function DataTable({
               </TableHead>
             );
           })}
-          {showAction && <TableHead>Action</TableHead>}
+          {showAction && <TableHead className="font-semibold text-xs text-black">Action</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>{children}</TableBody>
