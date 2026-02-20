@@ -157,9 +157,9 @@ export default function TrainingGuidesPage() {
           User Training Guide for JOEE Solutions HIMS
         </h1>
         <p className="text-gray-600 text-lg leading-relaxed">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
-          incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
-          exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+          Access comprehensive training materials and documentation to help you navigate and utilize 
+          the JOEE Solutions Hospital Information Management System (HIMS) effectively. Upload, view, 
+          and download training guides to enhance your understanding of the system's features and capabilities.
         </p>
       </div>
 
@@ -240,6 +240,12 @@ export default function TrainingGuidesPage() {
             </CardContent>
           </Card>
         ) : (
+          <>
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-700 font-medium">
+                ✓ Training guides have been uploaded successfully
+              </p>
+            </div>
           <div className="space-y-4">
             {guides.map((guide: any) => (
               <Card key={guide.id} className="hover:shadow-md transition-shadow">
@@ -292,6 +298,7 @@ export default function TrainingGuidesPage() {
               </Card>
             ))}
           </div>
+          </>
         )}
       </div>
     </div>

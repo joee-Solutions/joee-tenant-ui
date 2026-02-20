@@ -74,11 +74,20 @@ httpAuth.interceptors.request.use(
       }
     } catch {}
 
-    config.headers = {
+    // If data is FormData, remove Content-Type header to let axios set it automatically with boundary
+    const isFormData = config.data instanceof FormData;
+    const headers: any = {
       ...config.headers,
       ...(authorization ? { authorization } : {}),
       ...(tenantDomain ? { "x-tenant-id": tenantDomain } : {}),
     };
+    
+    // Remove Content-Type for FormData - axios will set it with boundary automatically
+    if (isFormData) {
+      delete headers['Content-Type'];
+    }
+
+    config.headers = headers;
     return config;
   },
   (error) => {

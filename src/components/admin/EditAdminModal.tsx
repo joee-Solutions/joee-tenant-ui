@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -152,98 +152,100 @@ export default function EditAdminModal({
           </Button>
         </div>
 
-        <form onSubmit={form.handleSubmit(handleSubmit)}>
-          <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-2 gap-5">
+        <FormProvider {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <div className="flex flex-col gap-5">
+              <div className="grid grid-cols-2 gap-5">
+                <FieldBox
+                  bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                  name="first_name"
+                  control={form.control}
+                  labelText="First Name"
+                  type="text"
+                  placeholder="Enter First name"
+                />
+                <FieldBox
+                  bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                  type="text"
+                  name="last_name"
+                  control={form.control}
+                  labelText="Last Name"
+                  placeholder="Enter Last name"
+                />
+              </div>
+
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                name="first_name"
-                control={form.control}
-                labelText="First Name"
                 type="text"
-                placeholder="Enter First name"
+                name="email"
+                control={form.control}
+                labelText="Email"
+                placeholder="Enter email"
               />
+
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
                 type="text"
-                name="last_name"
+                name="address"
                 control={form.control}
-                labelText="Last Name"
-                placeholder="Enter Last name"
+                labelText="Address"
+                placeholder="Enter Address"
               />
+
+              <FieldBox
+                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                type="text"
+                name="phone_number"
+                control={form.control}
+                labelText="Phone number"
+                placeholder="Enter Phone number"
+              />
+
+              <FieldSelect
+                bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                name="role"
+                control={form.control}
+                options={orgStatus}
+                labelText="Role"
+                placeholder="Select"
+              />
+
+              <FieldBox
+                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                name="company"
+                control={form.control}
+                labelText="Company"
+                type="text"
+                placeholder="Enter here"
+              />
+
+              <div className="flex gap-3 justify-end mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="px-6"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-6 bg-[#003465] text-white hover:bg-[#003465]/90"
+                >
+                  {isUpdating ? (
+                    <>
+                      <Spinner className="mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Admin"
+                  )}
+                </Button>
+              </div>
             </div>
-
-            <FieldBox
-              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              type="text"
-              name="email"
-              control={form.control}
-              labelText="Email"
-              placeholder="Enter email"
-            />
-
-            <FieldBox
-              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              type="text"
-              name="address"
-              control={form.control}
-              labelText="Address"
-              placeholder="Enter Address"
-            />
-
-            <FieldBox
-              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              type="text"
-              name="phone_number"
-              control={form.control}
-              labelText="Phone number"
-              placeholder="Enter Phone number"
-            />
-
-            <FieldSelect
-              bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              name="role"
-              control={form.control}
-              options={orgStatus}
-              labelText="Role"
-              placeholder="Select"
-            />
-
-            <FieldBox
-              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              name="company"
-              control={form.control}
-              labelText="Company"
-              type="text"
-              placeholder="Enter here"
-            />
-
-            <div className="flex gap-3 justify-end mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="px-6"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isUpdating}
-                className="px-6 bg-[#003465] text-white hover:bg-[#003465]/90"
-              >
-                {isUpdating ? (
-                  <>
-                    <Spinner className="mr-2" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Admin"
-                )}
-              </Button>
-            </div>
-          </div>
-        </form>
+          </form>
+        </FormProvider>
       </div>
     </div>
   );

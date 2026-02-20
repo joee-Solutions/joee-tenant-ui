@@ -794,8 +794,24 @@ export const useTrainingGuidesData = (filters?: {
     revalidateOnReconnect: true,
   });
 
+  // Extract data - handle both direct array and nested structure
+  const extractedData = extractData<any>(data);
+  
+  // Handle different response structures:
+  // 1. Direct array: data = [...]
+  // 2. Object with guides: data = { guides: [...] }
+  // 3. Nested: data = { data: { guides: [...] } }
+  let guides: any[] = [];
+  if (Array.isArray(extractedData)) {
+    guides = extractedData;
+  } else if (extractedData?.guides && Array.isArray(extractedData.guides)) {
+    guides = extractedData.guides;
+  } else if (extractedData?.data?.guides && Array.isArray(extractedData.data.guides)) {
+    guides = extractedData.data.guides;
+  }
+
   return {
-    data: extractData<any[]>(data) as any,
+    data: { guides },
     meta: extractMeta(data),
     isLoading,
     error,

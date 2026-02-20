@@ -206,11 +206,7 @@ export class OfflineService {
       // Ensure database is open before attempting to cache
       if (!db.isOpen()) {
         try {
-          if (typeof (db as any).safeOpen === 'function') {
-            await (db as any).safeOpen();
-          } else {
-            await db.open();
-          }
+          await db.safeOpen();
         } catch (openError: any) {
           // If database can't be opened, skip caching silently
           offlineLogger.debug('Database not available for caching', { 
@@ -246,17 +242,49 @@ export class OfflineService {
         return; // Skip caching if data can't be serialized
       }
 
-      await db.apiCache.put({
-        endpoint,
-        data,
-        timestamp: new Date(),
-        expiresAt,
-      });
-      
-      offlineLogger.debug(`Cached response for ${endpoint}`, {
-        expiresAt: expiresAt.toISOString(),
-        dataSize,
-      });
+      try {
+        await db.apiCache.put({
+          endpoint,
+          data,
+          timestamp: new Date(),
+          expiresAt,
+        });
+        
+        offlineLogger.debug(`Cached response for ${endpoint}`, {
+          expiresAt: expiresAt.toISOString(),
+          dataSize,
+        });
+      } catch (putError: any) {
+        // If we get a ConstraintError, the database schema might be corrupted
+        // Try to recover by deleting and recreating the database
+        if (putError?.name === 'ConstraintError' || putError?.message?.includes('already exists')) {
+          console.warn('ConstraintError during cache storage, attempting database recovery...');
+          try {
+            // Close database
+            if (db.isOpen()) {
+              await db.close();
+            }
+            // Delete and recreate
+            await db.delete();
+            await db.safeOpen();
+            // Retry the operation
+            await db.apiCache.put({
+              endpoint,
+              data,
+              timestamp: new Date(),
+              expiresAt,
+            });
+            console.log('✅ Response cached after database recovery');
+          } catch (recoveryError: any) {
+            // If recovery fails, just skip caching - don't break the app
+            console.warn('Failed to cache response after database recovery, skipping cache:', recoveryError?.message);
+            return; // Exit gracefully
+          }
+        } else {
+          // Re-throw other errors
+          throw putError;
+        }
+      }
     } catch (error: any) {
       // Extract comprehensive error information
       let errorMessage = 'Unknown error';
@@ -308,11 +336,7 @@ export class OfflineService {
       // Ensure database is open before attempting to get cache
       if (!db.isOpen()) {
         try {
-          if (typeof (db as any).safeOpen === 'function') {
-            await (db as any).safeOpen();
-          } else {
-            await db.open();
-          }
+          await db.safeOpen();
         } catch (openError: any) {
           // If database can't be opened, return null silently
           offlineLogger.debug('Database not available for cache retrieval', { 
@@ -844,11 +868,7 @@ export class OfflineService {
       // Ensure database is open before attempting cleanup - use safeOpen to handle ConstraintError
       if (!db.isOpen()) {
         try {
-          if (typeof (db as any).safeOpen === 'function') {
-            await (db as any).safeOpen();
-          } else {
-            await db.open();
-          }
+          await db.safeOpen();
         } catch (openError: any) {
           // If database can't be opened, skip cleanup silently
           offlineLogger.debug('Database not available for cache cleanup', { 
@@ -872,9 +892,7 @@ export class OfflineService {
         if (queryError?.name === 'ConstraintError' || queryError?.message?.includes('already exists')) {
           console.warn('ConstraintError during cache query, attempting database recovery...');
           try {
-            if (typeof (db as any).safeOpen === 'function') {
-              await (db as any).safeOpen(); // This will attempt recovery
-            }
+            await db.safeOpen(); // This will attempt recovery
             // Retry the query after recovery
             const now = new Date();
             expired = await db.apiCache

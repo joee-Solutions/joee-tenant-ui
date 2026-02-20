@@ -89,7 +89,7 @@ class OfflineAuthService {
           if (typeof (db as any).safeOpen === 'function') {
             await (db as any).safeOpen();
           } else {
-            await db.open();
+            await db.safeOpen();
           }
         } catch (openError: any) {
           // If it's a constraint error about existing indexes, try to handle it
@@ -98,7 +98,7 @@ class OfflineAuthService {
             try {
               // Try closing and reopening
               await db.close();
-              await db.open();
+              await db.safeOpen();
             } catch (retryError: any) {
               throw new Error(`Failed to open database after retry: ${retryError?.message || 'Unknown error'}`);
             }
@@ -167,7 +167,31 @@ class OfflineAuthService {
         // Log success to console for debugging
         console.log('✅ Offline credentials successfully stored for:', email);
       } catch (dbError: any) {
-        throw new Error(`Database operation failed: ${dbError?.message || 'Unknown database error'}. Original error: ${dbError}`);
+        // If we get a ConstraintError, the database schema might be corrupted
+        // Try to recover by deleting and recreating the database
+        if (dbError?.name === 'ConstraintError' || dbError?.message?.includes('already exists')) {
+          console.warn('ConstraintError during credential storage, attempting database recovery...');
+          try {
+            // Close database
+            if (db.isOpen()) {
+              await db.close();
+            }
+            // Delete and recreate
+            await db.delete();
+            await db.safeOpen();
+            // Retry the operation
+            if (existing) {
+              await db.offlineCredentials.update(existing.id!, credentialData as any);
+            } else {
+              await db.offlineCredentials.add(credentialData as any);
+            }
+            console.log('✅ Credentials stored after database recovery');
+          } catch (recoveryError: any) {
+            throw new Error(`Database operation failed and recovery failed: ${recoveryError?.message || 'Unknown error'}`);
+          }
+        } else {
+          throw new Error(`Database operation failed: ${dbError?.message || 'Unknown database error'}. Original error: ${dbError}`);
+        }
       }
     } catch (error: any) {
       // Extract comprehensive error information
@@ -323,7 +347,7 @@ class OfflineAuthService {
           if (typeof (db as any).safeOpen === 'function') {
             await (db as any).safeOpen();
           } else {
-            await db.open();
+            await db.safeOpen();
           }
         } catch (openError: any) {
           console.warn('Database not available for credential check:', openError?.message);
@@ -373,11 +397,7 @@ if (typeof window !== 'undefined') {
     try {
       if (!db.isOpen()) {
         console.log('Attempting to open database...');
-        if (typeof (db as any).safeOpen === 'function') {
-          await (db as any).safeOpen();
-        } else {
-          await db.open();
-        }
+        await db.safeOpen();
         console.log('Database opened:', db.isOpen());
       }
       

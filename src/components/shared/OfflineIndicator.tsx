@@ -11,6 +11,11 @@ export default function OfflineIndicator() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
+  // Don't show when online with no pending actions (unless minimized and has sync history)
+  // But respect user preference to hide when synced
+  const hideWhenSynced = typeof window !== 'undefined' && 
+    localStorage.getItem('user_hide_offline_indicator_when_synced') === 'true';
+
   // Update last sync time when sync completes
   useEffect(() => {
     if (isOnline && syncStatus.pending === 0 && syncStatus.failed === 0 && syncStatus.syncing === 0) {
@@ -23,11 +28,15 @@ export default function OfflineIndicator() {
     }
   }, [syncStatus, isOnline, isSyncing]);
 
-  // Don't show when online with no pending actions (unless minimized and has sync history)
-  // But respect user preference to hide when synced
-  const hideWhenSynced = typeof window !== 'undefined' && 
-    localStorage.getItem('user_hide_offline_indicator_when_synced') === 'true';
-  
+  // Show indicator if user closed it but there are new pending/failed actions
+  // Reset the preference when there are new actions
+  useEffect(() => {
+    if ((syncStatus.pending > 0 || syncStatus.failed > 0) && hideWhenSynced) {
+      localStorage.removeItem('user_hide_offline_indicator_when_synced');
+    }
+  }, [syncStatus.pending, syncStatus.failed, hideWhenSynced]);
+
+  // Early return after all hooks are called
   if (isOnline && syncStatus.pending === 0 && syncStatus.failed === 0 && !isMinimized) {
     // If user closed it when synced, don't show it again
     if (hideWhenSynced) {
@@ -36,14 +45,6 @@ export default function OfflineIndicator() {
     // Otherwise, auto-hide when synced (default behavior)
     return null;
   }
-  
-  // Show indicator if user closed it but there are new pending/failed actions
-  // Reset the preference when there are new actions
-  useEffect(() => {
-    if ((syncStatus.pending > 0 || syncStatus.failed > 0) && hideWhenSynced) {
-      localStorage.removeItem('user_hide_offline_indicator_when_synced');
-    }
-  }, [syncStatus.pending, syncStatus.failed, hideWhenSynced]);
 
   const getStatusMessage = () => {
     if (!isOnline) {

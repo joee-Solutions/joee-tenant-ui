@@ -116,15 +116,38 @@ export default function TrainingGuideForm({
       Object.keys(payload).forEach((key) => {
         if (key === "metadata") {
           formData.append(key, JSON.stringify(payload[key]));
+        } else if (key === "is_featured") {
+          // Handle boolean values - backend might expect "true"/"false" or 1/0
+          formData.append(key, payload[key] ? "true" : "false");
         } else {
-          formData.append(key, String(payload[key]));
+          formData.append(key, String(payload[key] || ""));
         }
       });
 
-      // Append file if selected
+      // Append file if selected - ensure file is always appended for create mode
       if (selectedFile) {
         formData.append("file", selectedFile);
+        console.log("File appended to FormData:", {
+          name: selectedFile.name,
+          size: selectedFile.size,
+          type: selectedFile.type
+        });
+      } else if (mode === "create") {
+        // This should not happen due to validation, but log it
+        console.error("No file selected for create mode");
       }
+
+      // Debug: Log FormData contents (excluding file data)
+      console.log("FormData contents:", {
+        title: formData.get("title"),
+        description: formData.get("description"),
+        category: formData.get("category"),
+        guide_version: formData.get("guide_version"),
+        is_featured: formData.get("is_featured"),
+        metadata: formData.get("metadata"),
+        hasFile: !!formData.get("file"),
+        fileSize: selectedFile?.size
+      });
 
       const endpoint = mode === "create" 
         ? API_ENDPOINTS.CREATE_TRAINING_GUIDE
