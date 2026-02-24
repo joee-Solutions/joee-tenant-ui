@@ -19,6 +19,7 @@ interface FieldBoxProps<T extends FieldValues> {
   fieldDescription?: string;
   bgInputClass?: string;
   disabled?: boolean;
+  autoComplete?: string;
 }
 
 function FieldBox<T extends FieldValues>({
@@ -31,6 +32,7 @@ function FieldBox<T extends FieldValues>({
   fieldDescription,
   bgInputClass,
   disabled,
+  autoComplete,
 }: FieldBoxProps<T>) {
   return (
     <FormField
@@ -47,6 +49,7 @@ function FieldBox<T extends FieldValues>({
                 type={type}
                 placeholder={placeholder}
                 {...field}
+                autoComplete={autoComplete}
                 className={`${
                   iconText ? "pl-10" : ""
                 } text-sm font-normal text-[#737373] border border-[#737373] h-[60px] focus:ring-transparent rounded px-[21px] ${

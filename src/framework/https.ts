@@ -1,6 +1,6 @@
 import { siteConfig } from "@/framework/site-config";
 import axios from "axios";
-import { getRefreshToken, getToken } from "./get-token";
+import { getRefreshToken, getToken, isTokenExpiredOrExpiringSoon } from "./get-token";
 import Cookies from "js-cookie";
 import { API_ENDPOINTS } from "./api-endpoints";
 
@@ -51,12 +51,29 @@ if (typeof window !== undefined) {
   });
 }
 httpAuth.interceptors.request.use(
-  (config) => {
-    const token = getToken();
+  async (config) => {
+    let token = getToken();
+
+    // Proactively refresh if token is expired or expiring soon (before we use it)
+    const refreshToken = getRefreshToken();
+    if (
+      token &&
+      refreshToken &&
+      isTokenExpiredOrExpiringSoon(token) &&
+      !refreshingToking &&
+      !redirectingToLogin
+    ) {
+      try {
+        const refreshed = await refreshUser();
+        if (refreshed) {
+          token = getToken();
+        }
+      } catch (e) {
+        // refreshUser handles redirect; continue with request so 401 path can run if needed
+      }
+    }
+
     let authorization;
-    // Only set authorization if we have a valid token
-    // If token is missing or invalid, let the request proceed
-    // The error handler will catch 401 errors and attempt token refresh
     if (typeof token === "string" && token.trim().length > 10) {
       authorization = `Bearer ${token}`;
     }
@@ -309,7 +326,8 @@ const refreshUser = async () => {
     return null;
   }
 
-  console.log("token expired, refreshing token");
+  // Only refresh when we have a refresh token; otherwise we'll redirect in the 401 handler
+  console.log("Refreshing access token before it expires");
   try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {

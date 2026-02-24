@@ -17,6 +17,7 @@ import { toast } from "react-toastify";
 import { useTenantStore } from "@/contexts/AuthProvider";
 import { getToken } from "@/framework/get-token";
 import { offlineAuthService } from "@/lib/offline/offlineAuth";
+import { ensureOfflineDbReady } from "@/lib/offline/database";
 
 type LoginProps = z.infer<typeof schema>;
 
@@ -69,6 +70,15 @@ const TenantLoginPage = () => {
     }
   }, []);
 
+  // Pre-open offline DB when login page mounts so it's ready when user submits
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      ensureOfflineDbReady().catch((err) => {
+        console.warn('[OFFLINE] DB pre-init failed (will retry on login):', err?.message);
+      });
+    }
+  }, []);
+
   // Check if user has valid token and redirect to dashboard (works offline)
   useEffect(() => {
     const token = getToken();
@@ -110,13 +120,20 @@ const TenantLoginPage = () => {
           return;
         } else {
           // No cached credentials or invalid
-          toast.error(
-            "No offline credentials found. Please login while online first to enable offline login.",
-            {
-              toastId: "offline-login-error",
-              autoClose: 5000,
-            }
-          );
+          const errorMessage = offlineResult.error || 
+            "No offline credentials found. Please login while online first to enable offline login.";
+          toast.error(errorMessage, {
+            toastId: "offline-login-error",
+            autoClose: 5000,
+          });
+          
+          // Log for debugging
+          console.error('[OFFLINE LOGIN] Failed:', {
+            success: offlineResult.success,
+            hasToken: !!offlineResult.token,
+            hasUserData: !!offlineResult.userData,
+            error: offlineResult.error,
+          });
           return;
         }
       } catch (error: any) {
@@ -172,6 +189,7 @@ const TenantLoginPage = () => {
           // Store credentials for offline login (encrypted)
           // This is optional - login should succeed even if offline storage fails
           try {
+            console.log('[OFFLINE CREDENTIALS] Attempting to store credentials for:', data.email);
             await offlineAuthService.storeCredentials(
               data.email,
               data.password,
@@ -179,20 +197,34 @@ const TenantLoginPage = () => {
               userData
             );
             
+            // Wait a moment for IndexedDB to complete
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
             // Verify credentials were stored
             const hasCredentials = await offlineAuthService.hasOfflineCredentials(data.email);
             if (hasCredentials) {
-              console.log('✅ Offline credentials verified and stored successfully');
+              console.log('✅ Offline credentials verified and stored successfully for:', data.email);
             } else {
               console.warn('⚠️ Offline credentials storage may have failed - verification returned false');
+              console.warn('⚠️ This means offline login will not work. Please check browser console for errors.');
+              // Show a warning to user
+              toast.warn("Offline login may not be available. Credentials could not be saved. Please check browser console.", {
+                toastId: "offline-credentials-warning",
+                autoClose: 5000,
+              });
             }
-          } catch (offlineError) {
+          } catch (offlineError: any) {
             // Log but don't block login - offline credentials are optional
             console.error("❌ Failed to store offline credentials (login will continue):", offlineError);
+            console.error("❌ Error details:", {
+              message: offlineError?.message,
+              name: offlineError?.name,
+              stack: offlineError?.stack,
+            });
             // Show a non-blocking warning to user
-            toast.warn("Offline login may not be available. Credentials could not be saved.", {
+            toast.warn("Offline login may not be available. Credentials could not be saved. Please check browser console for details.", {
               toastId: "offline-credentials-warning",
-              autoClose: 3000,
+              autoClose: 5000,
             });
           }
           

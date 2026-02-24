@@ -1,13 +1,17 @@
 "use client";
 import { useTenant } from "@/hooks/swr";
-import { CircleArrowLeft, Building2, Users2, UserSquare2, CalendarDays, CalendarClock, Settings } from "lucide-react";
+import { CircleArrowLeft, Building2, Users2, UserSquare2, CalendarDays, CalendarClock, Settings, Cloud, RotateCcw } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { preCacheService } from "@/lib/offline/preCacheService";
 import { offlineService } from "@/lib/offline/offlineService";
+import { Button } from "@/components/ui/button";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { toast } from "react-toastify";
 
 const links = [
   { href: "departments", label: "Departments", Icon: Building2 },
@@ -28,6 +32,26 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
   const currentTab = pathname.split("/")[4] || "departments";
 
   const { data, isLoading } = useTenant(orgSlug);
+  const tenantId = typeof data === "object" && data && (data as any)?.id != null ? (data as any).id : (orgSlug && /^\d+$/.test(orgSlug) ? parseInt(orgSlug, 10) : null);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+
+  const handleCreateBackup = async () => {
+    if (!tenantId || typeof tenantId !== "number") {
+      toast.error("Organization ID is required to create a backup");
+      return;
+    }
+    setCreatingBackup(true);
+    try {
+      await processRequestAuth("post", API_ENDPOINTS.CREATE_TENANT_BACKUP(tenantId), { tenantId });
+      toast.success("Backup created successfully");
+    } catch (err: any) {
+      console.error("Backup creation error:", err);
+      toast.error(err?.response?.data?.message || "Failed to create backup");
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
+
   useEffect(() => {
     if (!isLoading && data && typeof data === "object" && (data as { domain?: string }).domain) {
       try {
@@ -55,7 +79,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="px-4 pb-20">
-      <header className="mb-6">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <Link
           href="/dashboard/organization"
           className="font-semibold text-2xl text-black gap-2 p-0 flex items-center"
@@ -63,6 +87,27 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
           <CircleArrowLeft className="fill-[#003465] text-white size-[32px]" />
           {typeof data === "object" && data && (data as { name?: string }).name ? (data as { name?: string }).name : "Organization"}
         </Link>
+        {tenantId != null && (
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleCreateBackup}
+              disabled={creatingBackup}
+              className="bg-[#003465] text-white hover:bg-[#003465]/90 h-10 px-4 text-sm"
+            >
+              <Cloud className="w-4 h-4 mr-2" />
+              {creatingBackup ? "Creating..." : "Backup"}
+            </Button>
+            <Link href={`/dashboard/organization/${orgSlug}/backup`}>
+              <Button
+                variant="outline"
+                className="h-10 px-4 text-sm border-[#003465] text-[#003465] hover:bg-[#D9EDFF]"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Restore
+              </Button>
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* General Overview Section */}

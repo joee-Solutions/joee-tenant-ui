@@ -1,13 +1,39 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
+import { useFormContext } from "react-hook-form";
 
-export default function ProfileImageUploader({ title="Upload Profile Image" }: { title?: string }) {
-  const [image, setImage] = useState(null);
+interface ProfileImageUploaderProps {
+  title?: string;
+  name?: string; // Form field name
+}
+
+export default function ProfileImageUploader({ 
+  title = "Upload Profile Image",
+  name = "profileImage"
+}: ProfileImageUploaderProps) {
+  const { watch, setValue } = useFormContext();
+  const formImageValue = watch(name);
+  
+  const [image, setImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize and sync local state with form value when form value changes (e.g., from API)
+  useEffect(() => {
+    // Update image when form value changes (from API load or user selection)
+    if (formImageValue && formImageValue.trim() !== "") {
+      setImage(formImageValue);
+    } else if (!formImageValue || formImageValue === "" || formImageValue === null) {
+      // Only clear if current image is not a newly selected base64 image
+      // This prevents clearing when user just selected a new image
+      if (!image || !image.startsWith('data:')) {
+        setImage(null);
+      }
+    }
+  }, [formImageValue]);
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -61,25 +87,34 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
     }
   };
 
-  const handleFile = (file) => {
+  const handleFile = (file: File) => {
     if (validateFile(file)) {
       setUploading(true);
+      setError("");
 
-      // Simulate upload process
-      setTimeout(() => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setImage(reader.result as any);
-          setUploading(false);
-        };
-        reader.readAsDataURL(file);
-      }, 1000);
+      // Convert file to base64 data URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Image = reader.result as string;
+        setImage(base64Image);
+        // Update form field with base64 image
+        setValue(name, base64Image, { shouldValidate: false });
+        setUploading(false);
+        console.log("Image uploaded and set to form field:", name);
+      };
+      reader.onerror = () => {
+        setError("Failed to read file");
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const removeImage = () => {
     setImage(null);
     setError("");
+    // Clear form field
+    setValue(name, "", { shouldValidate: true });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -121,6 +156,7 @@ export default function ProfileImageUploader({ title="Upload Profile Image" }: {
                 className="max-w-full max-h-full object-contain rounded"
                 width={300}
                 height={300}
+                unoptimized={image.startsWith('data:')} // Allow base64 images
               />
               <button
                 className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"

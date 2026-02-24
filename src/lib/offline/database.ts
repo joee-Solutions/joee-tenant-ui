@@ -145,63 +145,63 @@ export class OfflineDatabase extends Dexie {
       departments: '++id, tenantId, name, _syncStatus, _timestamp',
       notifications: '++id, read, isRead, _syncStatus, _timestamp',
       syncQueue: '++id, action, entity, status, timestamp',
-      apiCache: '++id, endpoint, *endpoint, timestamp, expiresAt',
+      apiCache: '++id, endpoint, timestamp, expiresAt',
       offlineCredentials: '++id, email, expiresAt',
     });
   }
 
+  private _openLock: Promise<void> = Promise.resolve();
+
   /**
-   * Safely open the database, handling existing indexes
-   * This method handles the case where indexes already exist (ConstraintError)
-   * If the database is corrupted, it will delete and recreate it
+   * Safely open the database, handling existing indexes.
+   * Serialized so only one open/recreate runs at a time (avoids ConstraintError race).
    */
   async safeOpen(): Promise<void> {
-    // If already open, return immediately
-    if (this.isOpen()) {
-      return;
-    }
+    const run = () => this._safeOpenImpl();
+    this._openLock = this._openLock.then(run, run);
+    return this._openLock;
+  }
+
+  private async _safeOpenImpl(): Promise<void> {
+    if (this.isOpen()) return;
 
     try {
       await this.open();
     } catch (error: any) {
-      // If we get a ConstraintError about existing indexes, the database schema is corrupted
-      // This happens when Dexie tries to create indexes that already exist
-      // The best solution is to delete and recreate the database
       if (error?.name === 'ConstraintError' || error?.message?.includes('already exists')) {
-        console.warn('⚠️ Database constraint error detected (index already exists). This usually means the database schema is corrupted.');
-        console.warn('Deleting and recreating database... (cached data will be lost)');
-        
+        console.warn('⚠️ Database constraint error detected (index already exists). Deleting via native IndexedDB and recreating...');
         try {
-          // Close if open
+          if (this.isOpen()) await this.close();
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          await new Promise<void>((resolve, reject) => {
+            const req = indexedDB.deleteDatabase(this.name);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+            req.onblocked = () => {
+              console.warn('[OFFLINE DB] Delete blocked - close other tabs with this app, then retry.');
+              setTimeout(() => reject(new Error('Database delete was blocked. Please close other tabs and try again.')), 5000);
+            };
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 1000));
           if (this.isOpen()) {
             await this.close();
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
-          
-          // Wait for database to release locks
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Delete the corrupted database
-          await this.delete();
-          console.log('✅ Corrupted database deleted');
-          
-          // Wait a bit more
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          // Recreate with fresh schema
           await this.open();
           console.log('✅ Database recreated successfully. Offline features are now available.');
         } catch (recreateError: any) {
           console.error('❌ Failed to delete and recreate database:', recreateError);
-          // Don't throw - let the app continue even if database is broken
-          // The app can still work without offline caching
-          console.warn('⚠️ Database initialization failed. App will continue without offline caching.');
+          throw new Error(`Database could not be recreated: ${recreateError?.message || 'Unknown error'}`);
         }
       } else {
-        // For other errors, just log and continue
-        console.warn('Database initialization error (non-critical):', error?.message || 'Unknown error');
-        // Don't throw - let the app continue without offline caching
+        console.warn('Database initialization error:', error?.message || 'Unknown error');
+        throw error;
       }
     }
+
+    if (!this.isOpen()) throw new Error('Database could not be opened');
   }
 }
 
@@ -219,12 +219,64 @@ if (typeof window !== 'undefined') {
   // Only initialize once, even if called multiple times
   if (!initializationPromise) {
     initializing = true;
-    initializationPromise = db.safeOpen().catch((error) => {
-      console.warn('Database initialization failed on module load:', error);
-      // Don't throw - app can continue without offline features
-    }).finally(() => {
-      initializing = false;
-    });
+    initializationPromise = db.safeOpen()
+      .then(() => {
+        if (!db.isOpen()) {
+          throw new Error('Database did not open');
+        }
+        console.log('[OFFLINE DB] ✅ Database initialized successfully');
+      })
+      .catch((error) => {
+        console.error('[OFFLINE DB] ❌ Database initialization failed on module load:', error);
+        console.error('[OFFLINE DB] Error details:', {
+          message: error?.message,
+          name: error?.name,
+          stack: error?.stack,
+        });
+        initializing = false;
+        throw error; // Reject so callers (e.g. offlineAuth) can retry open
+      })
+      .finally(() => {
+        initializing = false;
+      });
+    
+    // Expose initialization promise for other modules to wait on
+    (window as any).__offlineDbInitPromise = initializationPromise;
   }
+
+  // Also ensure database is open when credentials are accessed
+  const ensureDbOpen = async () => {
+    if (!db.isOpen() && !initializing) {
+      try {
+        await db.safeOpen();
+      } catch (error) {
+        console.warn('[OFFLINE DB] Failed to ensure database is open:', error);
+      }
+    }
+  };
+  
+  // Expose helper for manual database opening
+  (window as any).ensureOfflineDbOpen = ensureDbOpen;
+}
+
+/**
+ * Call this early (e.g. on login page mount) so the DB is open before the user submits.
+ * Safe to call multiple times; returns the same promise once init has started.
+ */
+export function ensureOfflineDbReady(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  let p = (window as any).__offlineDbInitPromise as Promise<void> | undefined;
+  if (!p) {
+    p = db.safeOpen().then(() => {
+      if (!db.isOpen()) throw new Error('Database did not open');
+    });
+    (window as any).__offlineDbInitPromise = p;
+  }
+  return p.catch(() => {
+    (window as any).__offlineDbInitPromise = undefined;
+    return db.safeOpen().then(() => {
+      if (!db.isOpen()) throw new Error('Database did not open');
+    });
+  });
 }
 

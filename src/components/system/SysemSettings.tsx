@@ -83,7 +83,7 @@ export default function SystemSettings() {
             phoneNumber: response.data.phoneNumber || "",
             address: response.data.address || "",
             company: response.data.company || "",
-            profileImage: response.data.profileImage || "",
+            profileImage: response.data.profileImage || response.data.logo || "",
           });
         } else {
           toast.error("Failed to load system settings");
@@ -102,11 +102,32 @@ export default function SystemSettings() {
   const onSubmit = async (payload: SystemSettingsSchemaType) => {
     setIsLoading(true);
     try {
+      // Check if profileImage is a base64 data URL (newly uploaded image)
+      const isBase64Image = payload.profileImage && payload.profileImage.startsWith('data:image/');
+      
+      // If it's a base64 image, we might need to convert it or send as FormData
+      // For now, send as-is (base64 string) - backend should handle it
+      // If backend expects file upload, we'll need to convert base64 to File and use FormData
+      
+      console.log("Submitting system settings:", {
+        ...payload,
+        profileImage: payload.profileImage ? `${payload.profileImage.substring(0, 50)}...` : "empty",
+        isBase64Image
+      });
+      
       const response = await processRequestAuth("put", API_ENDPOINTS.UPDATE_SYSTEM_SETTINGS, payload);
       
-      if (response.status) {
+      if (response.status || response.success) {
         setShowSuccessDialog(true);
         toast.success("System settings updated successfully");
+        
+        // If update was successful and response includes updated data, refresh form
+        if (response.data) {
+          form.reset({
+            ...payload,
+            profileImage: response.data.profileImage || response.data.logo || payload.profileImage || "",
+          });
+        }
       } else {
         toast.error(response.message || "Failed to update system settings");
       }
@@ -139,7 +160,7 @@ export default function SystemSettings() {
       </h2>
       <FormComposer form={form} onSubmit={onSubmit}>
         <div className="flex flex-col gap-[30px]">
-          <ProfileImageUploader title="System Logo"/>
+          <ProfileImageUploader title="System Logo" name="profileImage"/>
           <div className="grid grid-cols-2 gap-5 items-start justify-center">
             <FieldBox
               bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"

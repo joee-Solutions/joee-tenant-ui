@@ -291,9 +291,6 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
           <PopoverTrigger asChild>
             <span className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors">
               <BellIcon className="h-6 w-6" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3"></span>
-              )}
         </span>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
@@ -307,13 +304,10 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
                 </div>
               ) : (
                 notifications.map((notification) => {
-                  const isUnread = notification.read !== true && notification.isRead !== true && (!notification.readAt || notification.readAt === null);
                   return (
                   <div
                     key={notification.id}
-                    className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                        isUnread ? "bg-blue-50" : ""
-                    }`}
+                    className="p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start justify-between">
@@ -328,9 +322,6 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
                             {notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : ""}
                         </p>
                         </div>
-                        {isUnread && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full ml-2 flex-shrink-0"></span>
-                        )}
                       </div>
                     </div>
                   );
@@ -353,14 +344,14 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
         {/* Notification View Modal */}
         {showNotificationModal && selectedNotification && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
             onClick={() => {
               setShowNotificationModal(false);
               setSelectedNotification(null);
             }}
           >
             <div
-              className="bg-white rounded-lg p-6 w-full max-w-2xl mx-auto my-auto max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-lg p-6 w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-start mb-4">

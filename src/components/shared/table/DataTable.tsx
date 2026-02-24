@@ -37,9 +37,11 @@ const getColumnHeaders = function (data: Record<string, any>) {
       c[1] = secondC;
 
       return c.join(" ");
+    } else if (key === "sn") {
+      return "S/N";
     }
-    // Return key as-is if it's already properly formatted (e.g., "S/N", "Patient", "Date", "Provider", "Time", "Action")
-    return key;
+    // First letter capital for single-word keys (e.g. sender, title, organization, actions)
+    return key.charAt(0).toUpperCase() + key.slice(1);
   });
 
   return headers;

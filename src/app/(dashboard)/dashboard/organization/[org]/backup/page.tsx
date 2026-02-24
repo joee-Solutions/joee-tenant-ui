@@ -130,7 +130,7 @@ export default function BackupPage() {
       await processRequestAuth(
         "post",
         API_ENDPOINTS.CREATE_TENANT_BACKUP(orgIdNumber),
-        { entityType: activeTab }
+        { tenantId: orgIdNumber, entityType: activeTab }
       );
       toast.success("Backup created successfully");
       mutate(); // Refresh backups list

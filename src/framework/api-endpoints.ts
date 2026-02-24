@@ -1,5 +1,5 @@
 export const API_ENDPOINTS = {
-  REFRESH_TOKEN: "/auth/super/refresh-token",
+  REFRESH_TOKEN: "/auth/super/refresh",
   LOGIN: "/auth/super/login",
   SIGNUP: "/auth/super/signup",
   LOGOUT: "/auth/super/logout",
@@ -95,6 +95,6 @@ export const API_ENDPOINTS = {
   GET_TENANT_BACKUPS: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
   CREATE_TENANT_BACKUP: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
   GET_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
-  RESTORE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  RESTORE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/restore/${backupId}`,
   DELETE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
 };

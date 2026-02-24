@@ -60,12 +60,6 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
           <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
       <div className="relative z-10 flex justify-between items-center w-full">
         <h3 className="font-semibold text-lg">Employees - All Organizations</h3>
-        <Link 
-          href="/dashboard/search?tab=employees"
-          className="text-sm text-white hover:underline font-medium"
-        >
-          View All
-        </Link>
       </div>
         </div>
         <div className="flex flex-col items-center justify-center p-8 text-center -mt-12">
@@ -97,12 +91,6 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
        <div className="absolute inset-0 bg-[#003465] opacity-75 z-0"></div>
       <div className="relative z-10 flex justify-between items-center w-full ">
         <h3 className="font-semibold text-lg ">Employees - All Organizations</h3>
-        <Link 
-          href="/dashboard/search?tab=employees"
-          className="text-sm text-white hover:underline font-medium"
-        >
-          View All
-        </Link>
         </div>
       </div>
 

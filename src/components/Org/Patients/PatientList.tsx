@@ -77,13 +77,36 @@ export default function PatientList({ org }: { org: string }) {
   const [patientToDelete, setPatientToDelete] = useState<any | null>(null);
   const { data, isLoading, error, mutate } = useSWR(
     API_ENDPOINTS.TENANTS_PATIENTS(parseInt(org)),
-    authFectcher
+    authFectcher,
+    { revalidateOnFocus: true }
   );
 
-  console.log(data);
-  
-  // Get patients array safely
-  const patients = data?.data?.data || [];
+  // Get patients array from multiple possible API response shapes
+  const patients = (() => {
+    if (!data) return [];
+    const d = data as any;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d?.data)) return d.data;
+    if (Array.isArray(d?.data?.data)) return d.data.data;
+    if (Array.isArray(d?.data?.patients)) return d.data.patients;
+    if (Array.isArray(d?.patients)) return d.patients;
+    if (Array.isArray(d?.results)) return d.results;
+    return [];
+  })();
+
+  // Pagination meta from multiple possible shapes
+  const meta = (() => {
+    const d = data as any;
+    return d?.data?.meta ?? d?.meta ?? {};
+  })();
+  const totalCount = meta?.total ?? meta?.totalCount ?? patients.length;
+  const totalPages = meta?.totalPages ?? meta?.total_pages ?? Math.max(1, Math.ceil(totalCount / pageSize));
+  const limit = meta?.limit ?? meta?.pageSize ?? pageSize;
+
+  // Slice for client-side pagination when API doesn't return paginated data
+  const paginatedPatients = Array.isArray(patients) && (meta?.total != null || meta?.totalCount != null)
+    ? patients
+    : patients.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -154,8 +177,8 @@ export default function PatientList({ org }: { org: string }) {
                   No patients found
                 </TableCell>
               </TableRow>
-            ) : Array.isArray(patients) && patients.length > 0 ? (
-              patients.map((patient, index) => {
+            ) : Array.isArray(paginatedPatients) && paginatedPatients.length > 0 ? (
+              paginatedPatients.map((patient, index) => {
                 return (
                   <TableRow
                     key={patient.id}
@@ -175,24 +198,24 @@ export default function PatientList({ org }: { org: string }) {
                           />
                         </span>
                         <p className="font-medium text-xs text-black">
-                          {patient?.firstname} {patient?.lastname}
+                          {patient?.first_name ?? patient?.firstname} {patient?.last_name ?? patient?.lastname}
                         </p>
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {patient?.address}
+                      {patient?.address ?? patient?.contact_info?.address}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {patient?.gender}
+                      {patient?.gender ?? patient?.sex}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {formatDateFn(patient?.date_of_birth)}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {patient?.phone_number}
+                      {patient?.phone_number ?? patient?.contact_info?.phone_number_home ?? patient?.phone}
                     </TableCell>
                     <TableCell className="font-semibold text-xs text-[#737373]">
-                      {patient?.email}
+                      {patient?.email ?? patient?.contact_info?.email}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu modal={false}>
@@ -244,10 +267,10 @@ export default function PatientList({ org }: { org: string }) {
           </DataTable>
           </div>
           <Pagination
-            dataLength={data?.data?.meta?.total || 0}
-            numOfPages={data?.data?.meta?.totalPages || 1}
-            pageSize={data?.data?.meta?.limit || pageSize}
-            currentPage={data?.data?.meta?.page || currentPage}
+            dataLength={totalCount}
+            numOfPages={totalPages}
+            pageSize={limit}
+            currentPage={currentPage}
             setCurrentPage={setCurrentPage}
           />
         </section>
@@ -257,7 +280,7 @@ export default function PatientList({ org }: { org: string }) {
         <DeleteWarningModal
           title="Delete Patient"
           message="Are you sure you want to delete"
-          itemName={`${patientToDelete.firstname} ${patientToDelete.lastname}`}
+          itemName={`${patientToDelete?.first_name ?? patientToDelete?.firstname} ${patientToDelete?.last_name ?? patientToDelete?.lastname}`}
           onConfirm={handleDelete}
           onCancel={() => {
             setShowDeleteWarning(false);

@@ -235,6 +235,7 @@ export default function AdminForm() {
             control={form.control}
             labelText="Email"
             placeholder="Enter email"
+            autoComplete="off"
           />
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -271,14 +272,15 @@ export default function AdminForm() {
             placeholder="Enter here"
           />
           <div className="grid gap-[6px]">
-            <label htmlFor="login-password" className="text-sm font-medium">
+            <label htmlFor="create-admin-password" className="text-sm font-medium">
               Password
             </label>
             <Input
-              id="login-password"
-                type={showPassword ? "text" : "password"}
-                {...form.register("password")}
-                icon={
+              id="create-admin-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              {...form.register("password")}
+              icon={
                   showPassword ? (
                     <EyeOffIcon
                       className="size-5"
