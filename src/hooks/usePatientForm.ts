@@ -138,10 +138,10 @@ export function usePatientForm({
             }
           }
           
-          toast.success(patientId ? "Patient updated successfully" : "Patient created successfully", { 
+          toast.success(patientId ? "Patient data saved successfully." : "Patient created successfully.", { 
             toastId: "save-success",
-            autoClose: 2000,
-            position: "bottom-right"
+            autoClose: 4000,
+            position: "top-right"
           });
           setHasUnsavedChanges(false);
           setIsSavedToAPI(true); // Mark as saved to API
@@ -226,49 +226,13 @@ export function usePatientForm({
     }
   }, [methods, saveToLocalStorage, setError, setCurrentStep]);
 
-  // Auto-save progress whenever form data changes (on input)
+  // Track unsaved changes only (no auto-save — save happens only when user clicks Save)
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let saveCount = 0;
-    
     const subscription = methods.watch(() => {
-      // Clear previous timeout
-      clearTimeout(timeoutId);
       setHasUnsavedChanges(true);
-      
-      // Debounce auto-save to avoid too frequent saves
-      timeoutId = setTimeout(() => {
-        saveCount++;
-        // Show notification every 5 saves to avoid spam
-        saveToLocalStorage(saveCount % 5 === 0);
-      }, 1000); // Save 1 second after last change
     });
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
-    };
-  }, [methods, saveToLocalStorage, setHasUnsavedChanges]);
-
-  // Auto-save on blur (when user clicks out of field)
-  useEffect(() => {
-    const handleBlur = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      // Check if the blurred element is a form input
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
-        // Small delay to ensure the value is updated in the form
-        setTimeout(() => {
-          saveToLocalStorage(true); // Show notification on blur
-        }, 100);
-      }
-    };
-
-    // Use capture phase to catch blur events
-    document.addEventListener('focusout', handleBlur, true);
-    return () => {
-      document.removeEventListener('focusout', handleBlur, true);
-    };
-  }, [saveToLocalStorage]);
+    return () => subscription.unsubscribe();
+  }, [methods, setHasUnsavedChanges]);
 
   return {
     saveToLocalStorage,

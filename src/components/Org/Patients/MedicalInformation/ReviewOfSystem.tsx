@@ -52,14 +52,8 @@ export type ReviewOfSystemData = z.infer<typeof reviewOfSystemSchema>;
 export default function MedicalSymptomForm() {
   const {
     control,
-    register,
-    formState: { errors },
-    watch,
     setValue,
   } = useFormContext<Pick<FormDataStepper, 'reviewOfSystem'>>();
-
-  // Watch all form values
-  const formData = watch("reviewOfSystem") || {};
 
   const SymptomSection = ({
     title,
@@ -99,10 +93,12 @@ export default function MedicalSymptomForm() {
         <Controller
           name={`reviewOfSystem.${detailsName}` as any}
           control={control}
+          defaultValue=""
           render={({ field }) => (
-        <Textarea
+            <Textarea
               {...field}
-          className="w-full border border-[#737373] rounded p-2 h-32 focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
+              value={field.value ?? ""}
+              className="w-full border border-[#737373] rounded p-2 h-32 focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-[#003465]"
             />
           )}
         />
@@ -112,7 +108,6 @@ export default function MedicalSymptomForm() {
 
   return (
     <div className=" mb-8">
-      <form>
         <SymptomSection
           title="Genitourinary"
           checkboxes={[
@@ -182,7 +177,6 @@ export default function MedicalSymptomForm() {
         />
 
         {/* Save button removed - form saves automatically */}
-      </form>
     </div>
   );
 }

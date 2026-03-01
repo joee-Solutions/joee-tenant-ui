@@ -282,7 +282,7 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
     } : undefined,
     allergies: data.allergies || [],
     medHistory: data.medHistory || data.medicalHistories || data.medical_history || [],
-    diagnosisHistory: data.diagnosisHistory || [], // Map diagnosisHistory from API
+    diagnosisHistory: data.diagnosisHistory || data.diagnosis_history || [],
     surgeryHistory: data.surgeryHistory || data.surgeries || data.surgery_history || [],
     immunizationHistory: data.immunizationHistory || data.immunizations || data.immunization_history || [],
     famhistory: data.famhistory || data.familyHistory || data.family_history || [],
@@ -369,52 +369,55 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
       }
       return {};
     })(),
-    // Map additionalReview from API
-    additionalReview: data.additionalReview || {},
-    // Transform socialHistory back to lifeStyle structure
+    additionalReview: data.additionalReview || data.additional_review || {},
+    // Transform socialHistory back to lifeStyle structure (full object so checkboxes/selects get defined values)
     lifeStyle: (() => {
-      if (data.lifeStyle && typeof data.lifeStyle === 'object') {
-        return data.lifeStyle;
+      const emptyLifeStyle = {
+        tobaccoUse: "",
+        tobaccoQuantity: "",
+        tobaccoDuration: "",
+        alcoholUse: "",
+        alcoholInfo: "",
+        drugUse: "",
+        drugInfo: "",
+        dietExercise: "",
+        dietExerciseInfo: "",
+        partners: "",
+        protection: "",
+        comment: "",
+      };
+      const norm = (v: unknown): string => (v == null || v === "") ? "" : String(v).toLowerCase().trim();
+      const normBool = (v: unknown): string => (v === true || v === "true" || v === "yes") ? "yes" : (v === false || v === "false" || v === "no") ? "no" : "";
+      const fromSh = (sh: Record<string, unknown>) => ({
+        tobaccoUse: norm(sh.tobacco_use ?? sh.tobaccoUse) || "",
+        tobaccoQuantity: sh.tobacco_quantity != null ? String(sh.tobacco_quantity) : (sh.tobaccoQuantity != null ? String(sh.tobaccoQuantity) : ""),
+        tobaccoDuration: (sh.years != null ? String(sh.years) : "") || (sh.tobaccoDuration != null ? String(sh.tobaccoDuration) : ""),
+        alcoholUse: norm(sh.alcohol_use ?? sh.alcoholUse) || "",
+        alcoholInfo: norm(sh.alcohol_info ?? sh.alcoholInfo) || "",
+        drugUse: normBool(sh.illicit_drugs ?? sh.drugUse) || norm(sh.drugUse) || "",
+        drugInfo: norm(sh.illicit_drugs_info ?? sh.drugInfo) || "",
+        dietExercise: normBool(sh.diet_and_exercise ?? sh.dietExercise) || norm(sh.diet_and_exercise ?? sh.dietExercise) || "",
+        dietExerciseInfo: norm(sh.diet_and_exercise_info ?? sh.dietExerciseInfo) || "",
+        partners: norm(sh.partners) || "",
+        protection: norm(sh.protection) || "",
+        comment: norm(sh.comment ?? sh.notes) || "",
+      });
+      if (data.lifeStyle && typeof data.lifeStyle === "object") {
+        return { ...emptyLifeStyle, ...fromSh(data.lifeStyle as Record<string, unknown>) };
       }
-      if (data.lifestyle && typeof data.lifestyle === 'object') {
-        return data.lifestyle;
+      if (data.lifestyle && typeof data.lifestyle === "object") {
+        return { ...emptyLifeStyle, ...fromSh(data.lifestyle as Record<string, unknown>) };
       }
-      // Backend returns socialHistory, transform to lifeStyle
-      if (data.socialHistory && typeof data.socialHistory === 'object') {
-        const sh = data.socialHistory;
-        return {
-          tobaccoUse: sh.tobacco_use || "",
-          tobaccoQuantity: sh.tobacco_quantity ? String(sh.tobacco_quantity) : "",
-          tobaccoDuration: sh.years ? String(sh.years) : "",
-          alcoholUse: sh.alcohol_use || "",
-          alcoholInfo: sh.alcohol_info || "",
-          drugUse: sh.illicit_drugs === true ? "yes" : (sh.illicit_drugs === false ? "no" : ""),
-          drugInfo: sh.illicit_drugs_info || "",
-          dietExercise: sh.diet_and_exercise || "",
-          dietExerciseInfo: sh.diet_and_exercise_info || "",
-          partners: sh.partners || "",
-          protection: sh.protection || "",
-          comment: sh.comment || sh.notes || "",
-        };
+      if (data.socialHistory && typeof data.socialHistory === "object") {
+        return { ...emptyLifeStyle, ...fromSh(data.socialHistory as Record<string, unknown>) };
       }
-      if (data.social_history && typeof data.social_history === 'object') {
-        const sh = data.social_history;
-        return {
-          tobaccoUse: sh.tobacco_use || "",
-          tobaccoQuantity: sh.tobacco_quantity ? String(sh.tobacco_quantity) : "",
-          tobaccoDuration: sh.years ? String(sh.years) : "",
-          alcoholUse: sh.alcohol_use || "",
-          alcoholInfo: sh.alcohol_info || "",
-          drugUse: sh.illicit_drugs === true ? "yes" : (sh.illicit_drugs === false ? "no" : ""),
-          drugInfo: sh.illicit_drugs_info || "",
-          dietExercise: sh.diet_and_exercise || "",
-          dietExerciseInfo: sh.diet_and_exercise_info || "",
-          partners: sh.partners || "",
-          protection: sh.protection || "",
-          comment: sh.comment || sh.notes || "",
-        };
+      if (data.social_history && typeof data.social_history === "object") {
+        return { ...emptyLifeStyle, ...fromSh(data.social_history as Record<string, unknown>) };
       }
-      return {};
+      if (data.socailHistory && typeof data.socailHistory === "object") {
+        return { ...emptyLifeStyle, ...fromSh(data.socailHistory as Record<string, unknown>) };
+      }
+      return emptyLifeStyle;
     })(),
   };
 };
@@ -483,6 +486,20 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
       vitalSigns: [],
       reviewOfSystem: {},
       additionalReview: {},
+      lifeStyle: {
+        tobaccoUse: "",
+        tobaccoQuantity: "",
+        tobaccoDuration: "",
+        alcoholUse: "",
+        alcoholInfo: "",
+        drugUse: "",
+        drugInfo: "",
+        dietExercise: "",
+        dietExerciseInfo: "",
+        partners: "",
+        protection: "",
+        comment: "",
+      },
     }
   });
 

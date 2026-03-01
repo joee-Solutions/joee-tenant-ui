@@ -99,6 +99,11 @@ export interface SyncQueueItem {
   retries: number;
   status: 'pending' | 'syncing' | 'failed' | 'completed';
   error?: string;
+  /** Original HTTP method (put vs patch) so sync uses correct verb */
+  method?: 'post' | 'put' | 'patch' | 'delete';
+  // Optional backoff control (not indexed)
+  nextAttemptAt?: Date;
+  lastAttemptAt?: Date;
 }
 
 export interface CachedApiResponse {

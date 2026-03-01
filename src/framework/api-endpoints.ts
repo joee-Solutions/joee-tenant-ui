@@ -21,14 +21,14 @@ export const API_ENDPOINTS = {
   EDIT_ORGANIZATION: (tenantId: string) => `/super/tenants/${tenantId}`,
   TENANTS_DEPARTMENTS: (tenantId: number) =>
     `/super/tenants/${tenantId}/departments`,
-  TENANTS_PATIENTS: (tenantId: number) => `/super/tenants/${tenantId}/patients`,
-  TENANTS_APPOINTMENTS: (tenantId: number) =>
+  TENANTS_PATIENTS: (tenantId: number | string) => `/super/tenants/${tenantId}/patients`,
+  TENANTS_APPOINTMENTS: (tenantId: number | string) =>
     `/super/tenants/${tenantId}/appointments`,
   TENANTS_SCHEDULES: (tenantId: number) =>
     `/super/tenants/${tenantId}/schedules`,
    TENANTS_EMPLOYEES: (tenantId: number,deptId:number) =>
     `/super/tenants/${tenantId}/${deptId}/employees`,
-   GET_TENANTS_EMPLOYEES: (tenantId: number) =>
+   GET_TENANTS_EMPLOYEES: (tenantId: number | string) =>
     `/super/tenants/${tenantId}/employees`,
    GET_TENANT_EMPLOYEE: (tenantId: number, employeeId: number) =>
      `/super/tenants/${tenantId}/employees/${employeeId}`,

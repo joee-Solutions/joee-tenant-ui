@@ -52,10 +52,9 @@ export default function LifestyleForm() {
                 control={control}
                 render={({ field: { onChange, value } }) => (
                   <div>
-
                     <label className="flex items-center space-x-2 text-base text-black font-normal mb-2">
                       <Checkbox
-                        checked={value === option.toLowerCase()}
+                        checked={Boolean(value && String(value).toLowerCase() === option.toLowerCase())}
                         onCheckedChange={() => onChange(option.toLowerCase())}
                         className="w-6 h-6 rounded"
                       />
@@ -127,7 +126,7 @@ export default function LifestyleForm() {
                   <div>
                     <label className="flex items-center space-x-2 text-base text-black font-normal mb-2">
                       <Checkbox
-                        checked={value === option.toLowerCase()}
+                        checked={Boolean(value && String(value).toLowerCase() === option.toLowerCase())}
                         onCheckedChange={() => onChange(option.toLowerCase())}
                         className="w-6 h-6 rounded"
                       />
@@ -174,7 +173,7 @@ export default function LifestyleForm() {
                   <div>
                     <label className="flex items-center space-x-2 text-base text-black font-normal mb-2">
                       <Checkbox
-                        checked={value === option.toLowerCase()}
+                        checked={Boolean(value && String(value).toLowerCase() === option.toLowerCase())}
                         onCheckedChange={() => onChange(option.toLowerCase())}
                         className="w-6 h-6 rounded"
                       />
@@ -225,7 +224,7 @@ export default function LifestyleForm() {
                   <div>
                     <label className="flex items-center space-x-2 text-base text-black font-normal mb-2">
                       <Checkbox
-                        checked={value === option.toLowerCase()}
+                        checked={Boolean(value && String(value).toLowerCase() === option.toLowerCase())}
                         onCheckedChange={() => onChange(option.toLowerCase())}
                         className="w-6 h-6 rounded"
                       />
@@ -274,7 +273,7 @@ export default function LifestyleForm() {
               render={({ field: { onChange, value } }) => (
                 <div className="w-full">
                   <Select
-                    value={value}
+                    value={value ?? ""}
                     onValueChange={onChange}
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
@@ -300,13 +299,12 @@ export default function LifestyleForm() {
             />
 
             <Controller
-
               name="lifeStyle.protection"
               control={control}
               render={({ field: { onChange, value } }) => (
                 <div>
                   <Select
-                    value={value}
+                    value={value ?? ""}
                     onValueChange={onChange}
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">

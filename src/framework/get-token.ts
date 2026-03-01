@@ -1,7 +1,7 @@
 import Cookies from 'js-cookie';
 
 export const getToken = () => {
-  if (typeof window === undefined) {
+  if (typeof window === 'undefined') {
     return null;
   }
   const AUTH_TOKEN = Cookies.get('auth_token');
@@ -9,7 +9,7 @@ export const getToken = () => {
 };
 
 export const getRefreshToken = () => {
-  if (typeof window === undefined) {
+  if (typeof window === 'undefined') {
     return null;
   }
   const AUTH_TOKEN = Cookies.get('refresh_token');
@@ -17,7 +17,7 @@ export const getRefreshToken = () => {
 };
 
 export const getMfaToken = () => {
-  if (typeof window === undefined) {
+  if (typeof window === 'undefined') {
     return null;
   }
   const AUTH_TOKEN = Cookies.get('mfa_token');

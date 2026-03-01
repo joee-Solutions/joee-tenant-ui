@@ -28,6 +28,14 @@ export default function OfflineIndicator() {
     }
   }, [syncStatus, isOnline, isSyncing]);
 
+  // Auto-sync in the background when online (no manual click required)
+  useEffect(() => {
+    if (isOnline && syncStatus.pending > 0 && syncStatus.syncing === 0) {
+      // fire-and-forget; offline service guards against concurrent sync
+      syncPendingActions();
+    }
+  }, [isOnline, syncStatus.pending, syncStatus.syncing, syncPendingActions]);
+
   // Show indicator if user closed it but there are new pending/failed actions
   // Reset the preference when there are new actions
   useEffect(() => {
@@ -66,16 +74,8 @@ export default function OfflineIndicator() {
     if (syncStatus.pending > 0) {
       return {
         title: 'Changes Pending',
-        description: `${syncStatus.pending} change${syncStatus.pending > 1 ? 's' : ''} waiting to sync. Click to sync now.`,
+        description: `${syncStatus.pending} change${syncStatus.pending > 1 ? 's' : ''} waiting to sync. We’ll sync automatically in the background.`,
         color: 'blue'
-      };
-    }
-    
-    if (syncStatus.failed > 0) {
-      return {
-        title: 'Sync Failed',
-        description: `${syncStatus.failed} change${syncStatus.failed > 1 ? 's' : ''} failed to sync. Please try again.`,
-        color: 'red'
       };
     }
     
@@ -152,27 +152,12 @@ export default function OfflineIndicator() {
           
           {syncStatus.pending > 0 && !syncStatus.syncing && (
             <p className="text-xs text-gray-500 mt-1">
-              {syncStatus.pending} pending • {syncStatus.failed > 0 && `${syncStatus.failed} failed`}
+              {syncStatus.pending} pending
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          {isOnline && (syncStatus.pending > 0 || syncStatus.failed > 0) && !syncStatus.syncing && (
-            <Button
-              onClick={async () => {
-                setIsSyncing(true);
-                await syncPendingActions();
-              }}
-              size="sm"
-              className="h-7 px-2 text-xs"
-              disabled={syncStatus.syncing > 0}
-            >
-              <RefreshCw className={`w-3 h-3 mr-1 ${syncStatus.syncing > 0 ? 'animate-spin' : ''}`} />
-              Sync
-            </Button>
-          )}
-          
           <div className="flex items-center gap-1">
             <Button
               onClick={() => setIsMinimized(true)}

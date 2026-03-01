@@ -184,15 +184,16 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
       conditions: item.conditions === "Other" && item.conditionsOther ? item.conditionsOther : item.conditions,
     })),
     status: patientStatus || {},
-    socialHistory: lifeStyle || {}, // Save socialHistory from lifeStyle
+    // Backend property name is "socailHistory" (typo in schema)
+    socailHistory: lifeStyle || {},
     visits: (visits || []).map((item: any) => ({
       ...item,
       // Replace "Other" with the custom text if diagnosisOther is provided
       diagnosis: item.diagnosis === "Other" && item.diagnosisOther ? item.diagnosisOther : item.diagnosis,
     })),
     prescriptions: prescriptions || [],
-    reviewOfSystem: reviewOfSystem || {}, // Save reviewOfSystem
-    additionalReview: additionalReview || {}, // Save additionalReview
+    reviewOfSystem: reviewOfSystem || {},
+    additionalReview: additionalReview || {},
     // Transform vitalSigns array to vitals object (take first/latest entry)
     vitals: (() => {
       if (!vitalSigns || !Array.isArray(vitalSigns) || vitalSigns.length === 0) {
@@ -229,8 +230,6 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
         pain_score: latest.painScore ? Number(latest.painScore) || 0 : 0,
       };
     })(),
-    // reviewOfSystems removed - not in backend Patient model (causes 500 error)
-    // additionalReview removed - not in backend schema
   };
 }
 
@@ -390,7 +389,7 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
   mappedData.prescriptions = Array.isArray(mappedData.prescriptions) ? mappedData.prescriptions : [];
   
   // Ensure objects are objects (not undefined or null)
-  mappedData.socialHistory = mappedData.socialHistory && typeof mappedData.socialHistory === 'object' ? mappedData.socialHistory : {};
+  mappedData.socailHistory = mappedData.socailHistory && typeof mappedData.socailHistory === 'object' ? mappedData.socailHistory : {};
   mappedData.reviewOfSystem = mappedData.reviewOfSystem && typeof mappedData.reviewOfSystem === 'object' ? mappedData.reviewOfSystem : {};
   mappedData.additionalReview = mappedData.additionalReview && typeof mappedData.additionalReview === 'object' ? mappedData.additionalReview : {};
   // vitalSigns transformed to vitals object - handled in mapFormDataToPatientDto

@@ -89,7 +89,7 @@ export default function PatientDischargeForm() {
                 Patient Status
               </label>
               <Select
-                value={dischargeEntries?.[index]?.patientStatus || undefined}
+                value={dischargeEntries?.[index]?.patientStatus ?? ""}
                 onValueChange={(value) => {
                   console.log("Patient status selected:", value);
                   setValue(`patientStatus.dischargeEntries.${index}.patientStatus`, value);

@@ -269,21 +269,24 @@ const processRequestAuth = async (
           }
         }
       } else {
-        // Refresh failed - tokens are cleared and user should be redirected
-        // Don't throw error here as redirect is happening
-        // If we're redirecting, just return null to prevent further requests
-        if (redirectingToLogin) {
-          if (callback) {
-            callback(path, null, error);
+        // Refresh failed or no refresh token - clear session and redirect to login (only once)
+        if (!redirectingToLogin && typeof window !== "undefined") {
+          redirectingToLogin = true;
+          Cookies.remove("refresh_token");
+          Cookies.remove("auth_token");
+          Cookies.remove("customer");
+          Cookies.remove("user");
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith("/auth/login")) {
+            window.location.href = "/auth/login";
           }
-          return null;
         }
         if (callback) {
           callback(path, null, error);
         } else {
           throw error;
         }
-        return;
+        return null;
       }
     } else if (redirectingToLogin) {
       // If we're already redirecting, don't process the error further
@@ -326,60 +329,54 @@ const refreshUser = async () => {
     return null;
   }
 
-  // Only refresh when we have a refresh token; otherwise we'll redirect in the 401 handler
+    // Only refresh when we have a refresh token; without it we skip refresh and let the request use the current token.
+  // If the server returns 401, the 401 handler will clear and redirect (don't clear here - avoids logging out when API doesn't send refresh token).
   console.log("Refreshing access token before it expires");
   try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-      console.log("No refresh token available");
-      // Clear all tokens and redirect to login (only once)
-      if (!redirectingToLogin) {
-        redirectingToLogin = true;
-        Cookies.remove("refresh_token");
-        Cookies.remove("auth_token");
-        Cookies.remove("customer");
-        Cookies.remove("user");
-        if (typeof window !== "undefined") {
-          // Use a more graceful redirect that doesn't cause a hard reload
-          const currentPath = window.location.pathname;
-          if (!currentPath.startsWith("/auth/login")) {
-            // Only redirect if we're not already on the login page
-            window.location.href = "/auth/login";
-          }
-        }
-      }
+      console.log("No refresh token available - skipping refresh, request will use current token");
       return null;
     }
 
     refreshingToking = true;
     
     try {
+      // POST /auth/super/refresh with body { refresh_token } returns { success, message, data: { access_token, expires_in } }
       const tResponse: any = await processRequestNoAuth(
         "post",
         API_ENDPOINTS.REFRESH_TOKEN,
         { refresh_token: refreshToken }
       );
       
-      // Check if response has token (handle different response structures)
-      // Prioritize nested structure: data.tokens.accessToken (matches login response format)
-      const newToken = 
-        tResponse?.data?.tokens?.accessToken ||  // Primary path: nested in data.tokens
-        tResponse?.tokens?.accessToken ||        // Fallback: direct tokens
-        tResponse?.token || 
+      // Canonical format: { success, message, data: { access_token, expires_in } }. Also handle double-nested or other shapes.
+      const newToken =
+        tResponse?.data?.access_token ||
+        tResponse?.data?.data?.access_token ||
+        tResponse?.data?.tokens?.accessToken ||
+        tResponse?.data?.accessToken ||
+        tResponse?.tokens?.accessToken ||
+        tResponse?.tokens?.access_token ||
+        tResponse?.accessToken ||
+        tResponse?.access_token ||
+        tResponse?.token ||
         tResponse?.data?.token;
-      
+
       const userData = tResponse?.data?.user || tResponse?.user;
-      
+
       if (newToken) {
         // Set token to expire in 1 day (instead of 30 minutes)
         Cookies.set("auth_token", newToken, { expires: 1 });
-        
-        // Update refresh token if provided in response - prioritize nested structure
-        const newRefreshToken = 
-          tResponse?.data?.tokens?.refreshToken ||  // Primary path: nested in data.tokens
-          tResponse?.tokens?.refreshToken ||        // Fallback: direct tokens
-          tResponse?.refreshToken || 
-          tResponse?.data?.refreshToken;
+
+        // Update refresh token if provided in response
+        const newRefreshToken =
+          tResponse?.data?.tokens?.refreshToken ||
+          tResponse?.data?.refreshToken ||
+          tResponse?.tokens?.refreshToken ||
+          tResponse?.tokens?.refresh_token ||
+          tResponse?.refreshToken ||
+          tResponse?.refresh_token ||
+          tResponse?.data?.refresh_token;
         
         if (newRefreshToken) {
           Cookies.set("refresh_token", newRefreshToken, { expires: 7 });

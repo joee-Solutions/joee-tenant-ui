@@ -319,7 +319,7 @@ export default function ContactDemographicForm() {
               >
                 Postal/Zip code
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                   <SelectValue placeholder={`Select Postal/Zip code`} />
                 </SelectTrigger>
@@ -542,7 +542,7 @@ export default function ContactDemographicForm() {
               >
                 Preferred Method of Contact
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                   <SelectValue placeholder={`Select contact method`} />
                 </SelectTrigger>
@@ -577,7 +577,7 @@ export default function ContactDemographicForm() {
               >
                 Current Living Situation
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                   <SelectValue placeholder={`Select living situation`} />
                 </SelectTrigger>
@@ -614,7 +614,7 @@ export default function ContactDemographicForm() {
               >
                 Referral Source
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                   <SelectValue placeholder={`Select referral source`} />
                 </SelectTrigger>
@@ -651,7 +651,7 @@ export default function ContactDemographicForm() {
               >
                 Occupation Status
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                   <SelectValue placeholder={`Select occupation status`} />
                 </SelectTrigger>
@@ -687,7 +687,7 @@ export default function ContactDemographicForm() {
               >
                 Industry
               </label>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
                   <SelectValue placeholder={`Select industry`} />
                 </SelectTrigger>

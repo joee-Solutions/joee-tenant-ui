@@ -437,6 +437,7 @@ export class OfflineService {
       timestamp: new Date(),
       retries: 0,
       status: 'pending' as const,
+      method,
     };
 
     const id = await db.syncQueue.add(queueItem);
@@ -450,29 +451,21 @@ export class OfflineService {
     return id;
   }
 
-  // Extract entity type from endpoint
+  // Extract entity type from endpoint (check specific resources first; /tenants/85/patients matches /tenants)
   private extractEntityFromEndpoint(endpoint: string): SyncQueueItem['entity'] {
-    if (endpoint.includes('/tenants') || endpoint.includes('/organizations')) {
-      return 'organization';
-    } else if (endpoint.includes('/employees')) {
-      return 'employee';
-    } else if (endpoint.includes('/patients')) {
-      return 'patient';
-    } else if (endpoint.includes('/appointments')) {
-      return 'appointment';
-    } else if (endpoint.includes('/schedules')) {
-      return 'schedule';
-    } else if (endpoint.includes('/departments')) {
-      return 'department';
-    } else if (endpoint.includes('/notification')) {
-      return 'notification';
-    } else if (endpoint.includes('/medical') || endpoint.includes('/visit') || endpoint.includes('/prescription')) {
-      return 'medical_record';
-    }
-    return 'organization'; // default
+    if (endpoint.includes('/patients')) return 'patient';
+    if (endpoint.includes('/employees')) return 'employee';
+    if (endpoint.includes('/appointments')) return 'appointment';
+    if (endpoint.includes('/schedules')) return 'schedule';
+    if (endpoint.includes('/departments')) return 'department';
+    if (endpoint.includes('/notification')) return 'notification';
+    if (endpoint.includes('/medical') || endpoint.includes('/visit') || endpoint.includes('/prescription')) return 'medical_record';
+    if (endpoint.includes('/tenants') || endpoint.includes('/organizations')) return 'organization';
+    return 'organization';
   }
 
-  // Sync pending actions when coming back online
+  // Sync pending actions when coming back online.
+  // When user clicks "Sync", also retries failed items (resets them to pending with fresh retries).
   async syncPendingActions(): Promise<void> {
     if (this.syncInProgress || !this.isOnline) {
       offlineLogger.debug('Sync skipped', { syncInProgress: this.syncInProgress, isOnline: this.isOnline });
@@ -483,25 +476,41 @@ export class OfflineService {
     offlineLogger.info('Starting sync of pending actions');
 
     try {
-      const pendingItems = await db.syncQueue
-        .where('status')
-        .equals('pending')
-        .toArray();
-      
-      offlineLogger.info(`Found ${pendingItems.length} pending actions to sync`);
+      // Always retry any previously-failed items automatically (no manual "Sync" required)
+      const failedItems = await db.syncQueue.where('status').equals('failed').toArray();
+      for (const item of failedItems) {
+        await db.syncQueue.update(item.id!, {
+          status: 'pending',
+          // keep retries but clear hard-failed state; we'll apply backoff instead
+          error: item.error,
+        });
+      }
 
-      for (const item of pendingItems) {
+      // Only sync items that are due (respect nextAttemptAt backoff)
+      const now = new Date();
+      const itemsToSync = (await db.syncQueue.where('status').equals('pending').toArray()).filter((it) => {
+        const next = (it as any).nextAttemptAt as Date | undefined;
+        return !next || next <= now;
+      });
+
+      offlineLogger.info(`Found ${itemsToSync.length} actions to sync`);
+
+      for (const item of itemsToSync) {
         try {
           offlineLogger.debug(`Syncing action: ${item.action} ${item.entity}`, { itemId: item.id });
           
           // Update status to syncing
-          await db.syncQueue.update(item.id!, { status: 'syncing' });
+          await db.syncQueue.update(item.id!, { status: 'syncing', lastAttemptAt: new Date() });
 
-          // Determine HTTP method from action
-          const method = 
+          // Use stored method (preserves PUT vs PATCH) or fall back to action mapping
+          // Patients and appointments use PATCH for update; default update to PUT
+          let method: 'post' | 'put' | 'patch' | 'delete' =
             item.action === 'create' ? 'post' :
             item.action === 'update' ? 'put' :
-            item.action === 'delete' ? 'delete' : 'get';
+            'delete';
+          if (item.method) method = item.method;
+          else if (item.action === 'update' && (item.endpoint.includes('/patients/') || item.endpoint.includes('/appointments/')))
+            method = 'patch';
 
           // Make the request using the offline service (which will handle online requests)
           await this.makeRequest(method, item.endpoint, item.data);
@@ -510,6 +519,7 @@ export class OfflineService {
           await db.syncQueue.update(item.id!, { 
             status: 'completed',
             retries: item.retries + 1,
+            nextAttemptAt: undefined,
           });
           
           offlineLogger.info(`Successfully synced action: ${item.action} ${item.entity}`, { itemId: item.id });
@@ -530,23 +540,17 @@ export class OfflineService {
             }),
           });
           
-          // Mark as failed if retries exceeded
           const newRetries = item.retries + 1;
-          if (newRetries >= 3) {
-            await db.syncQueue.update(item.id!, {
-              status: 'failed',
-              retries: newRetries,
-              error: errorMessage,
-            });
-            offlineLogger.warn(`Action marked as FAILED after ${newRetries} retries`, { itemId: item.id });
-          } else {
-            // Retry later
-            await db.syncQueue.update(item.id!, {
-              status: 'pending',
-              retries: newRetries,
-            });
-            offlineLogger.info(`Action will retry (attempt ${newRetries}/3)`, { itemId: item.id });
-          }
+          // Never hard-mark as failed; keep pending and retry automatically with backoff
+          const baseMs = 5000;
+          const backoffMs = Math.min(baseMs * Math.pow(2, Math.min(newRetries, 6)), 5 * 60 * 1000); // cap 5 min
+          await db.syncQueue.update(item.id!, {
+            status: 'pending',
+            retries: newRetries,
+            error: errorMessage,
+            nextAttemptAt: new Date(Date.now() + backoffMs),
+          });
+          offlineLogger.info(`Action will retry automatically (attempt ${newRetries})`, { itemId: item.id, backoffMs });
         }
       }
       
@@ -577,9 +581,10 @@ export class OfflineService {
     syncing: number;
     failed: number;
   }> {
+    // Treat failed as pending (we auto-retry; do not surface "failed" in the UI)
     const pending = await db.syncQueue.where('status').equals('pending').count();
     const syncing = await db.syncQueue.where('status').equals('syncing').count();
-    const failed = await db.syncQueue.where('status').equals('failed').count();
+    const failed = 0;
 
     return { pending, syncing, failed };
   }

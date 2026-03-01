@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 import { TenantStoreProvider } from "@/contexts/AuthProvider";
 
 export const metadata: Metadata = {
@@ -24,7 +25,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/assets/logo/logo.png" />
       </head>
       <body className="font-poppins" suppressHydrationWarning>
-        <TenantStoreProvider>{children}</TenantStoreProvider>
+        <TenantStoreProvider>
+          {children}
+          <ToastContainer position="top-right" autoClose={4000} />
+        </TenantStoreProvider>
       </body>
     </html>
   );

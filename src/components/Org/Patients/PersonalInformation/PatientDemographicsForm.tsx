@@ -270,7 +270,7 @@ export default function PatientInfoForm() {
                       {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
                     </label>
                     <Select 
-                      value={field.value || undefined} 
+                      value={field.value ?? ""} 
                       onValueChange={(value) => {
                         console.log(`Select ${key} changed:`, value);
                         field.onChange(value);

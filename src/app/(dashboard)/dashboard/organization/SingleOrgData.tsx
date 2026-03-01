@@ -29,7 +29,7 @@ const SingleOrgData = ({ slug }: { slug: string }) => {
     }
     setCreatingBackup(true);
     try {
-      await processRequestAuth("post", API_ENDPOINTS.CREATE_TENANT_BACKUP(tenantId), { tenantId });
+      await processRequestAuth("post", API_ENDPOINTS.CREATE_TENANT_BACKUP(tenantId), { tenantId: Number(tenantId) });
       toast.success("Backup created successfully");
     } catch (err: any) {
       console.error("Backup creation error:", err);

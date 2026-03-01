@@ -58,7 +58,7 @@ export function SearchableSelect({
 
   return (
     <Select
-      value={value}
+      value={value ?? ""}
       onValueChange={onValueChange}
       open={open}
       onOpenChange={setOpen}
@@ -90,12 +90,12 @@ export function SearchableSelect({
           </div>
         </div>
 
-        {/* Filtered Options */}
+        {/* Filtered Options - use index in key so duplicate option labels (e.g. "Pneumonia" in multiple categories) stay unique */}
         <div className="max-h-[300px] overflow-y-auto">
           {filteredOptions.length > 0 ? (
-            filteredOptions.map((option) => (
+            filteredOptions.map((option, index) => (
               <SelectItem
-                key={option}
+                key={`${option}-${index}`}
                 value={option}
                 className="hover:bg-gray-100 cursor-pointer"
               >

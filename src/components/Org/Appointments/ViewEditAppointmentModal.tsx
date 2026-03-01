@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Edit, Check, Clock } from "lucide-react";
+import { X, Edit, Check, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -22,6 +22,15 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -36,7 +45,10 @@ type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
 interface ViewEditAppointmentModalProps {
   appointment: any;
-  orgId: number;
+  /** Numeric org id (for SWR keys when tenant uses numeric id) */
+  orgId?: number;
+  /** Tenant id to use in API path (from GET_TENANT); use this for PATCH/DELETE to avoid 404 */
+  tenantIdForPath?: number | string;
   onClose: () => void;
   onUpdate: () => void;
 }
@@ -44,20 +56,31 @@ interface ViewEditAppointmentModalProps {
 export default function ViewEditAppointmentModal({
   appointment,
   orgId,
+  tenantIdForPath,
   onClose,
   onUpdate,
 }: ViewEditAppointmentModalProps) {
+  const tenantId = tenantIdForPath ?? orgId ?? null;
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+
+  // Normalize time to HH:mm for API (backend rejects HH:mm:ss)
+  const toHHmm = (time: string) => {
+    if (!time) return "";
+    const parts = time.trim().split(":");
+    if (parts.length >= 2) return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+    return time;
+  };
 
   // Fetch data for dropdowns
   const { data: patientsData, error: patientsError, isLoading: isLoadingPatients } = useSWR(
-    orgId ? API_ENDPOINTS.TENANTS_PATIENTS(orgId) : null,
+    tenantId != null && tenantId !== "" ? API_ENDPOINTS.TENANTS_PATIENTS(tenantId) : null,
     authFectcher
   );
 
   const { data: employeesData, error: employeesError, isLoading: isLoadingEmployees } = useSWR(
-    orgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
+    tenantId != null ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId) : null,
     authFectcher
   );
 
@@ -88,19 +111,33 @@ export default function ViewEditAppointmentModal({
   }, [patientsData]);
 
   const providers = useMemo(() => {
-    // Try different data structures like AddAppointment does
+    // Try different data structures (data.data, data, or raw array)
     let result: any[] = [];
-    if (Array.isArray(employeesData?.data)) {
+    if (Array.isArray(employeesData?.data?.data)) {
+      result = employeesData.data.data;
+    } else if (Array.isArray(employeesData?.data)) {
       result = employeesData.data;
     } else if (Array.isArray(employeesData)) {
       result = employeesData;
     }
-    console.log("=== PROVIDERS DEBUG ===");
-    console.log("employeesData:", employeesData);
-    console.log("providers array:", result);
-    console.log("providers length:", result.length);
     return result;
   }, [employeesData]);
+
+  // Resolve doctorId: use user.id if present, else match by user firstname/lastname in providers list
+  const resolvedDoctorId = useMemo(() => {
+    if (!appointment?.user) return "";
+    const u = appointment.user;
+    if (u.id != null) return String(u.id);
+    const first = (u.firstname ?? u.first_name ?? "").toString().trim().toLowerCase();
+    const last = (u.lastname ?? u.last_name ?? "").toString().trim().toLowerCase();
+    if (!first && !last) return "";
+    const found = providers.find((p: any) => {
+      const pFirst = (p.firstname ?? p.first_name ?? "").toString().trim().toLowerCase();
+      const pLast = (p.lastname ?? p.last_name ?? "").toString().trim().toLowerCase();
+      return pFirst === first && pLast === last;
+    });
+    return found?.id != null ? String(found.id) : "";
+  }, [appointment?.user, providers]);
 
   // Format time for display (HH:mm to HH:MM AM/PM)
   const formatTimeForDisplay = (time: string) => {
@@ -155,70 +192,36 @@ export default function ViewEditAppointmentModal({
     },
   });
 
-  // Load appointment data into form when appointment or data changes
+  // Load appointment data into form when appointment or providers/patients change
   useEffect(() => {
     if (appointment && appointment.id) {
-      console.log("=== APPOINTMENT DEBUG ===");
-      console.log("appointment:", appointment);
-      console.log("appointment.patient:", appointment.patient);
-      console.log("appointment.patient?.id:", appointment.patient?.id);
-      console.log("appointment.user:", appointment.user);
-      console.log("appointment.user?.id:", appointment.user?.id);
-      console.log("appointment.date:", appointment.date);
-      
       const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-      const doctorId = appointment.user?.id ? String(appointment.user.id) : "";
-      
-      console.log("Setting form values:");
-      console.log("patientId:", patientId);
-      console.log("doctorId:", doctorId);
-      console.log("date:", appointment.date || "");
-      
-      // Use setTimeout to ensure form state is ready
+      const doctorId = resolvedDoctorId;
       setTimeout(() => {
         form.reset({
           patientId,
           doctorId,
           date: appointment.date || "",
-          startTime: appointment.startTime || "",
-          endTime: appointment.endTime || "",
+          startTime: toHHmm(appointment.startTime || ""),
+          endTime: toHHmm(appointment.endTime || ""),
           description: appointment.description || "",
         });
-        
-        console.log("Form values after reset:", form.getValues());
       }, 100);
     }
-  }, [appointment?.id, form]);
+  }, [appointment?.id, appointment?.date, appointment?.user, resolvedDoctorId, form]);
 
   const handleEdit = () => {
     if (!appointment) return;
-    
     const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-    const doctorId = appointment.user?.id ? String(appointment.user.id) : "";
-    
-    console.log("=== HANDLE EDIT DEBUG ===");
-    console.log("Setting edit mode with values:");
-    console.log("patientId:", patientId);
-    console.log("doctorId:", doctorId);
-    console.log("date:", appointment.date);
-    console.log("startTime:", appointment.startTime);
-    console.log("endTime:", appointment.endTime);
-    
-    // Set form values BEFORE switching to edit mode
+    const doctorId = resolvedDoctorId;
     form.setValue("patientId", patientId, { shouldValidate: false, shouldDirty: false });
     form.setValue("doctorId", doctorId, { shouldValidate: false, shouldDirty: false });
     form.setValue("date", appointment.date || "", { shouldValidate: false, shouldDirty: false });
-    form.setValue("startTime", appointment.startTime || "", { shouldValidate: false, shouldDirty: false });
-    form.setValue("endTime", appointment.endTime || "", { shouldValidate: false, shouldDirty: false });
+    form.setValue("startTime", toHHmm(appointment.startTime || ""), { shouldValidate: false, shouldDirty: false });
+    form.setValue("endTime", toHHmm(appointment.endTime || ""), { shouldValidate: false, shouldDirty: false });
     form.setValue("description", appointment.description || "", { shouldValidate: false, shouldDirty: false });
     
-    // Then switch to edit mode
     setIsEditMode(true);
-    
-    // Verify values after a short delay
-    setTimeout(() => {
-      console.log("Form values after edit mode:", form.getValues());
-    }, 100);
   };
 
   const handleCancel = () => {
@@ -227,14 +230,13 @@ export default function ViewEditAppointmentModal({
       // Reset form to original values
       if (appointment) {
         const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-        const doctorId = appointment.user?.id ? String(appointment.user.id) : "";
-        
+        const doctorId = resolvedDoctorId;
         form.reset({
           patientId,
           doctorId,
           date: appointment.date || "",
-          startTime: appointment.startTime || "",
-          endTime: appointment.endTime || "",
+          startTime: toHHmm(appointment.startTime || ""),
+          endTime: toHHmm(appointment.endTime || ""),
           description: appointment.description || "",
         });
       }
@@ -244,26 +246,24 @@ export default function ViewEditAppointmentModal({
   };
 
   const handleSave = async (data: AppointmentSchemaType) => {
-    if (!appointment?.id) return;
+    if (!appointment?.id || tenantId == null) return;
 
     setLoading(true);
     try {
       await processRequestAuth(
-        "put",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointment.id}`,
+        "patch",
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointment.id}`,
         {
           patientId: Number(data.patientId),
           doctorId: Number(data.doctorId),
           date: data.date,
-          startTime: data.startTime,
-          endTime: data.endTime,
+          startTime: toHHmm(data.startTime),
+          endTime: toHHmm(data.endTime),
           description: data.description || "",
         }
       );
       toast.success("Appointment updated successfully");
-      setIsEditMode(false);
-      onUpdate();
-      onClose();
+      setShowSuccessAlert(true);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update appointment");
     } finally {
@@ -272,14 +272,14 @@ export default function ViewEditAppointmentModal({
   };
 
   const handleDelete = async () => {
-    if (!appointment?.id) return;
+    if (!appointment?.id || tenantId == null) return;
     if (!confirm("Are you sure you want to cancel this appointment?")) return;
 
     setLoading(true);
     try {
       await processRequestAuth(
         "delete",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointment.id}`
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointment.id}`
       );
       toast.success("Appointment canceled successfully");
       onUpdate();
@@ -297,20 +297,18 @@ export default function ViewEditAppointmentModal({
   useEffect(() => {
     if (appointment?.id) {
       setIsEditMode(false);
-      // Reload form data when appointment changes
       const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-      const doctorId = appointment.user?.id ? String(appointment.user.id) : "";
-      
+      const doctorId = resolvedDoctorId;
       form.reset({
         patientId,
         doctorId,
         date: appointment.date || "",
-        startTime: appointment.startTime || "",
-        endTime: appointment.endTime || "",
+        startTime: toHHmm(appointment.startTime || ""),
+        endTime: toHHmm(appointment.endTime || ""),
         description: appointment.description || "",
       });
     }
-  }, [appointment?.id, form]);
+  }, [appointment?.id, resolvedDoctorId, form]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
@@ -359,7 +357,7 @@ export default function ViewEditAppointmentModal({
                       <SelectTrigger className="w-full h-12">
                         <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
                       </SelectTrigger>
-                      <SelectContent className="z-[100] bg-white max-h-[300px] overflow-y-auto">
+                      <SelectContent className="z-[10001] bg-white max-h-[300px] overflow-y-auto">
                         {isLoadingPatients ? (
                           <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
                         ) : patients.length === 0 ? (
@@ -381,7 +379,7 @@ export default function ViewEditAppointmentModal({
               />
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {appointment.patient?.first_name} {appointment.patient?.last_name}
+                {appointment.patient?.first_name || appointment.patient?.firstname} {appointment.patient?.last_name || appointment.patient?.lastname}
               </div>
             )}
             {form.formState.errors.patientId && (
@@ -420,7 +418,7 @@ export default function ViewEditAppointmentModal({
                       <SelectTrigger className="w-full h-12">
                         <SelectValue placeholder={isLoadingEmployees ? "Loading providers..." : "Select provider"} />
                       </SelectTrigger>
-                      <SelectContent className="z-[100] bg-white max-h-[300px] overflow-y-auto">
+                      <SelectContent className="z-[10001] bg-white max-h-[300px] overflow-y-auto">
                         {isLoadingEmployees ? (
                           <div className="px-2 py-1.5 text-sm text-gray-500">Loading providers...</div>
                         ) : providers.length === 0 ? (
@@ -431,7 +429,7 @@ export default function ViewEditAppointmentModal({
                               key={provider.id}
                               value={String(provider.id)}
                             >
-                              {provider.firstname} {provider.lastname}
+                              {provider.firstname || provider.first_name} {provider.lastname || provider.last_name}
                               {provider.department?.name &&
                                 ` - ${provider.department.name}`}
                               {provider.designation && ` (${provider.designation})`}
@@ -445,7 +443,7 @@ export default function ViewEditAppointmentModal({
               />
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {appointment.user?.firstname} {appointment.user?.lastname}
+                {appointment.user?.firstname || appointment.user?.first_name} {appointment.user?.lastname || appointment.user?.last_name}
               </div>
             )}
             {form.formState.errors.doctorId && (
@@ -641,6 +639,34 @@ export default function ViewEditAppointmentModal({
           </div>
         </form>
       </div>
+
+      {/* Success alert — ensure it appears above the modal */}
+      <AlertDialog open={showSuccessAlert} onOpenChange={setShowSuccessAlert}>
+        <AlertDialogContent overlayClassName="z-[10002]" className="z-[10002] bg-white flex flex-col items-center text-center">
+          <AlertDialogHeader className="flex flex-col items-center">
+            <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
+            <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">
+              Success
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-normal text-base text-[#737373]">
+              Appointment has been updated successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className="h-12 w-full max-w-[291px] bg-[#3FA907] text-white font-medium text-base"
+              onClick={() => {
+                setShowSuccessAlert(false);
+                setIsEditMode(false);
+                onUpdate();
+                onClose();
+              }}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

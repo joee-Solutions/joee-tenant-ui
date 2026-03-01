@@ -270,7 +270,7 @@ const extractNestedData = (responseData: any): any => {
   }
 };
 
-// Types for dashboard appointments data
+// Types for dashboard appointments data (matches API: data.data with totalAppointments, weeklyBreakdown, latestAppointments)
 interface AppointmentsByDay {
   day: string;
   male: number;
@@ -279,6 +279,9 @@ interface AppointmentsByDay {
 
 interface DashboardAppointmentsData {
   totalAppointments?: number;
+  maleAppointments?: number;
+  femaleAppointments?: number;
+  weeklyBreakdown?: AppointmentsByDay[];
   latestAppointments?: any[];
   clinic?: string;
   weeklyGrowth?: number;
@@ -319,43 +322,47 @@ export const useDashboardAppointments = () => {
   
   if (dataObj) {
     transformedData = { ...dataObj };
-    
-    // If we have latestAppointments but no appointmentsByDay, transform it
-    if (dataObj.latestAppointments && Array.isArray(dataObj.latestAppointments) && !dataObj.appointmentsByDay) {
-      // Group appointments by day of week and count by gender
+
+    // Prefer API's weeklyBreakdown as appointmentsByDay (same shape: { day, male, female })
+    if (dataObj.weeklyBreakdown && Array.isArray(dataObj.weeklyBreakdown) && dataObj.weeklyBreakdown.length > 0) {
+      transformedData.appointmentsByDay = dataObj.weeklyBreakdown;
+    }
+    // Else if we have latestAppointments but no appointmentsByDay, derive from latestAppointments
+    else if (dataObj.latestAppointments && Array.isArray(dataObj.latestAppointments) && !dataObj.appointmentsByDay) {
       const dayMap = new Map<string, { male: number; female: number }>();
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      
+
       dataObj.latestAppointments.forEach((appointment: any) => {
         if (appointment.date || appointment.appointmentDate || appointment.createdAt) {
           const dateStr = appointment.date || appointment.appointmentDate || appointment.createdAt;
           const date = new Date(dateStr);
           const dayName = dayNames[date.getDay()];
-          
+
           if (dayName) {
             const current = dayMap.get(dayName) || { male: 0, female: 0 };
             const gender = (appointment.gender || appointment.patient?.gender || '').toLowerCase();
-            
+
             if (gender === 'male' || gender === 'm') {
               current.male += 1;
             } else if (gender === 'female' || gender === 'f') {
               current.female += 1;
             }
-            
+
             dayMap.set(dayName, current);
           }
         }
       });
-      
-      // Convert map to array format expected by chart
+
       transformedData.appointmentsByDay = dayNames.map(day => ({
         day,
         male: dayMap.get(day)?.male || 0,
         female: dayMap.get(day)?.female || 0,
       }));
     } else if (!transformedData.appointmentsByDay) {
-      // If no appointmentsByDay and no latestAppointments, use empty array
-      transformedData.appointmentsByDay = [];
+      // Ensure chart always has an array (e.g. empty weeklyBreakdown or no data)
+      transformedData.appointmentsByDay = Array.isArray(dataObj.weeklyBreakdown)
+        ? dataObj.weeklyBreakdown
+        : [];
     }
     
     // Set defaults for clinic and weeklyGrowth if not present

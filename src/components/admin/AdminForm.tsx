@@ -147,8 +147,11 @@ export default function AdminForm() {
       }
 
       form.reset();
-      toast.success("Admin created successfully");
-      router.push("/dashboard/admin/list");
+      toast.success("Admin created successfully.", {
+        position: "top-right",
+        autoClose: 4000,
+      });
+      setIsOpen(true);
     } catch (error: any) {
       console.error("Error creating admin:", error);
       
@@ -323,16 +326,15 @@ export default function AdminForm() {
                     Success
                   </AlertDialogTitle>
                   <AlertDialogDescription className="font-normal text-base text-[#737373]">
-                    You have successfully saved changes
+                    Admin has been created successfully.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogAction className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base">
-                    <button
-                      onClick={() => router.push("/dashboard/admin/list")}
-                    >
-                      Continue
-                    </button>
+                  <AlertDialogAction
+                    className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base"
+                    onClick={() => router.push("/dashboard/admin/list")}
+                  >
+                    Continue
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

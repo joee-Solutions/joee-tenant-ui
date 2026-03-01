@@ -51,7 +51,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
 import { formatDateFn } from "@/lib/utils";
-import EditAppointmentModal from "./EditAppointmentModal";
+import ViewEditAppointmentModal from "./ViewEditAppointmentModal";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 
 /* ---------------- schema ---------------- */
@@ -92,18 +92,17 @@ export default function Page({ slug }: { slug: string }) {
 
   /* ---------------- data ---------------- */
 
-  const orgId = slug && !isNaN(parseInt(slug)) ? parseInt(slug) : null;
+  // Resolve tenant from API so we use the same id the backend uses (avoids 404 on PATCH)
+  const tenantEndpoint = slug ? API_ENDPOINTS.GET_TENANT(slug) : null;
+  const { data: tenantData } = useSWR(tenantEndpoint, authFectcher);
+  const tenant = tenantData?.data ?? tenantData;
+  const orgId = tenant?.id != null
+    ? (typeof tenant.id === "number" ? tenant.id : Number(tenant.id))
+    : (slug && /^\d+$/.test(String(slug)) ? parseInt(String(slug), 10) : null);
+  const tenantIdForPath = tenant?.id != null ? tenant.id : (orgId ?? slug);
 
-  // Debug logging
-  console.log("=== APPOINTMENT LIST DEBUG ===");
-  console.log("viewMode:", viewMode);
-  console.log("calendarViewMode:", calendarViewMode);
-  console.log("orgId:", orgId);
-  console.log("slug:", slug);
-  console.log("API Endpoint:", orgId ? API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId) : "null");
-
-  // Only fetch if orgId is valid
-  const appointmentsEndpoint = orgId && orgId > 0 ? API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId) : null;
+  // Only fetch if we have a valid tenant identifier
+  const appointmentsEndpoint = tenantIdForPath != null && tenantIdForPath !== "" ? API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantIdForPath) : null;
   
   const { data, error: appointmentsError, mutate } = useSWR(
     appointmentsEndpoint,
@@ -121,7 +120,7 @@ export default function Page({ slug }: { slug: string }) {
     }
   );
 
-  const employeesEndpoint = orgId && orgId > 0 ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null;
+  const employeesEndpoint = tenantIdForPath != null && tenantIdForPath !== "" ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantIdForPath) : null;
   
   const { data: employeesData, error: employeesError } = useSWR(
     employeesEndpoint,
@@ -234,7 +233,7 @@ export default function Page({ slug }: { slug: string }) {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!appointmentToDelete || !orgId) {
+    if (!appointmentToDelete || (tenantIdForPath == null || tenantIdForPath === "")) {
       toast.error("Invalid appointment or organization ID");
       return;
     }
@@ -242,7 +241,7 @@ export default function Page({ slug }: { slug: string }) {
     try {
     await processRequestAuth(
       "delete",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointmentToDelete.id}`
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantIdForPath)}/${appointmentToDelete.id}`
     );
       toast.success("Appointment deleted successfully");
     mutate();
@@ -256,13 +255,18 @@ export default function Page({ slug }: { slug: string }) {
     }
   };
 
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
 
-  const handleEditClick = (appointment: any) => {
+  const handleViewAppointment = (appointment: any) => {
     setSelectedAppointment(appointment);
-    setEditModalOpen(true);
+    setShowAppointmentModal(true);
     setOpenDropdownId(null);
+  };
+
+  const handleCloseAppointmentModal = () => {
+    setShowAppointmentModal(false);
+    setSelectedAppointment(null);
   };
 
   // Close dropdown when clicking outside
@@ -331,14 +335,14 @@ export default function Page({ slug }: { slug: string }) {
         </Select>
       </div>
 
-      {!orgId && (
+      {tenantIdForPath == null || tenantIdForPath === "" ? (
         <div className="p-8 text-center">
-          <p className="text-red-500">Error: Invalid organization ID. Please check the URL.</p>
-          <p className="text-sm text-gray-500 mt-2">orgId: {orgId}, slug: {slug}</p>
+          <p className="text-red-500">Error: Invalid organization. Please check the URL.</p>
+          <p className="text-sm text-gray-500 mt-2">slug: {slug}</p>
         </div>
-      )}
+      ) : null}
 
-      {orgId && appointmentsError && appointments.length === 0 && (
+      {tenantIdForPath != null && tenantIdForPath !== "" && appointmentsError && appointments.length === 0 && (
         <div className="p-8 text-center">
           {appointmentsError?.message?.includes("offline") || appointmentsError?.message?.includes("No cached data") || (typeof window !== 'undefined' && !navigator.onLine) ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -356,7 +360,7 @@ export default function Page({ slug }: { slug: string }) {
         </div>
       )}
       
-      {orgId && appointmentsError && appointments.length > 0 && (typeof window !== 'undefined' && !navigator.onLine) && (
+      {tenantIdForPath != null && tenantIdForPath !== "" && appointmentsError && appointments.length > 0 && (typeof window !== 'undefined' && !navigator.onLine) && (
         <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-yellow-800 text-sm">
             ⚠️ You're offline. Showing cached appointments. Some data may be outdated.
@@ -364,7 +368,7 @@ export default function Page({ slug }: { slug: string }) {
         </div>
       )}
 
-      {viewMode === "calendar" && orgId && !appointmentsError && (
+      {viewMode === "calendar" && tenantIdForPath != null && tenantIdForPath !== "" && !appointmentsError && (
         <>
           {console.log("Rendering calendar with appointments:", calendarAppointments.length)}
         <AppointmentsCalendar
@@ -376,7 +380,7 @@ export default function Page({ slug }: { slug: string }) {
             onViewAppointment={(apt) => {
               const foundAppointment = appointments.find((a: any) => String(a.id) === apt.id);
               if (foundAppointment) {
-                router.push(`/dashboard/organization/${slug}/appointments/${foundAppointment.id}/edit`);
+                handleViewAppointment(foundAppointment);
               }
             }}
           onAddAppointment={() =>
@@ -455,7 +459,7 @@ export default function Page({ slug }: { slug: string }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
                       <DropdownMenuItem
-                        onClick={() => handleEditClick(a)}
+                        onClick={() => handleViewAppointment(a)}
                         className="cursor-pointer flex items-center gap-2"
                       >
                         <Edit className="size-4" />
@@ -484,6 +488,17 @@ export default function Page({ slug }: { slug: string }) {
             setCurrentPage={setCurrentPage}
           />
         </>
+      )}
+
+      {/* View / Edit Appointment Modal (calendar click or list Edit) */}
+      {showAppointmentModal && selectedAppointment && tenantIdForPath != null && tenantIdForPath !== "" && (
+        <ViewEditAppointmentModal
+          appointment={selectedAppointment}
+          orgId={typeof tenantIdForPath === "number" ? tenantIdForPath : (/^\d+$/.test(String(tenantIdForPath)) ? parseInt(String(tenantIdForPath), 10) : undefined)}
+          tenantIdForPath={tenantIdForPath}
+          onClose={handleCloseAppointmentModal}
+          onUpdate={() => mutate()}
+        />
       )}
 
       {/* Delete Warning Modal */}

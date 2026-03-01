@@ -8,6 +8,16 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Role } from "@/lib/types";
+import { CheckCircle2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Permission {
   key: string;
@@ -442,6 +452,7 @@ export default function AccessControlManager({ slug }: { slug: string }) {
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(permissionCategories[0].key);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // Fetch roles to get their IDs
   useEffect(() => {
@@ -602,6 +613,7 @@ export default function AccessControlManager({ slug }: { slug: string }) {
       await Promise.all(updatePromises);
       
       toast.success("Access control permissions updated successfully!");
+      setShowSuccessAlert(true);
     } catch (error) {
       console.error("Error saving permissions:", error);
       toast.error("Failed to save permissions");
@@ -754,6 +766,28 @@ export default function AccessControlManager({ slug }: { slug: string }) {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showSuccessAlert} onOpenChange={setShowSuccessAlert}>
+        <AlertDialogContent overlayClassName="z-[10002]" className="z-[10002] bg-white flex flex-col items-center text-center">
+          <AlertDialogHeader className="flex flex-col items-center">
+            <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
+            <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">
+              Success
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-normal text-base text-[#737373]">
+              Access control permissions updated successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className="h-12 w-full max-w-[291px] bg-[#3FA907] text-white font-medium text-base"
+              onClick={() => setShowSuccessAlert(false)}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
