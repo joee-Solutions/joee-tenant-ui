@@ -26,7 +26,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
-  doctorId: z.string().min(1, "Provider is required"),
+  doctorId: z.string().min(1, "Appointment with is required"),
   date: z.string().min(1, "Appointment date is required"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
@@ -78,7 +78,21 @@ export default function AddAppointment({ slug }: { slug: string }) {
     authFectcher
   );
 
+  const patients = useMemo(() => {
+    let result: any[] = [];
+    if (Array.isArray(patientsData?.data?.data)) result = patientsData.data.data;
+    else if (Array.isArray(patientsData?.data)) result = patientsData.data;
+    else if (Array.isArray(patientsData)) result = patientsData;
+    return result;
+  }, [patientsData]);
 
+  const providers = useMemo(() => {
+    let result: any[] = [];
+    if (Array.isArray(employeesData?.data?.data)) result = employeesData.data.data;
+    else if (Array.isArray(employeesData?.data)) result = employeesData.data;
+    else if (Array.isArray(employeesData)) result = employeesData;
+    return result;
+  }, [employeesData]);
 
   const form = useForm<AppointmentSchemaType>({
     resolver: zodResolver(AppointmentSchema),
@@ -185,27 +199,28 @@ export default function AddAppointment({ slug }: { slug: string }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Patient Selection */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">Patient</label>
+            <label className="block text-base text-black font-normal mb-2">Patient name</label>
             <Controller
               name="patientId"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value ?? ""}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                     <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
                   </SelectTrigger>
                   <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
                     {isLoadingPatients ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
-                    ) : Array.isArray(patientsData?.data?.data) && patientsData.data.data.length > 0 ? (
-                      patientsData.data.data.map((patient: any) => (
-                        <SelectItem key={patient.id} value={patient.id.toString()} className="hover:bg-gray-200">
-                          {patient.firstname} {patient.lastname} {patient.gender && `(${patient.gender})`}
+                    ) : patients.length > 0 ? (
+                      patients.map((patient: any) => (
+                        <SelectItem key={patient.id} value={String(patient.id)} className="hover:bg-gray-200">
+                          {patient.first_name || patient.firstname} {patient.last_name || patient.lastname}
+                          {patient.gender && ` (${patient.gender})`}
                         </SelectItem>
                       ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-gray-500">
-                        {patientsData ? 'No patients available' : 'Loading...'}
+                        {patientsData ? "No patients available" : "Loading..."}
                       </div>
                     )}
                   </SelectContent>
@@ -217,31 +232,31 @@ export default function AddAppointment({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* Provider Selection */}
+          {/* Appointment with (Provider) */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">Provider</label>
+            <label className="block text-base text-black font-normal mb-2">Appointment with</label>
             <Controller
               name="doctorId"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value ?? ""}>
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                    <SelectValue placeholder={isLoadingEmployees ? "Loading providers..." : "Select provider"} />
+                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select provider"} />
                   </SelectTrigger>
                   <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
                     {isLoadingEmployees ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500">Loading providers...</div>
-                    ) : Array.isArray(employeesData?.data) && employeesData.data.length > 0 ? (
-                      employeesData.data.map((employee: any) => (
-                        <SelectItem key={employee.id} value={employee.id.toString()} className="hover:bg-gray-200">
-                          {employee.firstname} {employee.lastname}
-                          {employee.department?.name && ` - ${employee.department.name}`}
-                          {employee.designation && ` (${employee.designation})`}
+                    ) : providers.length > 0 ? (
+                      providers.map((provider: any) => (
+                        <SelectItem key={provider.id} value={String(provider.id)} className="hover:bg-gray-200">
+                          {provider.firstname || provider.first_name} {provider.lastname || provider.last_name}
+                          {provider.department?.name && ` - ${provider.department.name}`}
+                          {provider.designation && ` (${provider.designation})`}
                         </SelectItem>
                       ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-gray-500">
-                        {employeesData ? 'No providers available' : 'Loading...'}
+                        {employeesData ? "No providers available" : "Loading..."}
                       </div>
                     )}
                   </SelectContent>

@@ -136,7 +136,15 @@ export default function BackupPage() {
       mutate(); // Refresh backups list
     } catch (error: any) {
       console.error("Backup creation error:", error);
-      toast.error(error?.response?.data?.message || "Failed to create backup");
+      const data = error?.response?.data;
+      const message = data?.message || data?.error;
+      const validationErrors = data?.validationErrors;
+      const detail = Array.isArray(validationErrors)
+        ? validationErrors.join(", ")
+        : typeof validationErrors === "string"
+          ? validationErrors
+          : message;
+      toast.error(detail || "Backup operation failed. Check backend storage and permissions.");
     } finally {
       setCreatingBackup(false);
     }

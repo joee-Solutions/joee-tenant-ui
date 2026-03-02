@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useTenantsData, useAllUsersData, useAllPatientsData } from "@/hooks/swr";
+import { useTenantsData, useDashboardEmployees, useAllPatientsData } from "@/hooks/swr";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { Building2, Users, UserCircle, Briefcase } from "lucide-react";
 import Link from "next/link";
@@ -25,19 +25,21 @@ function SearchPageContent() {
     }
   }, [tabFromUrl]);
 
-  // Fetch all data
-  const { data: tenantsData, isLoading: loadingTenants } = useTenantsData({ search: query });
-  const { data: employeesData, isLoading: loadingEmployees } = useAllUsersData();
+  // Fetch all data. Use dashboard users endpoint for employees (GET /super/tenants/employees requires tenant id).
+  const { data: tenantsData, isLoading: loadingTenants } = useTenantsData();
+  const { data: employeesData, isLoading: loadingEmployees } = useDashboardEmployees();
   const { data: patientsData, isLoading: loadingPatients } = useAllPatientsData();
 
-  // Filter data based on search query
+  // Filter data based on search query (client-side so e.g. "JOE" finds organization named "JOE")
   const filteredOrganizations = useMemo(() => {
-    if (!query || !Array.isArray(tenantsData)) return [];
-    const searchLower = query.toLowerCase();
+    if (!Array.isArray(tenantsData)) return [];
+    if (!query) return tenantsData;
+    const searchLower = query.toLowerCase().trim();
     return tenantsData.filter((org: any) => 
       org.name?.toLowerCase().includes(searchLower) ||
-      org.domain?.toLowerCase().includes(searchLower) ||
-      org.email?.toLowerCase().includes(searchLower)
+      (org.domain && String(org.domain).toLowerCase().includes(searchLower)) ||
+      (org.email && String(org.email).toLowerCase().includes(searchLower)) ||
+      (org.address && String(org.address).toLowerCase().includes(searchLower))
     );
   }, [tenantsData, query]);
 
@@ -48,12 +50,14 @@ function SearchPageContent() {
       return (activeTab === "employees" || activeTab === "all") ? employeesData : [];
     }
     const searchLower = query.toLowerCase();
-    return employeesData.filter((emp: any) => 
-      `${emp.firstname || ''} ${emp.lastname || ''}`.toLowerCase().includes(searchLower) ||
-      emp.email?.toLowerCase().includes(searchLower) ||
-      emp.designation?.toLowerCase().includes(searchLower) ||
-      emp.department?.name?.toLowerCase().includes(searchLower)
-    );
+    return employeesData.filter((emp: any) => {
+      const first = emp.firstname ?? emp.first_name ?? "";
+      const last = emp.lastname ?? emp.last_name ?? "";
+      return `${first} ${last}`.trim().toLowerCase().includes(searchLower) ||
+        emp.email?.toLowerCase().includes(searchLower) ||
+        emp.designation?.toLowerCase().includes(searchLower) ||
+        emp.department?.name?.toLowerCase().includes(searchLower);
+    });
   }, [employeesData, query, activeTab]);
 
   const filteredPatients = useMemo(() => {

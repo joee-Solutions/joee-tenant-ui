@@ -281,7 +281,7 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
       sex: data.guardian_info.Guardian_sex || data.guardian_info.guardian_sex || '',
     } : undefined,
     allergies: data.allergies || [],
-    medHistory: data.medHistory || data.medicalHistories || data.medical_history || [],
+    medHistory: data.medHistory || data.medicalHistory || data.medicalHistories || data.medical_history || [],
     diagnosisHistory: data.diagnosisHistory || data.diagnosis_history || [],
     surgeryHistory: data.surgeryHistory || data.surgeries || data.surgery_history || [],
     immunizationHistory: data.immunizationHistory || data.immunizations || data.immunization_history || [],

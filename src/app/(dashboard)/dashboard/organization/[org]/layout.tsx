@@ -46,7 +46,15 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
       toast.success("Backup created successfully");
     } catch (err: any) {
       console.error("Backup creation error:", err);
-      toast.error(err?.response?.data?.message || "Failed to create backup");
+      const data = err?.response?.data;
+      const message = data?.message || data?.error;
+      const validationErrors = data?.validationErrors;
+      const detail = Array.isArray(validationErrors)
+        ? validationErrors.join(", ")
+        : typeof validationErrors === "string"
+          ? validationErrors
+          : message;
+      toast.error(detail || "Backup operation failed. Check backend storage and permissions.");
     } finally {
       setCreatingBackup(false);
     }

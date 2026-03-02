@@ -65,9 +65,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main Content */}
       <div className="flex flex-col gap-[49px] lg:pl-72 w-full">
+        <OfflineIndicator />
         <MainHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
         {children}
-        <OfflineIndicator />
         <OfflineDebugPanel />
         
         {/* Pre-cache Progress Indicator - User-friendly modal */}

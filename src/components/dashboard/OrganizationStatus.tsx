@@ -62,8 +62,7 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h3 className="text-xl font-medium mb-4">Organizations Status</h3>
-      <div className="flex items-center">
-   
+      <div className="flex items-center min-w-0">
         <div className="relative flex-shrink-0 mr-8">
           <ResponsiveContainer width={250} height={250}>
             <PieChart>
@@ -149,9 +148,9 @@ const OrganizationStatus: FC<OrganizationStatusProps> = ({ data, colors }) => {
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0 flex-1 flex flex-col items-center justify-center text-center">
           <p className="text-gray-500 mb-2">Total number of all organizations</p>
-          <p className="text-3xl font-medium text-blue-900">{data.totalCount}</p>
+          <p className="text-3xl font-medium text-blue-900 break-words">{data.totalCount}</p>
         </div>
       </div>
 

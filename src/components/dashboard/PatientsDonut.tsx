@@ -17,8 +17,8 @@ const PatientsDonut: FC<PatientsDonutProps> = ({ data }) => {
         <h2 className="text-lg md:text-xl font-medium text-black">Patients</h2>
       </div>
 
-      <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-center gap-6">
-        <div className="mb-6  ">
+      <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-center gap-6 text-center">
+        <div className="mb-6 flex flex-col items-center justify-center">
           <p className="text-gray-500 text-lg">Total Patients</p>
           <p className="text-xl font-medium text-blue-900">
             {data.totalPatients === 0 ? "0 Patients" : `${data.totalPatients.toLocaleString()} Patients`}

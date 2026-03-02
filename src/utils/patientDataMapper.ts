@@ -191,6 +191,7 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
       // Replace "Other" with the custom text if diagnosisOther is provided
       diagnosis: item.diagnosis === "Other" && item.diagnosisOther ? item.diagnosisOther : item.diagnosis,
     })),
+    medicalHistory: medHistory || [],
     prescriptions: prescriptions || [],
     reviewOfSystem: reviewOfSystem || {},
     additionalReview: additionalReview || {},
@@ -386,6 +387,7 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
   mappedData.surgeries = Array.isArray(mappedData.surgeries) ? mappedData.surgeries : [];
   mappedData.allergies = Array.isArray(mappedData.allergies) ? mappedData.allergies : [];
   mappedData.visits = Array.isArray(mappedData.visits) ? mappedData.visits : [];
+  mappedData.medicalHistory = Array.isArray(mappedData.medicalHistory) ? mappedData.medicalHistory : [];
   mappedData.prescriptions = Array.isArray(mappedData.prescriptions) ? mappedData.prescriptions : [];
   
   // Ensure objects are objects (not undefined or null)

@@ -32,10 +32,7 @@ const EditOrganizationSchema = z.object({
     .string()
     .email("Invalid email address")
     .min(1, "This field is required"),
-  website: z
-    .string()
-    .url("Invalid URL address")
-    .min(1, "This field is required"),
+  website: z.string().min(1, "This field is required"),
   adminName: z
     .string()
     .min(1, "This field is required")
