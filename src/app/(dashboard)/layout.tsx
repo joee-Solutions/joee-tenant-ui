@@ -2,7 +2,6 @@
 import MainHeader from "@/components/shared/MainHeader";
 import SideNavigation from "@/components/shared/SideNavigation";
 import OfflineIndicator from "@/components/shared/OfflineIndicator";
-import PreCacheProgressModal from "@/components/shared/PreCacheProgressModal";
 import React, { useState, useEffect } from "react";
 import { preCacheService } from "@/lib/offline/preCacheService";
 import { offlineService } from "@/lib/offline/offlineService";
@@ -15,29 +14,15 @@ const OfflineDebugPanel = process.env.NODE_ENV === 'development'
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [preCacheProgress, setPreCacheProgress] = useState<{ current: number; total: number } | null>(null);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Pre-cache all important endpoints on first load
+  // Pre-cache in background only (no popup modal)
   useEffect(() => {
-    // Only pre-cache if online and not already completed
-    // Check if user closed the notification (still pre-cache but don't show progress)
     if (typeof window !== 'undefined' && offlineService.getOnlineStatus() && !preCacheService.isCompleted()) {
-      const userClosedNotification = localStorage.getItem('user_closed_precache_notification') === 'true';
-      
-      preCacheService.preCacheAll({
-        onProgress: userClosedNotification 
-          ? undefined // Don't show progress if user closed notification
-          : (current, total) => {
-              // Don't pass endpoint - just show progress
-              setPreCacheProgress({ current, total });
-            },
-      }).then(() => {
-        setPreCacheProgress(null);
-      });
+      preCacheService.preCacheAll({});
     }
   }, []);
 
@@ -69,18 +54,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <MainHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
         {children}
         <OfflineDebugPanel />
-        
-        {/* Pre-cache Progress Indicator - User-friendly modal */}
-        {preCacheProgress && (
-          <PreCacheProgressModal 
-            current={preCacheProgress.current}
-            total={preCacheProgress.total}
-            onMinimize={() => {
-              // Don't clear state - just let modal handle minimized state
-              // Pre-caching will continue in background and update progress
-            }}
-          />
-        )}
       </div>
     </div>
   );

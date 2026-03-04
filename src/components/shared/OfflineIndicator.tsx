@@ -21,7 +21,7 @@ export default function OfflineIndicator() {
     <div className="sticky top-0 left-0 right-0 z-40 flex items-center justify-center gap-2 bg-amber-500 text-amber-950 px-4 py-2 text-sm font-medium shadow-sm">
       <WifiOff className="w-4 h-4 flex-shrink-0" />
       <span>
-        You&apos;re offline. You can continue using the app; your changes will sync when you&apos;re back online.
+        You are offline. Your changes will sync when you come back online.
       </span>
     </div>
   );

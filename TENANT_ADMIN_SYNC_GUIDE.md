@@ -19,7 +19,7 @@ TENANTS_EMPLOYEES: "/super/tenants/${tenantId}/employees"
 
 // Admin management
 GET_SUPER_ADMIN: "/management/super/admin/all"
-ADD_SUPER_ADMIN: "/auth/super/register"
+ADD_SUPER_ADMIN: "/auth/super/create"
 ```
 
 ### Tenant Admin Endpoints (Expected)
