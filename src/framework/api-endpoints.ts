@@ -66,7 +66,7 @@ export const API_ENDPOINTS = {
   GET_UNREAD_COUNT: (userId: number) => `/notifications/user/${userId}/unread-count`,
   GET_TENANT_UNREAD_COUNT: (tenantId: number) => `/notifications/tenant/${tenantId}/unread-count`,
   GET_ADMIN_PROFILE: "/management/super/admin/profile",
-  UPDATE_ADMIN_PROFILE: "/management/super/admin/profile",
+  UPDATE_ADMIN_PROFILE: (id: number | string) => `/management/super/admin/profile/${id}`,
   CHANGE_PASSWORD: "/auth/super/change-password",
   
   // Roles Management
@@ -92,9 +92,9 @@ export const API_ENDPOINTS = {
   GET_PATIENT_APPOINTMENTS: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}/appointments`,
   
   // Backup & Restore
-  GET_TENANT_BACKUPS: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
+  GET_TENANT_BACKUPS: (tenantId: number | string) => `/super/tenants/${tenantId}/backups`,
   CREATE_TENANT_BACKUP: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
-  GET_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
-  RESTORE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/restore/${backupId}`,
-  DELETE_TENANT_BACKUP: (tenantId: number, backupId: number) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  GET_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  RESTORE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/restore/${backupId}`,
+  DELETE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backup/${backupId}`,
 };

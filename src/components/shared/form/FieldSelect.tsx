@@ -49,11 +49,10 @@ function FieldSelect<T extends FieldValues>({
               {labelText}
             </FormLabel>
           )}
-          <Select 
-            onValueChange={field.onChange} 
-            defaultValue={defaultOption}
+          <Select
+            onValueChange={field.onChange}
             disabled={disabled}
-            value={field.value || undefined}
+            value={field.value && options.includes(field.value) ? field.value : undefined}
           >
             <FormControl>
               <SelectTrigger

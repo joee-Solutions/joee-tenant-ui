@@ -30,13 +30,9 @@ const NewOrganizationSchema = z.object({
     .string()
     .email("Invalid email address")
     .min(1, "This field is required"),
-  website: z.string().min(1, "This field is required"),
-  adminName: z
-    .string()
-    .min(1, "This field is required")
-    .refine((val) => val.trim().split(" ").length >= 2, {
-      message: "Please enter a full name (first and last)",
-    }),
+  website: z.string().optional(),
+  adminFirstname: z.string().min(1, "Admin first name is required"),
+  adminLastname: z.string().min(1, "Admin last name is required"),
   adminPhoneNumber: z.string().min(1, "This field is required"),
   org_type: z.string().min(1, "This field is required"),
   domain: z.string().min(1, "This field is required"),
@@ -161,7 +157,8 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
     defaultValues: {
       name: "",
       address: "",
-      adminName: "",
+      adminFirstname: "",
+      adminLastname: "",
       adminPhoneNumber: "",
       city: "",
       country: "",
@@ -261,19 +258,18 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         state,
         zip,
         country,
-        adminName,
+        adminFirstname,
+        adminLastname,
         adminPhoneNumber,
+        org_type,
         ...rest
       } = payload;
-      const [firstname, ...lastnameParts] = adminName.split(" ");
-      const lastname = lastnameParts.join(" ") || firstname; // Handle single name case
-      
-      // Country and state are already stored as names, so use them directly
       const countryName = country;
       const stateName = state;
 
       const formattedPayload = {
         ...rest,
+        organization_type: org_type || null,
         address_metadata: {
           address: address,
           city: city,
@@ -283,8 +279,8 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         },
         admin_info: {
           phone_number: adminPhoneNumber,
-          firstname: firstname,
-          lastname: lastname,
+          firstname: adminFirstname,
+          lastname: adminLastname,
         },
       };
 
@@ -553,10 +549,17 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
               />
               <FieldBox
                 type="text"
-                name="adminName"
+                name="adminFirstname"
                 control={form.control}
-                labelText="Admin/Contact Person name"
-                placeholder="e.g John Doe"
+                labelText="Admin first name"
+                placeholder="e.g. John"
+              />
+              <FieldBox
+                type="text"
+                name="adminLastname"
+                control={form.control}
+                labelText="Admin last name"
+                placeholder="e.g. Doe"
               />
             </div>
             <FieldBox

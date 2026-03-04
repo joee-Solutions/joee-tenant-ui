@@ -9,6 +9,17 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { preCacheService } from "@/lib/offline/preCacheService";
 import { offlineService } from "@/lib/offline/offlineService";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
@@ -27,13 +38,16 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const orgSlug = pathname.split("/")[3];
   const base = `/dashboard/organization/${orgSlug}`;
-  
-  // Get current active tab from pathname
-  const currentTab = pathname.split("/")[4] || "departments";
+  const segment4 = pathname.split("/")[4];
+  const isBackupPage = segment4 === "backup";
+
+  // Get current active tab from pathname (backup page is not a tab)
+  const currentTab = segment4 || "departments";
 
   const { data, isLoading } = useTenant(orgSlug);
   const tenantId = typeof data === "object" && data && (data as any)?.id != null ? (data as any).id : (orgSlug && /^\d+$/.test(orgSlug) ? parseInt(orgSlug, 10) : null);
   const [creatingBackup, setCreatingBackup] = useState(false);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
 
   const handleCreateBackup = async () => {
     if (!tenantId || typeof tenantId !== "number") {
@@ -41,6 +55,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     setCreatingBackup(true);
+    setBackupModalOpen(false);
     try {
       await processRequestAuth("post", API_ENDPOINTS.CREATE_TENANT_BACKUP(tenantId), { tenantId: Number(tenantId) });
       toast.success("Backup created successfully");
@@ -85,6 +100,11 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
     router.push(`${base}/${value}`);
   };
 
+  // On /backup route, render only the backup page content (it has its own full UI)
+  if (isBackupPage) {
+    return <div className="px-4 pb-20">{children}</div>;
+  }
+
   return (
     <div className="px-4 pb-20">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -97,14 +117,37 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
         </Link>
         {tenantId != null && (
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handleCreateBackup}
-              disabled={creatingBackup}
-              className="bg-[#003465] text-white hover:bg-[#003465]/90 h-10 px-4 text-sm"
-            >
-              <Cloud className="w-4 h-4 mr-2" />
-              {creatingBackup ? "Creating..." : "Backup"}
-            </Button>
+            <AlertDialog open={backupModalOpen} onOpenChange={setBackupModalOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  disabled={creatingBackup}
+                  className="bg-[#003465] text-white hover:bg-[#003465]/90 h-10 px-4 text-sm"
+                >
+                  <Cloud className="w-4 h-4 mr-2" />
+                  {creatingBackup ? "Creating..." : "Backup"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-white">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Backup organization</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    We are about to backup the whole organization data. This may take a moment. Do you want to continue?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleCreateBackup();
+                    }}
+                    className="bg-[#003465] hover:bg-[#003465]/90"
+                  >
+                    {creatingBackup ? "Creating..." : "Confirm"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Link href={`/dashboard/organization/${orgSlug}/backup`}>
               <Button
                 variant="outline"

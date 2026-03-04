@@ -21,6 +21,7 @@ import {
   Edit,
   EyeClosedIcon,
   EyeOffIcon,
+  KeyRound,
   Save,
   Trash2,
 } from "lucide-react";
@@ -56,6 +57,21 @@ const AdminFormSchema = z.object({
 type AdminFormSchemaType = z.infer<typeof AdminFormSchema>;
 
 const orgStatus = ["Admin", "Super_Admin", "User"];
+
+function generatePassword(length = 12): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const numbers = "23456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + numbers + special;
+  const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+  let pwd = pick(upper) + pick(lower) + pick(numbers) + pick(special);
+  for (let i = pwd.length; i < length; i++) pwd += pick(all);
+  return pwd
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
+}
 
 export default function AdminForm() {
   const { data: adminData, isLoading: isAdminLoading } = useAdminProfile();
@@ -199,6 +215,11 @@ export default function AdminForm() {
     }
   };
   const [showPassword, setShowPassword] = React.useState(false);
+  const handleGeneratePassword = () => {
+    const pwd = generatePassword(12);
+    form.setValue("password", pwd, { shouldValidate: true });
+    toast.info("Password generated");
+  };
   const handleShowPassword = () => {
     setShowPassword((prev) => !prev);
   };
@@ -275,9 +296,21 @@ export default function AdminForm() {
             placeholder="Enter here"
           />
           <div className="grid gap-[6px]">
-            <label htmlFor="create-admin-password" className="text-sm font-medium">
-              Password
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="create-admin-password" className="text-sm font-medium">
+                Password
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGeneratePassword}
+                className="h-9 shrink-0 gap-1.5 text-xs font-medium"
+              >
+                <KeyRound className="size-3.5" />
+                Generate password
+              </Button>
+            </div>
             <Input
               id="create-admin-password"
               type={showPassword ? "text" : "password"}

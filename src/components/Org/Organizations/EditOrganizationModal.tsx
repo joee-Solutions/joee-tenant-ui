@@ -32,13 +32,9 @@ const EditOrganizationSchema = z.object({
     .string()
     .email("Invalid email address")
     .min(1, "This field is required"),
-  website: z.string().min(1, "This field is required"),
-  adminName: z
-    .string()
-    .min(1, "This field is required")
-    .refine((val) => val.trim().split(" ").length >= 2, {
-      message: "Please enter a full name (first and last)",
-    }),
+  website: z.string().optional(),
+  adminFirstname: z.string().min(1, "Admin first name is required"),
+  adminLastname: z.string().min(1, "Admin last name is required"),
   adminPhoneNumber: z.string().min(1, "This field is required"),
   org_type: z.string().min(1, "This field is required"),
   domain: z.string().min(1, "This field is required"),
@@ -92,7 +88,8 @@ export default function EditOrganizationModal({
       fax: "",
       email: "",
       website: "",
-      adminName: "",
+      adminFirstname: "",
+      adminLastname: "",
       adminPhoneNumber: "",
       org_type: "",
       domain: "",
@@ -194,7 +191,7 @@ export default function EditOrganizationModal({
                        organization?.admin ||
                        {};
 
-      // Combine firstname and lastname for adminName - try multiple field name variations
+      // Admin info: firstname, lastname, phone_number
       const adminFirstName = adminInfo?.first_name || 
                              adminInfo?.firstname || 
                              adminInfo?.firstName ||
@@ -203,9 +200,7 @@ export default function EditOrganizationModal({
                            adminInfo?.lastname || 
                            adminInfo?.lastName ||
                            "";
-      const adminName = `${adminFirstName} ${adminLastName}`.trim() || "";
 
-      // Extract admin contact info - try multiple field name variations
       const adminPhone = adminInfo?.phone_number || 
                         adminInfo?.phoneNumber || 
                         adminInfo?.phone ||
@@ -216,9 +211,6 @@ export default function EditOrganizationModal({
       const stateValue = String(addressMetadata?.state || "");
       const cityValue = String(addressMetadata?.city || "");
       
-      // Try multiple paths for org_type
-      // Note: Backend returns organization_type in update response but may not include it in list responses
-      // Priority: organization_type (from update response) > org_type (legacy) > organizationType (camelCase)
       const orgTypeValue = String(organization?.organization_type || 
                                   organization?.org_type || 
                                   organization?.organizationType ||
@@ -236,17 +228,18 @@ export default function EditOrganizationModal({
         fax: String(organization?.fax || organization?.fax_number || organization?.organizationFax || ""),
         email: String(organization?.email || ""),
         website: String(organization?.website || ""),
-        adminName: adminName || "",
+        adminFirstname: adminFirstName || "",
+        adminLastname: adminLastName || "",
         adminPhoneNumber: String(adminPhone || ""),
         org_type: orgTypeValue,
         domain: String(organization?.domain || ""),
       };
       
-      // Debug: Log the extracted data
       console.log("EditOrganizationModal - Organization data:", {
         organization,
         adminInfo,
-        adminName,
+        adminFirstName,
+        adminLastName,
         adminPhone,
         orgTypeValue,
         formData
@@ -289,16 +282,18 @@ export default function EditOrganizationModal({
         
         // Re-set admin fields to ensure they're properly set (form.reset might not work for all field types)
         setTimeout(() => {
-          if (adminName) {
-            form.setValue("adminName", adminName, { shouldValidate: false, shouldDirty: false });
+          if (adminFirstName) {
+            form.setValue("adminFirstname", adminFirstName, { shouldValidate: false, shouldDirty: false });
+          }
+          if (adminLastName) {
+            form.setValue("adminLastname", adminLastName, { shouldValidate: false, shouldDirty: false });
           }
           if (adminPhone) {
             form.setValue("adminPhoneNumber", String(adminPhone), { shouldValidate: false, shouldDirty: false });
           }
           
-          // Trigger validation after all fields are set (with a delay to ensure DOM is updated)
           setTimeout(() => {
-            form.trigger(["adminName", "adminPhoneNumber", "org_type", "status"]);
+            form.trigger(["adminFirstname", "adminLastname", "adminPhoneNumber", "org_type", "status"]);
           }, 200);
         }, 100);
         
@@ -381,7 +376,8 @@ export default function EditOrganizationModal({
         state,
         zip,
         country,
-        adminName,
+        adminFirstname,
+        adminLastname,
         adminPhoneNumber,
         status,
         org_type, // Exclude org_type from update - backend validation expects status values, not org types
@@ -390,15 +386,8 @@ export default function EditOrganizationModal({
 
       // Build update payload
       const updatePayload: any = { ...rest };
-      
-      // Note: org_type is excluded from updates because:
-      // 1. Backend PUT validation incorrectly expects org_type to be "active" or "deactivated" (status values)
-      // 2. We're sending organization types (Hospital, Clinic, etc.) which don't match status validation
-      // 3. If organization type needs to be updated, use organization_type field instead
-      if (org_type && org_type !== defaults?.org_type) {
-        // Use organization_type instead of org_type to avoid backend validation conflict
-        updatePayload.organization_type = org_type;
-      }
+      // Always send organization_type (backend expects this key; use null when empty)
+      updatePayload.organization_type = org_type ?? defaults?.org_type ?? null;
 
       // Handle status
       if (status) {
@@ -423,14 +412,11 @@ export default function EditOrganizationModal({
       }
 
       // Handle admin info if any admin fields changed
-      if (adminName || adminPhoneNumber) {
-        const [firstname, ...lastnameParts] = (adminName || defaults?.adminName || "").split(" ");
-        const lastname = lastnameParts.join(" ") || firstname;
-        
+      if (adminFirstname !== undefined || adminLastname !== undefined || adminPhoneNumber !== undefined) {
         updatePayload.admin_info = {
-          firstname: firstname,
-          lastname: lastname,
-          phone_number: adminPhoneNumber || defaults?.adminPhoneNumber || "",
+          firstname: adminFirstname ?? defaults?.adminFirstname ?? "",
+          lastname: adminLastname ?? defaults?.adminLastname ?? "",
+          phone_number: adminPhoneNumber ?? defaults?.adminPhoneNumber ?? "",
         };
       }
 
@@ -656,10 +642,18 @@ export default function EditOrganizationModal({
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
                 type="text"
-                name="adminName"
+                name="adminFirstname"
                 control={form.control}
-                labelText="Admin/Contact Person name"
-                placeholder="e.g John Doe"
+                labelText="Admin first name"
+                placeholder="e.g. John"
+              />
+              <FieldBox
+                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                type="text"
+                name="adminLastname"
+                control={form.control}
+                labelText="Admin last name"
+                placeholder="e.g. Doe"
               />
             </div>
 

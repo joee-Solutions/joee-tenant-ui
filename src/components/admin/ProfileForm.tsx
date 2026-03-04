@@ -30,46 +30,84 @@ const EditOrganizationSchema = z.object({
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
-const orgStatus = ["Admin", "Super Admin", "User"];
+// Option values sent to/from API (e.g. "super_admin"). Select shows these as-is.
+const ROLE_OPTIONS = ["Admin", "User", "super_admin"];
+
+// Get role string from API (e.g. "Super_Admin" or roles[0])
+function getAdminRoleString(admin?: AdminUser | null): string {
+  if (!admin) return "";
+  const role = (admin as any).role;
+  if (typeof role === "string" && role.trim()) return role.trim();
+  const roles = admin.roles;
+  if (!Array.isArray(roles) || roles.length === 0) return "";
+  const first = roles[0];
+  if (typeof first === "string") return first.trim();
+  if (first && typeof first === "object" && "name" in first) return String((first as { name?: string }).name ?? "").trim();
+  return "";
+}
+
+// Normalize API role to match select option value (e.g. "Super_Admin" -> "super_admin")
+function normalizeRoleForSelect(roleStr: string): string {
+  if (!roleStr) return "";
+  const s = roleStr.trim().toLowerCase().replace(/\s+/g, "_");
+  const found = ROLE_OPTIONS.find((o) => o.toLowerCase() === s || o.toLowerCase().replace(/\s+/g, "_") === s);
+  return found ?? s;
+}
 
 export default function ProfileForm({ admin }: { admin?: AdminUser }) {
   const [isLoading, setIsLoading] = React.useState(false);
-  
+
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
     mode: "onChange",
     defaultValues: {
-      firstName: admin?.first_name || "",
-      lastName: admin?.last_name || "",
-      address: admin?.address || "",
-      email: admin?.email || "",
-      phoneNumber: admin?.phone_number || "",
-      role: admin?.roles?.[0] || "",
+      firstName: "",
+      lastName: "",
+      address: "",
+      email: "",
+      phoneNumber: "",
+      role: "",
       company: "Joee Solution",
     },
   });
-  const [isEdit, setIsEdit] = React.useState(true);
   const [isDisabled, setIsDisabled] = React.useState(true);
 
-  // Update form values when admin data changes
+  // Role options for the select (value must match an option for the selected role to show)
+  const roleOptions = React.useMemo(() => {
+    const raw = getAdminRoleString(admin);
+    const normalized = normalizeRoleForSelect(raw);
+    const opts = [...ROLE_OPTIONS];
+    if (normalized && !opts.includes(normalized)) opts.push(normalized);
+    if (raw && raw !== normalized && !opts.includes(raw)) opts.push(raw);
+    return opts;
+  }, [admin]);
+
+  // Update form when admin loads; set role to option value (e.g. "super_admin") so select displays it
   React.useEffect(() => {
     if (admin) {
+      const roleRaw = getAdminRoleString(admin);
+      const role = normalizeRoleForSelect(roleRaw) || roleRaw;
       form.reset({
         firstName: admin.first_name || "",
         lastName: admin.last_name || "",
         address: admin.address || "",
         email: admin.email || "",
         phoneNumber: admin.phone_number || "",
-        role: admin.roles?.[0] || "",
+        role: role || "",
         company: "Joee Solution",
       });
     }
   }, [admin, form]);
 
   const onSubmit = async (payload: EditOrganizationSchemaType) => {
+    if (isDisabled) return;
+    if (!admin?.id) {
+      toast.error("Cannot update: profile not loaded.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Transform camelCase to snake_case for backend
       const updatePayload = {
         first_name: payload.firstName,
         last_name: payload.lastName,
@@ -80,7 +118,11 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
         company: payload.company,
       };
 
-      const response = await processRequestAuth("put", API_ENDPOINTS.UPDATE_ADMIN_PROFILE, updatePayload);
+      const response = await processRequestAuth(
+        "patch",
+        API_ENDPOINTS.UPDATE_ADMIN_PROFILE(admin.id),
+        updatePayload
+      );
       
       // Check if update was successful
       const hasError = response?.error || response?.validationErrors || (response?.statusCode && response.statusCode >= 400);
@@ -183,7 +225,7 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
             bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
             name="role"
             control={form.control}
-            options={orgStatus}
+            options={roleOptions}
             labelText="Role"
             placeholder="Select"
             disabled={isDisabled}
@@ -225,8 +267,12 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
 
             {isDisabled ? (
               <Button
-                onClick={handleEdit}
                 type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleEdit();
+                }}
                 className="h-[60px] bg-[#003465] text-base font-medium text-white rounded w-full"
               >
                 Edit <Edit size={20} />
