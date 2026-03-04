@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { AlertCircle, X } from "lucide-react";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
@@ -33,14 +33,28 @@ const EditOrganizationSchema = z.object({
     .email("Invalid email address")
     .min(1, "This field is required"),
   website: z.string().optional(),
-  adminFirstname: z.string().min(1, "Admin first name is required"),
-  adminLastname: z.string().min(1, "Admin last name is required"),
-  adminPhoneNumber: z.string().min(1, "This field is required"),
+  adminFirstname: z.string().optional(),
+  adminLastname: z.string().optional(),
+  adminPhoneNumber: z.string().optional(),
   org_type: z.string().min(1, "This field is required"),
   domain: z.string().min(1, "This field is required"),
 });
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
+
+const EDIT_REQUIRED_FIELD_LABELS: Record<string, string> = {
+  name: "Organization name",
+  status: "Status",
+  address: "Address",
+  city: "City",
+  state: "State",
+  country: "Country",
+  phone_number: "Organization Phone number",
+  email: "Organization Email",
+  org_type: "Organization type",
+  domain: "Domain",
+};
+
 const orgStatus = ["active", "inactive"];
 const orgTypes = [
   "Hospital",
@@ -489,6 +503,19 @@ export default function EditOrganizationModal({
 
         <FormComposer form={form} onSubmit={handleSubmit}>
           <div className="flex flex-col gap-[30px]">
+            {form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0 && (
+              <div className="flex items-start gap-2 p-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside mt-1 text-sm">
+                    {Object.keys(form.formState.errors).map((key) => (
+                      <li key={key}>{EDIT_REQUIRED_FIELD_LABELS[key] ?? key}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 mb-4 pb-4 border-b">
               <Image
                 src={organization?.logo || orgPlaceholder}
@@ -606,7 +633,7 @@ export default function EditOrganizationModal({
                 type="text"
                 name="fax"
                 control={form.control}
-                labelText="Organization Fax"
+                labelText="Organization Fax (optional)"
                 placeholder="Enter here"
               />
             </div>

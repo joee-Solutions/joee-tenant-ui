@@ -30,10 +30,10 @@ const EditOrganizationSchema = z.object({
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
-// Option values sent to/from API (e.g. "super_admin"). Select shows these as-is.
-const ROLE_OPTIONS = ["Admin", "User", "super_admin"];
+// Option values for role select (include API values like "Super_Admin" so they display correctly)
+const ROLE_OPTIONS = ["Admin", "User", "super_admin", "Super_Admin"];
 
-// Get role string from API (e.g. "Super_Admin" or roles[0])
+// Get role string from API (roles[0] or singular "role")
 function getAdminRoleString(admin?: AdminUser | null): string {
   if (!admin) return "";
   const role = (admin as any).role;
@@ -46,12 +46,28 @@ function getAdminRoleString(admin?: AdminUser | null): string {
   return "";
 }
 
-// Normalize API role to match select option value (e.g. "Super_Admin" -> "super_admin")
-function normalizeRoleForSelect(roleStr: string): string {
+// Use API role as-is so Select can show it; fallback to normalized form for legacy options
+function getRoleForForm(roleStr: string): string {
   if (!roleStr) return "";
-  const s = roleStr.trim().toLowerCase().replace(/\s+/g, "_");
-  const found = ROLE_OPTIONS.find((o) => o.toLowerCase() === s || o.toLowerCase().replace(/\s+/g, "_") === s);
-  return found ?? s;
+  const trimmed = roleStr.trim();
+  if (ROLE_OPTIONS.includes(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase().replace(/\s+/g, "_");
+  const found = ROLE_OPTIONS.find((o) => o.toLowerCase().replace(/\s+/g, "_") === lower);
+  return found ?? trimmed;
+}
+
+function getDefaultValues(admin?: AdminUser | null) {
+  const roleRaw = admin ? getAdminRoleString(admin) : "";
+  const role = roleRaw ? getRoleForForm(roleRaw) || roleRaw : "";
+  return {
+    firstName: admin?.first_name ?? "",
+    lastName: admin?.last_name ?? "",
+    address: admin?.address ?? "",
+    email: admin?.email ?? "",
+    phoneNumber: admin?.phone_number ?? "",
+    role,
+    company: "Joee Solution",
+  };
 }
 
 export default function ProfileForm({ admin }: { admin?: AdminUser }) {
@@ -60,40 +76,30 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
     mode: "onChange",
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      address: "",
-      email: "",
-      phoneNumber: "",
-      role: "",
-      company: "Joee Solution",
-    },
+    defaultValues: getDefaultValues(admin),
   });
   const [isDisabled, setIsDisabled] = React.useState(true);
 
-  // Role options for the select (value must match an option for the selected role to show)
+  // Role options: include API role so selected value (e.g. "Super_Admin") is always in the list
   const roleOptions = React.useMemo(() => {
     const raw = getAdminRoleString(admin);
-    const normalized = normalizeRoleForSelect(raw);
     const opts = [...ROLE_OPTIONS];
-    if (normalized && !opts.includes(normalized)) opts.push(normalized);
-    if (raw && raw !== normalized && !opts.includes(raw)) opts.push(raw);
+    if (raw && !opts.includes(raw)) opts.push(raw);
     return opts;
   }, [admin]);
 
-  // Update form when admin loads; set role to option value (e.g. "super_admin") so select displays it
+  // Update form when admin loads; set role so select displays (use API value e.g. "Super_Admin")
   React.useEffect(() => {
     if (admin) {
       const roleRaw = getAdminRoleString(admin);
-      const role = normalizeRoleForSelect(roleRaw) || roleRaw;
+      const role = getRoleForForm(roleRaw) || roleRaw || "";
       form.reset({
         firstName: admin.first_name || "",
         lastName: admin.last_name || "",
         address: admin.address || "",
         email: admin.email || "",
         phoneNumber: admin.phone_number || "",
-        role: role || "",
+        role,
         company: "Joee Solution",
       });
     }

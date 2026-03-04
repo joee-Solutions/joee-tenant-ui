@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { processRequestAuth } from "@/framework/https";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleArrowLeft } from "lucide-react";
+import { AlertCircle, CircleArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
@@ -34,11 +34,25 @@ const NewOrganizationSchema = z.object({
   adminFirstname: z.string().min(1, "Admin first name is required"),
   adminLastname: z.string().min(1, "Admin last name is required"),
   adminPhoneNumber: z.string().min(1, "This field is required"),
-  org_type: z.string().min(1, "This field is required"),
+  org_type: z.string().optional(),
   domain: z.string().min(1, "This field is required"),
 });
 
 type NewOrganizationSchemaType = z.infer<typeof NewOrganizationSchema>;
+
+const REQUIRED_FIELD_LABELS: Record<string, string> = {
+  name: "Organization name",
+  address: "Address",
+  city: "City",
+  state: "State",
+  country: "Country",
+  phone_number: "Organization Phone number",
+  email: "Organization Email",
+  domain: "Domain",
+  adminFirstname: "Admin first name",
+  adminLastname: "Admin last name",
+  adminPhoneNumber: "Admin phone number",
+};
 
 interface NewOrgProps {
   setIsAddOrg: (val: "add" | "edit" | "none") => void;
@@ -267,9 +281,9 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       const countryName = country;
       const stateName = state;
 
-      const formattedPayload = {
-        ...rest,
-        organization_type: org_type || null,
+      const { website, ...restWithoutWebsite } = rest;
+      const formattedPayload: Record<string, unknown> = {
+        ...restWithoutWebsite,
         address_metadata: {
           address: address,
           city: city,
@@ -283,6 +297,22 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
           lastname: adminLastname,
         },
       };
+      // Only send organization_type / org_type when provided (both keys for backend compatibility)
+      const orgTypeValue = org_type?.trim();
+      if (orgTypeValue) {
+        formattedPayload.organization_type = orgTypeValue;
+        formattedPayload.org_type = orgTypeValue;
+      }
+      // Only send website when it's a valid URL (backend: "website must be a URL address")
+      if (website?.trim()) {
+        try {
+          const url = website.trim();
+          new URL(url);
+          formattedPayload.website = url;
+        } catch {
+          // omit invalid or non-URL value
+        }
+      }
 
       const res = await processRequestAuth(
         "post",
@@ -417,6 +447,19 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       <div className="pt-10 pb-[52px] px-[49px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md">
         <FormComposer form={form} onSubmit={onSubmit}>
           <div className="flex flex-col gap-[30px]">
+            {form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0 && (
+              <div className="flex items-start gap-2 p-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside mt-1 text-sm">
+                    {Object.keys(form.formState.errors).map((key) => (
+                      <li key={key}>{REQUIRED_FIELD_LABELS[key] ?? key}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             <FieldBox
               name="name"
               control={form.control}
@@ -504,7 +547,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
                 type="text"
                 name="fax"
                 control={form.control}
-                labelText="Organization Fax"
+                labelText="Organization Fax (optional)"
                 placeholder="Enter here"
               />
             </div>

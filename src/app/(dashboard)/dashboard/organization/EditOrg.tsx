@@ -24,16 +24,16 @@ import { z } from "zod";
 
 const EditOrganizationSchema = z.object({
   name: z.string().min(1, "This field is required"),
-  // address: z.string().min(1, "This field is required"),
   status: z.string().min(1, "This field is required"),
   phoneNumber: z.string().min(1, "This field is required"),
   organizationEmail: z
     .string()
     .email("Invalid email address")
     .min(1, "This field is required"),
-
-  adminName: z.string().min(1, "This field is required"),
-  adminPhoneNumber: z.string().min(1, "This field is required"),
+  organization_type: z.string().optional(),
+  adminFirstname: z.string().optional(),
+  adminLastname: z.string().optional(),
+  adminPhoneNumber: z.string().optional(),
   adminEmail: z
     .string()
     .email("Invalid email address")
@@ -43,65 +43,92 @@ const EditOrganizationSchema = z.object({
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
 const orgStatus = ["active", "inactive", "deactivated"];
+const orgTypes = [
+  "Hospital",
+  "Clinic",
+  "Medical Center",
+  "Pharmacy",
+  "Laboratory",
+  "Diagnostic Center",
+  "Rehabilitation Center",
+  "Nursing Home",
+  "Urgent Care",
+  "Specialty Clinic",
+  "Dental Clinic",
+  "Eye Clinic",
+  "Mental Health Center",
+  "Other",
+];
 
 export default function EditOrg({ data, slug }: { data: any; slug: string }) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
-  const [defaults, setDefault] = useState<null>();
+  const [defaults, setDefault] = useState<Partial<EditOrganizationSchemaType> | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
     mode: "onChange",
     defaultValues: {
       name: "",
-      // address: "",
       adminEmail: "",
-      adminName: "",
+      adminFirstname: "",
+      adminLastname: "",
       adminPhoneNumber: "",
       organizationEmail: "",
+      organization_type: "",
       phoneNumber: "",
       status: "",
     },
   });
   useEffect(() => {
+    const adminInfo = data?.admin_info || data?.profile || {};
     const datas = {
       name: data?.name || "",
-      adminEmail: data?.profile?.admin_email || "",
+      adminEmail: adminInfo?.email ?? data?.profile?.admin_email ?? "",
       phoneNumber: data?.phone_number || "",
-      adminPhoneNumber: data?.profile?.phone_number || "",
+      adminPhoneNumber: adminInfo?.phone_number ?? data?.profile?.phone_number ?? "",
       organizationEmail: data?.email || "",
-      status: data?.status || "inactive",
-      adminName:
-        (data?.profile?.first_name || "") +
-        " " +
-        (data?.profile?.last_name || ""),
+      organization_type: data?.organization_type ?? data?.org_type ?? "",
+      status: (data?.status || "inactive").toLowerCase() === "active" ? "active" : "inactive",
+      adminFirstname: adminInfo?.firstname ?? adminInfo?.first_name ?? "",
+      adminLastname: adminInfo?.lastname ?? adminInfo?.last_name ?? "",
     };
-    form.reset({
-      ...datas,
-    });
+    form.reset(datas);
     setDefault(datas as any);
   }, [data]);
   const onSubmit = async (payload: EditOrganizationSchemaType) => {
     try {
       const changedFields = getChangedFields(defaults, payload);
-      console.log(changedFields);
       if (Object.keys(changedFields).length === 0) {
-        console.log("No changes detected");
         return;
+      }
+      const updatePayload: Record<string, unknown> = {};
+      if (changedFields.name !== undefined) updatePayload.name = changedFields.name;
+      if (changedFields.organizationEmail !== undefined) updatePayload.email = changedFields.organizationEmail;
+      if (changedFields.phoneNumber !== undefined) updatePayload.phone_number = changedFields.phoneNumber;
+      if (changedFields.organization_type !== undefined) updatePayload.organization_type = changedFields.organization_type || null;
+      if (changedFields.status !== undefined) {
+        const v = String(changedFields.status).toLowerCase();
+        updatePayload.status = v === "active" ? "active" : "deactivated";
+      }
+      if (
+        changedFields.adminFirstname !== undefined ||
+        changedFields.adminLastname !== undefined ||
+        changedFields.adminPhoneNumber !== undefined
+      ) {
+        updatePayload.admin_info = {
+          phone_number: changedFields.adminPhoneNumber ?? defaults?.adminPhoneNumber ?? "",
+          firstname: changedFields.adminFirstname ?? defaults?.adminFirstname ?? "",
+          lastname: changedFields.adminLastname ?? defaults?.adminLastname ?? "",
+        };
       }
       const res = await processRequestAuth(
         "put",
         API_ENDPOINTS.EDIT_ORGANIZATION(slug),
-        {
-          ...changedFields,
-        }
+        updatePayload
       );
-      console.log("Organization updated successfully:", res);
-
       setIsOpen(true);
     } catch (error) {
       console.error("Error submitting form:", error);
-      // Handle error appropriately, e.g., show a toast notification
-    } finally {
     }
   };
 
@@ -131,10 +158,18 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
 
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-            type="text"
-            name="adminName"
+            name="adminFirstname"
             control={form.control}
-            labelText="Admin/Contact Person name"
+            labelText="Admin first name"
+            type="text"
+            placeholder="Enter here"
+          />
+          <FieldBox
+            bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+            type="text"
+            name="adminLastname"
+            control={form.control}
+            labelText="Admin last name"
             placeholder="Enter here"
           />
 
@@ -181,6 +216,14 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
             options={orgStatus}
             defaultOption={data?.status}
             labelText="Status"
+            placeholder="Select"
+          />
+          <FieldSelect
+            bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
+            name="organization_type"
+            control={form.control}
+            options={orgTypes}
+            labelText="Organization type"
             placeholder="Select"
           />
 

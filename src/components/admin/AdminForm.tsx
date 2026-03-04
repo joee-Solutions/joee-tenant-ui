@@ -28,11 +28,9 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
-import ProfileImageUploader from "../ui/ImageUploader";
 import { useRouter } from "next/navigation";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
-import { tr } from "date-fns/locale";
 import { Input } from "../ui/input";
 import { Spinner } from "../icons/Spinner";
 import { toast } from "react-toastify";
@@ -49,7 +47,6 @@ const AdminFormSchema = z.object({
   role: z.string().min(1, "This field is required"),
   phone_number: z.string().min(1, "This field is required"),
   company: z.string().min(1, "This field is required"),
-  profileImage: z.string().optional(),
   password: z.string().min(1, "This field is required"),
   address: z.string().optional(),
 });
@@ -92,9 +89,18 @@ export default function AdminForm() {
   const [isOpen, setIsOpen] = React.useState(false);
 
   const onSubmit = async (payload: AdminFormSchemaType) => {
-    console.log('Submitting payload:', payload);
     try {
-      const response = await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, payload);
+      // Match API contract exactly: first_name, last_name, email, password, phone_number, address, role
+      const body: Record<string, string> = {
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        email: payload.email,
+        password: payload.password,
+        phone_number: payload.phone_number,
+        address: payload.address ?? "",
+        role: payload.role,
+      };
+      const response = await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, body);
       
       // Check if admin creation was successful
       // Handle both success response format and error response format
@@ -233,7 +239,6 @@ export default function AdminForm() {
       </h2>
       <FormComposer form={form} onSubmit={onSubmit}>
         <div className="flex flex-col gap-[30px]">
-          <ProfileImageUploader />
           <div className="grid grid-cols-2 gap-5 items-start justify-center">
             <FieldBox
               bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
