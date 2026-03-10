@@ -58,15 +58,13 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     sexual_orientation: demographic?.sexualOrientation || '',
     // image field removed - not in backend schema
 
-    // Contact info - build object without phone numbers first, then conditionally add them
+    // Contact info - only include email/email_work when valid (backend rejects empty string)
     contact_info: (() => {
       const contactInfo: any = {
         country: addDemographic?.country || "",
         state: addDemographic?.state || "",
         city: addDemographic?.city || "",
         zip_code: addDemographic?.postal || "",
-        email: addDemographic?.email || "",
-        email_work: addDemographic?.workEmail || "",
         address: addDemographic?.address || "",
         current_address: addDemographic?.currentAddress || "",
         method_of_contact: addDemographic?.contactMethod || "",
@@ -110,7 +108,14 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
         household_size: addDemographic?.householdSize || 0,
         notes: addDemographic?.notes || "",
       };
-      
+      const emailVal = (addDemographic?.email || "").trim();
+      if (emailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+        contactInfo.email = emailVal;
+      }
+      const workEmailVal = (addDemographic?.workEmail || "").trim();
+      if (workEmailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmailVal)) {
+        contactInfo.email_work = workEmailVal;
+      }
       // Only add phone numbers if they have valid, non-empty values
       // Format phone numbers before adding - must be valid E.164 format
       const mobilePhone = formatPhoneNumber(addDemographic?.mobilePhone);
@@ -286,8 +291,12 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
     mappedData.contact_info.state = mappedData.contact_info.state || '';
     mappedData.contact_info.city = mappedData.contact_info.city || '';
     mappedData.contact_info.zip_code = mappedData.contact_info.zip_code || '';
-    mappedData.contact_info.email = mappedData.contact_info.email || '';
-    mappedData.contact_info.email_work = mappedData.contact_info.email_work || '';
+    if (!mappedData.contact_info.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.contact_info.email.trim())) {
+      delete mappedData.contact_info.email;
+    }
+    if (!mappedData.contact_info.email_work?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.contact_info.email_work.trim())) {
+      delete mappedData.contact_info.email_work;
+    }
     mappedData.contact_info.address = mappedData.contact_info.address || '';
     mappedData.contact_info.current_address = mappedData.contact_info.current_address || '';
     mappedData.contact_info.method_of_contact = mappedData.contact_info.method_of_contact || '';
@@ -298,14 +307,15 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
     mappedData.contact_info.notes = mappedData.contact_info.notes || '';
     
     // Validate and format phone numbers - only include if valid, otherwise remove
-    if (mappedData.contact_info.phone_number_mobile !== undefined) {
-      const formattedMobile = formatPhoneNumber(mappedData.contact_info.phone_number_mobile);
+    if (mappedData.contact_info.phone_number_mobile !== undefined && mappedData.contact_info.phone_number_mobile !== null && mappedData.contact_info.phone_number_mobile !== '') {
+      const formattedMobile = formatPhoneNumber(String(mappedData.contact_info.phone_number_mobile));
       if (formattedMobile && /^\+\d{10,15}$/.test(formattedMobile)) {
         mappedData.contact_info.phone_number_mobile = formattedMobile;
       } else {
-        // Remove invalid phone number - don't send it to backend
         delete mappedData.contact_info.phone_number_mobile;
       }
+    } else {
+      delete mappedData.contact_info.phone_number_mobile;
     }
     
     if (mappedData.contact_info.phone_number_home !== undefined) {
@@ -366,17 +376,15 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
     }
   }
   
-  // Ensure emergencyInfo fields are properly formatted
+  // Ensure emergencyInfo fields are properly formatted; omit invalid/empty email (backend rejects empty)
   if (mappedData.emergencyInfo) {
     mappedData.emergencyInfo.emergency_contact_name = mappedData.emergencyInfo.emergency_contact_name || '';
     mappedData.emergencyInfo.emergency_contact_relationship = mappedData.emergencyInfo.emergency_contact_relationship || '';
-    // Only include email if it's valid, otherwise set to empty string
-    if (mappedData.emergencyInfo.emergency_contact_email) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.emergencyInfo.emergency_contact_email)) {
-        mappedData.emergencyInfo.emergency_contact_email = '';
-      }
+    const ecEmail = (mappedData.emergencyInfo.emergency_contact_email || '').trim();
+    if (!ecEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ecEmail)) {
+      delete mappedData.emergencyInfo.emergency_contact_email;
     } else {
-      mappedData.emergencyInfo.emergency_contact_email = '';
+      mappedData.emergencyInfo.emergency_contact_email = ecEmail;
     }
   }
   
@@ -402,5 +410,40 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
   }
   
   return mappedData;
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const E164_REGEX = /^\+\d{10,15}$/;
+
+/**
+ * Remove contact_info and emergencyInfo fields that would fail backend validation
+ * (email must be email, phone must be valid). Call right before sending to API.
+ */
+export function stripInvalidOptionalContactFields(
+  payload: ReturnType<typeof mapFormDataToPatientDto>
+): void {
+  if (payload.contact_info && typeof payload.contact_info === 'object') {
+    const ci = payload.contact_info as Record<string, unknown>;
+    const email = typeof ci.email === 'string' ? ci.email.trim() : '';
+    if (!email || !EMAIL_REGEX.test(email)) {
+      delete ci.email;
+    }
+    const emailWork = typeof ci.email_work === 'string' ? ci.email_work.trim() : '';
+    if (!emailWork || !EMAIL_REGEX.test(emailWork)) {
+      delete ci.email_work;
+    }
+    const mobile = ci.phone_number_mobile;
+    const mobileStr = mobile != null && mobile !== '' ? String(mobile) : '';
+    if (!mobileStr || !E164_REGEX.test(mobileStr)) {
+      delete ci.phone_number_mobile;
+    }
+  }
+  if (payload.emergencyInfo && typeof payload.emergencyInfo === 'object') {
+    const ei = payload.emergencyInfo as Record<string, unknown>;
+    const ecEmail = typeof ei.emergency_contact_email === 'string' ? ei.emergency_contact_email.trim() : '';
+    if (!ecEmail || !EMAIL_REGEX.test(ecEmail)) {
+      delete ei.emergency_contact_email;
+    }
+  }
 }
 

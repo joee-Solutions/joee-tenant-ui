@@ -2,21 +2,10 @@
 import React from "react";
 import FieldSelect from "@/components/shared/form/FieldSelect";
 import FormComposer from "@/components/shared/form/FormComposer";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Check,
-  CheckCircle2,
   CircleArrowLeft,
   Edit,
   EyeClosedIcon,
@@ -28,7 +17,6 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
-import { useRouter } from "next/navigation";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { Input } from "../ui/input";
@@ -86,7 +74,6 @@ export default function AdminForm() {
       address: "",
     },
   });
-  const [isOpen, setIsOpen] = React.useState(false);
 
   const onSubmit = async (payload: AdminFormSchemaType) => {
     try {
@@ -142,38 +129,11 @@ export default function AdminForm() {
         return;
       }
 
-      // Send notification after successful admin creation
-      try {
-        const adminFullName = `${payload.first_name} ${payload.last_name}`;
-        // Extract admin ID from the data (handle both single object and array)
-        const currentAdminId = Array.isArray(adminData) 
-          ? (adminData[0]?.id || 1)
-          : (adminData?.id || 1);
-        
-        const notificationData = {
-          title: "New Admin Created",
-          message: `A new admin account has been created for ${adminFullName} (${payload.email}) with role: ${payload.role}`,
-          type: "system",
-          priority: "medium",
-          userId: currentAdminId,
-          metadata: {},
-        };
-
-        await processRequestAuth("post", API_ENDPOINTS.CREATE_NOTIFICATION, notificationData);
-        console.log("Notification sent successfully for new admin creation");
-      } catch (notificationError) {
-        // Log notification error but don't fail the admin creation
-        console.error("Error sending notification:", notificationError);
-        // Optionally show a warning toast
-        toast.warning("Admin created successfully, but notification could not be sent");
-      }
-
       form.reset();
       toast.success("Admin created successfully.", {
         position: "top-right",
         autoClose: 4000,
       });
-      setIsOpen(true);
     } catch (error: any) {
       console.error("Error creating admin:", error);
       
@@ -231,7 +191,6 @@ export default function AdminForm() {
   };
 
   const handleEdit = () => { };
-  const router = useRouter();
   return (
     <>
       <h2 className="font-bold text-base text-black mb-[30px]">
@@ -353,31 +312,6 @@ export default function AdminForm() {
             }
           </Button>
           <div className="flex items-center gap-7">
-            <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-              <AlertDialogTrigger asChild>
-
-              </AlertDialogTrigger>
-              <AlertDialogContent className="bg-white flex flex-col items-center text-center">
-                <AlertDialogHeader className="flex flex-col items-center">
-                  <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
-                  <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">
-                    Success
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="font-normal text-base text-[#737373]">
-                    Admin has been created successfully.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogAction
-                    className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base"
-                    onClick={() => router.push("/dashboard/admin/list")}
-                  >
-                    Continue
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
             {/* <Button
               onClick={handleEdit}
               type="button"

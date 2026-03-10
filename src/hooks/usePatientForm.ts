@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { FormDataStepper } from "@/components/Org/Patients/PatientStepper";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
-import { mapFormDataToPatientDto, normalizePatientData } from "@/utils/patientDataMapper";
+import { mapFormDataToPatientDto, normalizePatientData, stripInvalidOptionalContactFields } from "@/utils/patientDataMapper";
 import { validateRequiredFields, getFirstStepWithMissingData } from "@/utils/patientValidation";
 
 interface UsePatientFormOptions {
@@ -74,6 +74,7 @@ export function usePatientForm({
           // Map and normalize form data for API
           const mappedData = mapFormDataToPatientDto(formData);
           normalizePatientData(mappedData, formData);
+          stripInvalidOptionalContactFields(mappedData);
           
           let response;
           if (patientId) {
@@ -204,7 +205,7 @@ export function usePatientForm({
     
     if (!validation.isValid) {
       // Show detailed error message
-      const errorMessage = `Cannot save: Please fill in all required fields:\n\n${validation.errors.map((err, idx) => `${idx + 1}. ${err}`).join('\n')}\n\nRequired fields: First Name, Last Name, Gender, Email, and Address.`;
+      const errorMessage = `Cannot save: Please fill in all required fields:\n\n${validation.errors.map((err, idx) => `${idx + 1}. ${err}`).join('\n')}\n\nRequired fields: First Name, Last Name, and Gender.`;
       toast.error(errorMessage, { 
         toastId: "save-validation-error",
         autoClose: 7000,

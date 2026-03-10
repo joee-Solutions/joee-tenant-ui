@@ -91,7 +91,7 @@ export default function MedicalSymptomsForm() {
   const { formState: { errors } } = useFormContext<Pick<FormDataStepper, 'additionalReview'>>();
 
   return (
-    <form className="mx-auto p-6">
+    <div className="mx-auto p-6">
       <SymptomCategory
         title="Psychiatric"
         categoryKey="psychiatric"
@@ -128,6 +128,6 @@ export default function MedicalSymptomsForm() {
           { id: "allergicReactions", label: "Allergic Reactions" },
         ]}
       />
-    </form>
+    </div>
   );
 }

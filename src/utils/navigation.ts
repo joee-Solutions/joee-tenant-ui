@@ -102,21 +102,21 @@ export const sideNavigation = [
   //     },
   //   ],
   // },
-  // {
-  //   name: "Reports & Analytics",
-  //   icon: icons.FileChartColumn,
-  //   href: "/dashboard/reports",
-  //   showRuler: true,
-  //   isTitle: true,
+  {
+    name: "Reports & Analytics",
+    icon: icons.FileChartColumn,
+    href: "/dashboard/reports",
+    showRuler: true,
+    isTitle: true,
 
-  //   children: [
-  //     {
-  //       title: "Reports Dashboard",
-  //       icon: icons.FileChartColumn,
-  //       href: "/dashboard/reports",
-  //     },
-  //   ],
-  // },
+    children: [
+      {
+        title: "Reports Dashboard",
+        icon: icons.FileChartColumn,
+        href: "/dashboard/reports",
+      },
+    ],
+  },
   { 
     name: "Settings & Support",
     icon: OrgIcon,

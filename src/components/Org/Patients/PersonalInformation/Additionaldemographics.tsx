@@ -21,7 +21,7 @@ export const addionalDemoSchema = z.object({
   state: z.string().optional(),
   city: z.string().optional(),
   postal: z.string().optional(),
-  email: z.string().email("Invalid email address").min(1, "Email is required"),
+  email: z.string().optional().refine((val) => !val || val.trim() === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim()), { message: "Invalid email address" }),
   workEmail: z.string().email("Invalid work email address").optional(),
   homePhone: z.string().optional().refine(
     (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
@@ -31,7 +31,7 @@ export const addionalDemoSchema = z.object({
     (val) => !val || /^[\d\s\-\+\(\)]+$/.test(val),
     { message: "Invalid phone number format" }
   ),
-  address: z.string().min(1, "Address is required"),
+  address: z.string().optional(),
   addressFrom: z.string().optional(),
   addressTo: z.string().optional(),
   currentAddress: z.string().optional(),

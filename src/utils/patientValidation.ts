@@ -19,16 +19,11 @@ export function validateRequiredFields(formData: FormDataStepper): { isValid: bo
     errors.push('Gender is required');
   }
   
-  // Check email
-  if (!formData.addDemographic?.email || formData.addDemographic.email.trim() === '') {
-    errors.push('Email is required');
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.addDemographic.email)) {
-    errors.push('Please enter a valid email address');
-  }
-  
-  // Check address
-  if (!formData.addDemographic?.address || formData.addDemographic.address.trim() === '') {
-    errors.push('Address is required');
+  // Email is optional; if provided, validate format
+  if (formData.addDemographic?.email && formData.addDemographic.email.trim() !== '') {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.addDemographic.email.trim())) {
+      errors.push('Please enter a valid email address');
+    }
   }
   
   return {
@@ -43,9 +38,6 @@ export function validateRequiredFields(formData: FormDataStepper): { isValid: bo
 export function getFirstStepWithMissingData(formData: FormDataStepper): number {
   if (!formData.demographic?.firstName || !formData.demographic?.lastName || !formData.demographic?.sex) {
     return 0; // Demographics step
-  }
-  if (!formData.addDemographic?.email || !formData.addDemographic?.address) {
-    return 1; // Additional demographics step
   }
   return 0; // Default to first step
 }
