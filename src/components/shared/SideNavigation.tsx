@@ -7,6 +7,7 @@ import Cookies from "js-cookie";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { useAdminProfile } from "@/hooks/swr";
 
 interface SideNavigationProps {
   isMobileMenuOpen?: boolean;
@@ -15,6 +16,12 @@ interface SideNavigationProps {
 
 const SideNavigation = ({ isMobileMenuOpen, setIsMobileMenuOpen }: SideNavigationProps) => {
   const router = useRouter();
+  const { data: adminProfile } = useAdminProfile();
+  const roles: string[] = Array.isArray(adminProfile)
+    ? (adminProfile[0]?.roles ?? [])
+    : (adminProfile?.roles ?? []);
+  const isSuperAdmin = roles.some((r) => String(r) === "Super_Admin");
+
   const handleLogout = async () => {
     try {
       // Get user email before clearing cookies
@@ -131,7 +138,13 @@ const SideNavigation = ({ isMobileMenuOpen, setIsMobileMenuOpen }: SideNavigatio
             )}
             <div className="flex flex-col w-full">
               {item.children &&
-                item.children.map((child) => {
+                item.children
+                  .filter(
+                    (child) =>
+                      !(child as { superAdminOnly?: boolean }).superAdminOnly ||
+                      isSuperAdmin
+                  )
+                  .map((child) => {
                   return (
                     <div key={child.title} className="py-1  w-full">
                       <div className="flex   gap-1">

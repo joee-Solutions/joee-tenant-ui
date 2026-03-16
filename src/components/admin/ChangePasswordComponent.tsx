@@ -13,8 +13,20 @@ import { generateRandomPassword } from "@/lib/utils";
 
 const changePasswordSchema = zod.object({
   oldPassword: zod.string().min(1, "This field is required"),
-  newPassword: zod.string().min(1, "This field is required"),
-  confirmPassword: zod.string().min(1, "This field is required"),
+  newPassword: zod
+    .string()
+    .min(8, "Password must be at least 8 characters long")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{\":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
+      "Password must contain at least one lowercase, uppercase, number and one special character"
+    ),
+  confirmPassword: zod
+    .string()
+    .min(8, "Password must be at least 8 characters long")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{\":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
+      "Password must contain at least one lowercase, uppercase, number and one special character"
+    ),
 });
 
 type ChangePasswordSchemaType = zod.infer<typeof changePasswordSchema>;

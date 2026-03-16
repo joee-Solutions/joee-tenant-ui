@@ -17,6 +17,9 @@ import Image from "next/image";
 import { formatDateFn } from "@/lib/utils";
 import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 import { Country, State, City } from "country-state-city";
+import { cityOverrides } from "@/lib/geo/cityOverrides";
+import { LocationSearchableSelect } from "@/components/shared/form/LocationSearchableSelect";
+import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 
 const EditOrganizationSchema = z.object({
   name: z.string().min(1, "This field is required"),
@@ -86,6 +89,7 @@ export default function EditOrganizationModal({
 }: EditOrganizationModalProps) {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [defaults, setDefaults] = useState<any>(null);
+  const [editSuccessOpen, setEditSuccessOpen] = useState(false);
 
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
@@ -150,10 +154,25 @@ export default function EditOrganizationModal({
   // Get cities based on selected country and state (as names for display) - sorted alphabetically
   const cityOptions = useMemo(() => {
     if (!selectedCountryCode || !selectedStateCode) return [];
-    return City.getCitiesOfState(selectedCountryCode, selectedStateCode)
-      .map((city) => city.name)
-      .sort((a, b) => a.localeCompare(b));
-  }, [selectedCountryCode, selectedStateCode]);
+    const baseCities = City.getCitiesOfState(selectedCountryCode, selectedStateCode)
+      .map((city) => city.name);
+
+    const overrideKey = `${selectedCountryCode}-${selectedStateCode}`;
+    const extraCities = cityOverrides[overrideKey] || [];
+
+    // Ensure the organization's existing city is always present so it can be displayed
+    const existingCity =
+      (organization?.address_metadata?.city as string | undefined) ||
+      (organization?.city as string | undefined) ||
+      undefined;
+
+    const merged = [...baseCities, ...extraCities];
+    if (existingCity && !merged.includes(existingCity)) {
+      merged.push(existingCity);
+    }
+
+    return Array.from(new Set(merged)).sort((a, b) => a.localeCompare(b));
+  }, [selectedCountryCode, selectedStateCode, organization]);
 
   // Reset state and city when country changes
   useEffect(() => {
@@ -395,6 +414,7 @@ export default function EditOrganizationModal({
         adminPhoneNumber,
         status,
         org_type, // Exclude org_type from update - backend validation expects status values, not org types
+        fax,
         ...rest
       } = changedFields;
 
@@ -434,6 +454,12 @@ export default function EditOrganizationModal({
         };
       }
 
+      // Map fax to fax_number when changed
+      if (fax !== undefined) {
+        const faxValue = String(fax ?? "").trim();
+        updatePayload.fax_number = faxValue;
+      }
+
       const response = await processRequestAuth(
         "put",
         API_ENDPOINTS.EDIT_ORGANIZATION(String(organization.id)),
@@ -467,9 +493,7 @@ export default function EditOrganizationModal({
       }
       
       toast.success("Organization updated successfully");
-
-      onSuccess();
-      onClose();
+      setEditSuccessOpen(true);
     } catch (error) {
       console.error(error);
       toast.error("Failed to update organization");
@@ -556,58 +580,45 @@ export default function EditOrganizationModal({
             {/* Country, State, City */}
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                <FieldSelect
-                  bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                  name="country"
+                <LocationSearchableSelect
                   control={form.control}
+                  name="country"
+                  label="Country"
                   options={countryOptions}
-                  labelText="Country"
                   placeholder="Select Country"
+                  searchPlaceholder="Search country..."
                 />
-                {selectedCountryName && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      form.setValue("country", "");
-                      form.setValue("state", "");
-                      form.setValue("city", "");
-                    }}
-                    className="text-xs text-blue-600 hover:underline mt-1"
-                  >
-                    Clear selection
-                  </button>
-                )}
               </div>
               <div className="w-full">
-                <FieldSelect
-                  bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                  name="state"
+                <LocationSearchableSelect
                   control={form.control}
+                  name="state"
+                  label="State/Province"
                   options={stateOptions}
-                  labelText="State"
-                  placeholder={selectedCountryName ? "Select State" : "Select Country first"}
+                  placeholder={
+                    selectedCountryName
+                      ? "Select State/Province"
+                      : "Select Country first"
+                  }
+                  searchPlaceholder="Search state/province..."
                   disabled={!selectedCountryName}
                 />
-                {!selectedCountryName && (
-                  <p className="text-xs text-gray-500 mt-1">Please select a country first</p>
-                )}
               </div>
             </div>
 
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                <FieldSelect
-                  bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                  name="city"
+                <LocationSearchableSelect
                   control={form.control}
+                  name="city"
+                  label="City"
                   options={cityOptions}
-                  labelText="City"
-                  placeholder={selectedStateName ? "Select City" : "Select State first"}
+                  placeholder={
+                    selectedStateName ? "Select City" : "Select State first"
+                  }
+                  searchPlaceholder="Search city..."
                   disabled={!selectedStateName}
                 />
-                {!selectedStateName && selectedCountryName && (
-                  <p className="text-xs text-gray-500 mt-1">Please select a state first</p>
-                )}
               </div>
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -731,6 +742,16 @@ export default function EditOrganizationModal({
           </div>
         </FormComposer>
       </div>
+
+      <OrganizationSuccessModal
+        open={editSuccessOpen}
+        onOpenChange={setEditSuccessOpen}
+        description="Organization has been updated successfully."
+        onContinue={() => {
+          onSuccess();
+          onClose();
+        }}
+      />
     </div>
   );
 }

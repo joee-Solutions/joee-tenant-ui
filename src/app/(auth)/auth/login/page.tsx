@@ -18,6 +18,11 @@ import { useTenantStore } from "@/contexts/AuthProvider";
 import { getToken } from "@/framework/get-token";
 import { offlineAuthService } from "@/lib/offline/offlineAuth";
 import { ensureOfflineDbReady } from "@/lib/offline/database";
+import {
+  extractLoginSession,
+  extractMfaChallenge,
+  isMfaRequiredResponse,
+} from "@/types/authResponse";
 
 type LoginProps = z.infer<typeof schema>;
 
@@ -149,41 +154,39 @@ const TenantLoginPage = () => {
       const rt = await processRequestNoAuth("post", API_ENDPOINTS.LOGIN, data);
       console.log("Login response:", rt);
       if (rt) {
-        // Extract token from response - prioritize the nested data structure
-        // Response structure: { success, message, data: { tokens: { accessToken, refreshToken }, user } }
-        const authToken = 
-          rt.data?.tokens?.accessToken ||  // Primary path: nested in data.tokens
-          rt.tokens?.accessToken ||        // Fallback: direct tokens
-          rt.token || 
-          rt.data?.token || 
-          rt.auth_token || 
-          rt.data?.auth_token;
-        
-        console.log("Extracted auth token:", authToken ? "Found" : "Not found");
-        
-        if (authToken) {
-          // Set auth_token cookie
-          Cookies.set("auth_token", authToken, { expires: 1 });
-          
-          // Store refresh token if available - prioritize nested structure
-          const refreshToken = 
-            rt.data?.tokens?.refreshToken ||  // Primary path: nested in data.tokens
-            rt.tokens?.refreshToken ||        // Fallback: direct tokens
-            rt.refreshToken || 
-            rt.data?.refreshToken;
-          
-          if (refreshToken) {
-            Cookies.set("refresh_token", refreshToken, { expires: 7 });
+        // First-time / MFA: data.mfa_required + data.token (challenge) → OTP page (do NOT use as auth_token)
+        if (isMfaRequiredResponse(rt)) {
+          const mfa = extractMfaChallenge(rt)!;
+          Cookies.set("mfa_token", mfa.token, { expires: 1 });
+          if (mfa.mfaType) {
+            try {
+              sessionStorage.setItem("mfa_type", mfa.mfaType);
+            } catch {
+              /* ignore */
+            }
           }
-          
-          // Remove mfa_token if it exists (no longer needed)
+          toast.info(mfa.message || "Enter the code to verify your account.", {
+            toastId: "mfa-required",
+          });
+          router.push("/auth/verify-otp");
+          return;
+        }
+
+        // Full session: data.tokens.accessToken (never use data.token here — that was MFA-only)
+        const session = extractLoginSession(rt);
+        const authToken = session?.accessToken;
+        console.log("Extracted auth token:", authToken ? "Found" : "Not found");
+
+        if (authToken) {
+          Cookies.set("auth_token", authToken, { expires: 1 });
+          if (session!.refreshToken) {
+            Cookies.set("refresh_token", session!.refreshToken, { expires: 7 });
+          }
           Cookies.remove("mfa_token");
-          
-          // Set user data if available in login response - prioritize nested structure
-          const userData = rt.data?.user || rt.user;
+          const userData = session!.user;
           if (userData) {
             Cookies.set("user", JSON.stringify(userData), { expires: 1 });
-            setUser(userData);
+            setUser(userData as unknown as Parameters<typeof setUser>[0]);
           }
           
           // Store credentials for offline login (encrypted)
@@ -194,7 +197,7 @@ const TenantLoginPage = () => {
               data.email,
               data.password,
               authToken,
-              userData
+              userData ?? undefined
             );
             
             // Wait a moment for IndexedDB to complete
@@ -232,12 +235,18 @@ const TenantLoginPage = () => {
           const { resetRedirectFlag } = await import("@/framework/https");
           resetRedirectFlag();
           
-          toast.success("Login successful", { toastId: "login-success" });
+          toast.success(session?.toastMessage || "Login successful", {
+            toastId: "login-success",
+          });
           router.push("/dashboard");
         } else {
-          // If no token is available, show error
           console.error("Login response structure:", JSON.stringify(rt, null, 2));
-          toast.error("Login failed: No authentication token received");
+          toast.error(
+            (rt as { data?: { message?: string }; message?: string })?.data
+              ?.message ||
+              (rt as { message?: string })?.message ||
+              "Login failed: No authentication token received"
+          );
         }
       }
     } catch (error: any) {

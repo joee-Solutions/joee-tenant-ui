@@ -9,7 +9,7 @@ import DataTable from "@/components/shared/table/DataTable";
 import Pagination from "@/components/shared/table/pagination";
 import { useAdminUsersData } from "@/hooks/swr";
 import { AdminUser } from "@/lib/types";
-import { Eye, User, MoreVertical } from "lucide-react";
+import { Eye, User, MoreVertical, Trash2 } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -18,6 +18,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ViewAdminModal from "@/components/admin/ViewAdminModal";
+import SuperAdminGuard from "@/components/admin/SuperAdminGuard";
+import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { processRequestAuth } from "@/framework/https";
+import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { useSWRConfig } from "swr";
+import { toast } from "react-toastify";
 
 // Mock table data structure - replace with actual data from API
 const adminTableData = [
@@ -40,6 +46,11 @@ export default function AdminListPage() {
   const [status, setStatus] = useState("");
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const { mutate: globalMutate } = useSWRConfig();
 
   // Fetch admin users
   const { data: adminsData, isLoading, error } = useAdminUsersData();
@@ -134,25 +145,53 @@ export default function AdminListPage() {
     setViewModalOpen(true);
   };
 
+  const handleDeleteClick = (admin: AdminUser) => {
+    setAdminToDelete(admin);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!adminToDelete?.id) return;
+    setDeletingId(adminToDelete.id);
+    try {
+      await processRequestAuth(
+        "delete",
+        API_ENDPOINTS.DELETE_ADMIN(adminToDelete.id)
+      );
+      toast.success("Admin deleted successfully");
+      setDeleteModalOpen(false);
+      setAdminToDelete(null);
+      globalMutate(
+        (key) =>
+          typeof key === "string" && key.includes(API_ENDPOINTS.GET_SUPER_ADMIN)
+      );
+    } catch (err) {
+      toast.error("Failed to delete admin");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // Handle error state - only show error if we don't have any data (including cached data)
-  if (error && (!adminsData || (Array.isArray(adminsData) && adminsData.length === 0))) {
-    return (
+  const errorContent =
+    error && (!adminsData || (Array.isArray(adminsData) && adminsData.length === 0)) ? (
       <div className="px-10 pt-[32px] pb-[56px]">
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <h2 className="text-2xl font-semibold text-red-600">Failed to Load Admin Users</h2>
           <p className="text-gray-600">Please try refreshing the page or contact support.</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Refresh Page
           </button>
         </div>
       </div>
-    );
-  }
+    ) : null;
 
   return (
+    <SuperAdminGuard>
+      {errorContent || (
     <div className="px-10 pt-[32px] pb-[56px] h-fit max-w-6xl mx-auto w-full">
       <section className="shadow-[0px_0px_4px_1px_#0000004D]">
         <header className="flex items-center justify-between gap-5 py-5 border-b px-4">
@@ -262,6 +301,13 @@ export default function AdminListPage() {
                           <Eye className="size-4" />
                           View
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(admin)}
+                          className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="size-4" />
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -297,6 +343,27 @@ export default function AdminListPage() {
           }}
         />
       )}
+
+      {/* Delete Admin Modal */}
+      {deleteModalOpen && adminToDelete && (
+        <DeleteWarningModal
+          title="Delete Admin"
+          message="Are you sure you want to delete"
+          itemName={
+            adminToDelete.first_name || adminToDelete.last_name
+              ? `${adminToDelete.first_name || ""} ${adminToDelete.last_name || ""}`.trim()
+              : adminToDelete.email || "this admin"
+          }
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => {
+            setDeleteModalOpen(false);
+            setAdminToDelete(null);
+          }}
+          isDeleting={deletingId === adminToDelete?.id}
+        />
+      )}
     </div>
+      )}
+    </SuperAdminGuard>
   );
 }

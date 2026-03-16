@@ -28,6 +28,7 @@ import { extractData } from "@/framework/joee.client";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
 
 function PageContent() {
@@ -44,7 +45,9 @@ function PageContent() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<any | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
-  
+  const [deleteSuccessOpen, setDeleteSuccessOpen] = useState(false);
+  const [deletedOrgName, setDeletedOrgName] = useState("");
+
   // Map sortBy to backend fields
   const sortFieldMap: Record<string, string> = {
     Name: "name",
@@ -145,12 +148,12 @@ function PageContent() {
         "delete",
         API_ENDPOINTS.EDIT_ORGANIZATION(String(selectedOrg.id))
       );
+      const removedName = selectedOrg.name || "Organization";
       toast.success("Organization deleted successfully");
-      
       setDeleteModalOpen(false);
       setSelectedOrg(null);
-      
-      // Revalidate to refresh data
+      setDeletedOrgName(removedName);
+      setDeleteSuccessOpen(true);
       globalMutate(
         (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS)
       );
@@ -466,6 +469,16 @@ function PageContent() {
               isDeleting={updatingId === selectedOrg?.id}
             />
           )}
+
+          <OrganizationSuccessModal
+            open={deleteSuccessOpen}
+            onOpenChange={setDeleteSuccessOpen}
+            description={
+              deletedOrgName
+                ? `"${deletedOrgName}" has been deleted successfully.`
+                : "Organization has been deleted successfully."
+            }
+          />
         </>
       )}
     </section>

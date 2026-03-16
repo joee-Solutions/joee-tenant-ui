@@ -26,6 +26,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'joee.nyc3.cdn.digitaloceanspaces.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

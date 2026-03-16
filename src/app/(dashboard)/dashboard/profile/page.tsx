@@ -84,24 +84,28 @@ const ProfilePage = () => {
               {item}
             </Button>
           ))}
-          <Link
-            href="/dashboard/admin/create"
-            className={cn(
-              `font-medium h-[60px] flex items-center justify-start text-sm text-[#737373] bg-[#F3F3F3] gap-1 py-[18px] px-7`
-            )}
-          >
-            <BookUser className="" />
-            Create Admin
-          </Link>
-          <Link
-            href="/dashboard/admin/list"
-            className={cn(
-              `font-medium h-[60px] flex items-center justify-start text-sm text-[#737373] bg-[#F3F3F3] gap-1 py-[18px] px-7`
-            )}
-          >
-            <Users className="fill-current" />
-            Admin List
-          </Link>
+          {adminData?.roles?.includes("Super_Admin") && (
+            <>
+              <Link
+                href="/dashboard/admin/create"
+                className={cn(
+                  `font-medium h-[60px] flex items-center justify-start text-sm text-[#737373] bg-[#F3F3F3] gap-1 py-[18px] px-7`
+                )}
+              >
+                <BookUser className="" />
+                Create Admin
+              </Link>
+              <Link
+                href="/dashboard/admin/list"
+                className={cn(
+                  `font-medium h-[60px] flex items-center justify-start text-sm text-[#737373] bg-[#F3F3F3] gap-1 py-[18px] px-7`
+                )}
+              >
+                <Users className="fill-current" />
+                Admin List
+              </Link>
+            </>
+          )}
         </div>
       </aside>
       <div className="px-10 pt-[32px] pb-[56px] shadow-[0px_0px_4px_1px_#0000004D] rounded-md h-fit">

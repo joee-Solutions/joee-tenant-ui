@@ -20,6 +20,7 @@ import { Spinner } from "@/components/icons/Spinner";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useTenantStore } from "@/contexts/AuthProvider";
+import { extractLoginSession } from "@/types/authResponse";
 
 type VerifyOtpLogin = z.infer<typeof schema>;
 const schema = z.object({
@@ -27,7 +28,14 @@ const schema = z.object({
 });
 const VerifyOtpLoginClient = ({ token }: { token: string }) => {
   const { setUser } = useTenantStore(state => state.actions);
-  useEffect(() => {}, []);
+  const [mfaType, setMfaType] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      setMfaType(sessionStorage.getItem("mfa_type"));
+    } catch {
+      setMfaType(null);
+    }
+  }, []);
   // const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const {
@@ -51,18 +59,54 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
           token,
         }
       );
-      if (rt.success === true && rt?.data?.token) {
-        console.log(data, "data");
+      // Same envelope as full login: data.tokens.accessToken + refreshToken + user
+      type VerifiedSession = {
+        accessToken: string;
+        refreshToken?: string;
+        user?: unknown;
+        toastMessage?: string;
+      };
+      let session: VerifiedSession | null = extractLoginSession(rt);
+      if (
+        !session &&
+        rt?.success === true &&
+        rt?.data?.token &&
+        !rt?.data?.mfa_required
+      ) {
+        session = {
+          accessToken: rt.data.token as string,
+          refreshToken: rt.data.refreshToken as string | undefined,
+          user: rt.data.user,
+          toastMessage: rt.data.message || rt.message,
+        };
+      }
+
+      if (session?.accessToken) {
         Cookies.remove("mfa_token");
-        Cookies.set("auth_token", rt.data.token, {
-          expires: 1,
+        try {
+          sessionStorage.removeItem("mfa_type");
+        } catch {
+          /* ignore */
+        }
+        Cookies.set("auth_token", session.accessToken, { expires: 1 });
+        if (session.refreshToken) {
+          Cookies.set("refresh_token", session.refreshToken, { expires: 7 });
+        }
+        if (session.user) {
+          Cookies.set("user", JSON.stringify(session.user), { expires: 1 });
+          setUser(session.user as Parameters<typeof setUser>[0]);
+        }
+        const { resetRedirectFlag } = await import("@/framework/https");
+        resetRedirectFlag();
+        toast.success(session.toastMessage || "Account verified. Welcome!", {
+          toastId: "verify-success",
         });
-        //   Cookies.set("refresh_token", rt.data.refresh_token, { expires: 1 });
-        Cookies.set("user", JSON.stringify(rt.data.user), {
-          expires: 1,
-        });
-        setUser(rt.data.user);
-        router.push(`/dashboard`);
+        router.push("/dashboard");
+      } else {
+        toast.error(
+          (rt as { data?: { message?: string } })?.data?.message ||
+            "Verification failed. Check your code and try again."
+        );
       }
     } catch (error: any) {
       if (
@@ -116,7 +160,11 @@ const VerifyOtpLoginClient = ({ token }: { token: string }) => {
           <h2 className="login font-bold text-2xl md:text-3xl">
             Enter Your Code
           </h2>
-          <span className="text-base">We sent a code to your email</span>
+          <span className="text-base">
+            {mfaType === "totp"
+              ? "Enter the 6-digit code from your authenticator app"
+              : "We sent a code to your email"}
+          </span>
         </div>
 
         <form

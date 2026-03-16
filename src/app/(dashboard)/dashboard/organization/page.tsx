@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 
 function PageContent() {
   const searchParams = useSearchParams();
@@ -53,6 +54,8 @@ function PageContent() {
   const [selectedOrg, setSelectedOrg] = useState<any | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [localTenants, setLocalTenants] = useState<any[] | null>(null);
+  const [deleteSuccessOpen, setDeleteSuccessOpen] = useState(false);
+  const [deletedOrgName, setDeletedOrgName] = useState("");
 
   // Read search query from URL params
   useEffect(() => {
@@ -211,24 +214,21 @@ function PageContent() {
   }, [openDropdownId]);
 
   const handleEditSuccess = () => {
-      // Optimistically update local list so the table reflects changes without reload
-      setLocalTenants((prev) =>
-        Array.isArray(prev)
-          ? prev.map((org) =>
-            org.id === selectedOrg?.id
-              ? { ...org, ...selectedOrg }
-                : org
-            )
-          : prev
-      );
-    
-    // Revalidate to refresh data
-    globalMutate(
-      (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS)
+    // Optimistically update local list so the table reflects changes without reload
+    setLocalTenants((prev) =>
+      Array.isArray(prev)
+        ? prev.map((org) =>
+            org.id === selectedOrg?.id ? { ...org, ...selectedOrg } : org
+          )
+        : prev
     );
 
-      setEditModalOpen(false);
-      setSelectedOrg(null);
+    // Revalidate to refresh data
+    globalMutate(
+      (key) =>
+        typeof key === "string" && key.includes(API_ENDPOINTS.GET_ALL_TENANTS)
+    );
+    // Do NOT close the edit modal here; let the inner success popup handle close
   };
 
   const handleDeleteConfirm = async () => {
@@ -240,6 +240,7 @@ function PageContent() {
         "delete",
         API_ENDPOINTS.EDIT_ORGANIZATION(String(selectedOrg.id))
       );
+      const removedName = selectedOrg.name || "Organization";
       toast.success("Organization deleted successfully");
       
       // Calculate if we need to adjust pagination
@@ -307,11 +308,10 @@ function PageContent() {
       
       setDeleteModalOpen(false);
       setSelectedOrg(null);
-      
-      // Revalidate to ensure we have the latest data from server
-      // This ensures pagination and other pages are updated correctly
+      setDeletedOrgName(removedName);
+      setDeleteSuccessOpen(true);
+
       setTimeout(() => {
-        // Revalidate all matching keys to get fresh data from server
         globalMutate(
           (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS)
         );
@@ -587,6 +587,16 @@ function PageContent() {
               isDeleting={updatingId === selectedOrg?.id}
             />
           )}
+
+          <OrganizationSuccessModal
+            open={deleteSuccessOpen}
+            onOpenChange={setDeleteSuccessOpen}
+            description={
+              deletedOrgName
+                ? `"${deletedOrgName}" has been deleted successfully.`
+                : "Organization has been deleted successfully."
+            }
+          />
         </>
       )}
     </section>

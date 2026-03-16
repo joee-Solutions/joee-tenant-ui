@@ -14,7 +14,10 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "react-toastify";
 import { Country, State, City } from "country-state-city";
-import { useMemo, useEffect } from "react";
+import { cityOverrides } from "@/lib/geo/cityOverrides";
+import { LocationSearchableSelect } from "@/components/shared/form/LocationSearchableSelect";
+import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
+import { useMemo, useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 
 const NewOrganizationSchema = z.object({
@@ -44,7 +47,7 @@ const REQUIRED_FIELD_LABELS: Record<string, string> = {
   name: "Organization name",
   address: "Address",
   city: "City",
-  state: "State",
+  state: "State/Province",
   country: "Country",
   phone_number: "Organization Phone number",
   email: "Organization Email",
@@ -165,6 +168,7 @@ const handleOrganizationError = (
 export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
   const router = useRouter();
   const { mutate: globalMutate } = useSWRConfig();
+  const [successOpen, setSuccessOpen] = useState(false);
   const form = useForm<NewOrganizationSchemaType>({
     resolver: zodResolver(NewOrganizationSchema),
     mode: "onChange",
@@ -227,9 +231,16 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
   // Get cities based on selected country and state (as names for display) - sorted alphabetically
   const cityOptions = useMemo(() => {
     if (!selectedCountryCode || !selectedStateCode) return [];
-    return City.getCitiesOfState(selectedCountryCode, selectedStateCode)
-      .map((city) => city.name)
-      .sort((a, b) => a.localeCompare(b));
+    const baseCities = City.getCitiesOfState(selectedCountryCode, selectedStateCode)
+      .map((city) => city.name);
+
+    const overrideKey = `${selectedCountryCode}-${selectedStateCode}`;
+    const extraCities = cityOverrides[overrideKey] || [];
+
+    // Merge, dedupe and sort
+    return Array.from(new Set([...baseCities, ...extraCities])).sort((a, b) =>
+      a.localeCompare(b)
+    );
   }, [selectedCountryCode, selectedStateCode]);
 
   // Reset state and city when country changes
@@ -276,6 +287,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         adminLastname,
         adminPhoneNumber,
         org_type,
+        fax,
         ...rest
       } = payload;
       const countryName = country;
@@ -302,6 +314,11 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       if (orgTypeValue) {
         formattedPayload.organization_type = orgTypeValue;
         formattedPayload.org_type = orgTypeValue;
+      }
+      // Map fax to fax_number for backend
+      const faxValue = fax?.trim();
+      if (faxValue) {
+        formattedPayload.fax_number = faxValue;
       }
       // Only send website when it's a valid URL (backend: "website must be a URL address")
       if (website?.trim()) {
@@ -339,10 +356,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
           toast.success("Organization created successfully!", {
             toastId: "org-create-success",
           });
-          setTimeout(() => {
-            setIsAddOrg("none");
-            form.reset();
-          }, 1000);
+          setSuccessOpen(true);
           return;
         }
         
@@ -369,11 +383,8 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
           { revalidate: true }
         );
         
-        // Close the form and show the organization list after a short delay
-        setTimeout(() => {
-          setIsAddOrg("none");
-          form.reset();
-        }, 1000);
+        // Show success modal; navigation handled on Continue
+        setSuccessOpen(true);
       } else {
         // If no success indicators and no error, treat as failure
         toast.error(res?.message || "Failed to create organization. Please try again.", {
@@ -475,57 +486,47 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
               placeholder="Enter here"
             />
 
-            {/* Country, State, City - Reordered: Country first, then State, then City */}
+            {/* Country, State, City - Country first, then State, then City (all searchable) */}
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-              <FieldSelect
+                <LocationSearchableSelect
+                  control={form.control}
                   name="country"
-                control={form.control}
+                  label="Country"
                   options={countryOptions}
-                  labelText="Country"
                   placeholder="Select Country"
-              />
-                {selectedCountryName && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      form.setValue("country", "");
-                      form.setValue("state", "");
-                      form.setValue("city", "");
-                    }}
-                    className="text-xs text-blue-600 hover:underline mt-1"
-                  >
-                    Clear selection
-                  </button>
-                )}
+                  searchPlaceholder="Search country..."
+                />
               </div>
               <div className="w-full">
-              <FieldSelect
-                name="state"
-                control={form.control}
+                <LocationSearchableSelect
+                  control={form.control}
+                  name="state"
+                  label="State/Province"
                   options={stateOptions}
-                labelText="State"
-                  placeholder={selectedCountryName ? "Select State" : "Select Country first"}
+                  placeholder={
+                    selectedCountryName
+                      ? "Select State/Province"
+                      : "Select Country first"
+                  }
+                  searchPlaceholder="Search state/province..."
                   disabled={!selectedCountryName}
-              />
-                {!selectedCountryName && (
-                  <p className="text-xs text-gray-500 mt-1">Please select a country first</p>
-                )}
+                />
               </div>
             </div>
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                <FieldSelect
-                  name="city"
+                <LocationSearchableSelect
                   control={form.control}
+                  name="city"
+                  label="City"
                   options={cityOptions}
-                  labelText="City"
-                  placeholder={selectedStateName ? "Select City" : "Select State first"}
+                  placeholder={
+                    selectedStateName ? "Select City" : "Select State first"
+                  }
+                  searchPlaceholder="Search city..."
                   disabled={!selectedStateName}
                 />
-                {!selectedStateName && selectedCountryName && (
-                  <p className="text-xs text-gray-500 mt-1">Please select a state first</p>
-                )}
               </div>
               <FieldBox
                 name="zip"
@@ -632,6 +633,17 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
             </Button>
           </div>
         </FormComposer>
+
+        <OrganizationSuccessModal
+          open={successOpen}
+          onOpenChange={setSuccessOpen}
+          description="Organization has been created successfully."
+          onContinue={() => {
+            form.reset();
+            setIsAddOrg("none");
+            router.push("/dashboard/organization");
+          }}
+        />
       </div>
     </div>
   );

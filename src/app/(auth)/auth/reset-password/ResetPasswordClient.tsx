@@ -18,7 +18,9 @@ type ResetPasswordProps = z.infer<typeof schema>;
 const schema = z.object({
   password: z
     .string()
-    .min(6)
+    .min(8, {
+      message: "Password must be at least 8 characters long",
+    })
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
       {
@@ -28,7 +30,9 @@ const schema = z.object({
     ),
   confirmPassword: z
     .string()
-    .min(6)
+    .min(8, {
+      message: "Password must be at least 8 characters long",
+    })
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
       {

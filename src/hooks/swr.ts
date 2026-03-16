@@ -136,7 +136,18 @@ export const authFectcher = async (url: string) => {
       throw friendlyError;
     }
     
-    // Re-throw error if no cached data available
+    // 401: session ended or invalid token — processRequestAuth redirects to login
+    if (error?.response?.status === 401 && typeof window !== 'undefined') {
+      return null;
+    }
+    // 5xx: avoid uncaught AxiosError in console if request still threw
+    if (
+      typeof error?.response?.status === 'number' &&
+      error.response.status >= 500 &&
+      error.response.status < 600
+    ) {
+      return null;
+    }
     throw error;
   }
 };

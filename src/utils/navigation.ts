@@ -74,11 +74,13 @@ export const sideNavigation = [
         title: "Create Admin",
         icon: icons.BookUser,
         href: "/dashboard/admin/create",
+        superAdminOnly: true,
       },
       {
         title: "Admin List",
         icon: icons.Users,
         href: "/dashboard/admin/list",
+        superAdminOnly: true,
       },
     ],
   },

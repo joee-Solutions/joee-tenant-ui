@@ -3,9 +3,18 @@ import React from "react";
 import FieldSelect from "@/components/shared/form/FieldSelect";
 import FormComposer from "@/components/shared/form/FormComposer";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Check,
+  CheckCircle2,
   CircleArrowLeft,
   Edit,
   EyeClosedIcon,
@@ -23,6 +32,7 @@ import { Input } from "../ui/input";
 import { Spinner } from "../icons/Spinner";
 import { toast } from "react-toastify";
 import { useAdminProfile } from "@/hooks/swr";
+import { useRouter } from "next/navigation";
 
 const AdminFormSchema = z.object({
   first_name: z.string().min(1, "This field is required"),
@@ -35,13 +45,19 @@ const AdminFormSchema = z.object({
   role: z.string().min(1, "This field is required"),
   phone_number: z.string().min(1, "This field is required"),
   company: z.string().min(1, "This field is required"),
-  password: z.string().min(1, "This field is required"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+}{":;'?/>.<,])(?=.*[a-zA-Z]).{8,}$/,
+      "Password must contain at least one lowercase, uppercase, number and one special character"
+    ),
   address: z.string().optional(),
 });
 
 type AdminFormSchemaType = z.infer<typeof AdminFormSchema>;
 
-const orgStatus = ["Admin", "Super_Admin", "User"];
+const orgStatus = ["Admin", "Super_Admin"];
 
 function generatePassword(length = 12): string {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -59,6 +75,8 @@ function generatePassword(length = 12): string {
 }
 
 export default function AdminForm() {
+  const router = useRouter();
+  const [successOpen, setSuccessOpen] = React.useState(false);
   const { data: adminData, isLoading: isAdminLoading } = useAdminProfile();
   const form = useForm<AdminFormSchemaType>({
     resolver: zodResolver(AdminFormSchema),
@@ -134,6 +152,7 @@ export default function AdminForm() {
         position: "top-right",
         autoClose: 4000,
       });
+      setSuccessOpen(true);
     } catch (error: any) {
       console.error("Error creating admin:", error);
       
@@ -322,6 +341,31 @@ export default function AdminForm() {
           </div>
         </div>
       </FormComposer>
+
+      <AlertDialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <AlertDialogContent className="bg-white flex flex-col items-center text-center sm:max-w-md">
+          <AlertDialogHeader className="flex flex-col items-center">
+            <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
+            <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">
+              Success
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-normal text-base text-[#737373]">
+              Admin has been created successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center w-full">
+            <AlertDialogAction
+              className="h-[60px] w-full max-w-[291px] bg-[#3FA907] text-white font-medium text-base"
+              onClick={() => {
+                setSuccessOpen(false);
+                router.push("/dashboard/admin/list");
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

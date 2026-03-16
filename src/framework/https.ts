@@ -259,14 +259,22 @@ const processRequestAuth = async (
         // Retry the original request with new token
         try {
           return await processRequestAuth(method, path, data, callback);
-        } catch (retryError) {
-          // If retry also fails, don't try to refresh again
+        } catch (retryError: any) {
+          // Retry still failed (e.g. 401 again) — same as session expired: redirect, do not throw (avoids SWR AxiosError spam)
           console.error("Request failed after token refresh:", retryError);
-          if (callback) {
-            callback(path, null, retryError);
-          } else {
-            throw retryError;
+          if (!redirectingToLogin && typeof window !== "undefined") {
+            redirectingToLogin = true;
+            Cookies.remove("refresh_token");
+            Cookies.remove("auth_token");
+            Cookies.remove("customer");
+            Cookies.remove("user");
+            const currentPath = window.location.pathname;
+            if (!currentPath.startsWith("/auth/login")) {
+              window.location.href = "/auth/login";
+            }
           }
+          if (callback) callback(path, null, retryError);
+          return null;
         }
       } else {
         // Refresh failed or no refresh token - clear session and redirect to login (only once)
@@ -283,20 +291,31 @@ const processRequestAuth = async (
         }
         if (callback) {
           callback(path, null, error);
-        } else {
-          throw error;
         }
+        // Do not throw — caller (e.g. SWR) otherwise logs uncaught AxiosError while redirect runs
         return null;
       }
     } else if (redirectingToLogin) {
-      // If we're already redirecting, don't process the error further
-      if (callback) {
-        callback(path, null, error);
-      }
+      if (callback) callback(path, null, error);
       return null;
     }
 
-    console.error("API request error:", error);
+    // Server errors: do not throw — avoids SWR/React uncaught AxiosError spam; UI can treat data as null
+    const isServerError =
+      typeof statusCode === "number" && statusCode >= 500 && statusCode < 600;
+    if (isServerError) {
+      console.warn(
+        `[API ${statusCode}]`,
+        path,
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message
+      );
+      if (callback) callback(path, null, error);
+      return null;
+    }
+
+    console.error("API request error:", path, error);
     if (callback) {
       callback(path, null, error);
     } else {
