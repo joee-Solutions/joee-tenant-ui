@@ -4,6 +4,8 @@ import withPWAInit from "next-pwa";
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
+  // Allow precaching chunks up to ~10 MB (build reported one chunk ~8.11 MB)
+  maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
 });
 
 const nextConfig: NextConfig = {
