@@ -230,17 +230,26 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
 
   // Get cities based on selected country and state (as names for display) - sorted alphabetically
   const cityOptions = useMemo(() => {
-    if (!selectedCountryCode || !selectedStateCode) return [];
-    const baseCities = City.getCitiesOfState(selectedCountryCode, selectedStateCode)
+    const countryCode = selectedCountryCode;
+    const stateCode = selectedStateCode;
+    if (!countryCode || !stateCode) return [];
+
+    const baseCities = City.getCitiesOfState(countryCode, stateCode)
       .map((city) => city.name);
 
-    const overrideKey = `${selectedCountryCode}-${selectedStateCode}`;
+    const overrideKey = `${countryCode}-${stateCode}`;
     const extraCities = cityOverrides[overrideKey] || [];
 
-    // Merge, dedupe and sort
-    return Array.from(new Set([...baseCities, ...extraCities])).sort((a, b) =>
-      a.localeCompare(b)
-    );
+    // International fallback:
+    // Some countries (e.g. UK) might not return cities by state/province in the dataset.
+    // If that happens, fall back to *all* cities in the selected country to avoid empty city dropdown.
+    const fallbackCities =
+      baseCities.length === 0
+        ? (City.getCitiesOfCountry(countryCode) || []).map((c) => c.name)
+        : [];
+
+    const merged = [...baseCities, ...extraCities, ...fallbackCities];
+    return Array.from(new Set(merged)).sort((a, b) => a.localeCompare(b));
   }, [selectedCountryCode, selectedStateCode]);
 
   // Reset state and city when country changes
@@ -516,17 +525,28 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
             </div>
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                <LocationSearchableSelect
-                  control={form.control}
-                  name="city"
-                  label="City"
-                  options={cityOptions}
-                  placeholder={
-                    selectedStateName ? "Select City" : "Select State first"
-                  }
-                  searchPlaceholder="Search city..."
-                  disabled={!selectedStateName}
-                />
+                {cityOptions.length > 0 ? (
+                  <LocationSearchableSelect
+                    control={form.control}
+                    name="city"
+                    label="City"
+                    options={cityOptions}
+                    placeholder={
+                      selectedStateName ? "Select City" : "Select State first"
+                    }
+                    searchPlaceholder="Search city..."
+                    disabled={!selectedStateName}
+                  />
+                ) : (
+                  <FieldBox
+                    bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                    name="city"
+                    control={form.control}
+                    labelText="City"
+                    type="text"
+                    placeholder="Enter city"
+                  />
+                )}
               </div>
               <FieldBox
                 name="zip"

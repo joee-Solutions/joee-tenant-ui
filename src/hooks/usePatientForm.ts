@@ -58,7 +58,7 @@ export function usePatientForm({
           toast.error(`Please fill in required fields: ${validation.errors.join(', ')}`, { 
             toastId: "validation-error",
             autoClose: 5000,
-            position: "bottom-right"
+            position: "top-right"
           });
           setError(validation.errors.join(', '));
           // Navigate to the first step with missing data
@@ -75,6 +75,45 @@ export function usePatientForm({
           const mappedData = mapFormDataToPatientDto(formData);
           normalizePatientData(mappedData, formData);
           stripInvalidOptionalContactFields(mappedData);
+
+          // Dev-only debug: show what we are about to POST
+          // (helps track email/phone validation mismatches with backend)
+          if (process.env.NODE_ENV !== "production") {
+            console.log("=== CREATE PATIENT PAYLOAD DEBUG ===", {
+              endpoint: API_ENDPOINTS.CREATE_PATIENT(Number(slug)),
+              raw_form_demographic: {
+                dateOfBirth: formData.demographic?.dateOfBirth,
+              },
+              payload_date_of_birth:
+                Object.prototype.hasOwnProperty.call(mappedData as any, "date_of_birth")
+                  ? (mappedData as any).date_of_birth
+                  : "<absent>",
+              contact_info: {
+                payload_has_contact_info:
+                  Object.prototype.hasOwnProperty.call(mappedData as any, "contact_info")
+                    ? true
+                    : false,
+                contact_info_keys: mappedData?.contact_info
+                  ? Object.keys(mappedData.contact_info)
+                  : [],
+                has_email:
+                  !!mappedData?.contact_info &&
+                  Object.prototype.hasOwnProperty.call(mappedData.contact_info, "email"),
+                has_phone_number_mobile:
+                  !!mappedData?.contact_info &&
+                  Object.prototype.hasOwnProperty.call(mappedData.contact_info, "phone_number_mobile"),
+                email: mappedData?.contact_info?.email,
+                phone_number_mobile: mappedData?.contact_info?.phone_number_mobile,
+                phone_number_home: mappedData?.contact_info?.phone_number_home,
+              },
+              mapped_date_of_birth: mappedData?.date_of_birth,
+              raw_form_addDemographic: {
+                email: formData.addDemographic?.email,
+                mobilePhone: formData.addDemographic?.mobilePhone,
+                homePhone: formData.addDemographic?.homePhone,
+              },
+            });
+          }
           
           let response;
           if (patientId) {
@@ -107,7 +146,7 @@ export function usePatientForm({
                   toast.error(`A patient with email ${patientEmail} already exists. Please use a different email or edit the existing patient.`, {
                     toastId: "duplicate-email-error",
                     autoClose: 5000,
-                    position: "bottom-right"
+                    position: "top-right"
                   });
                   setError(`Patient with email ${patientEmail} already exists`);
                   setLoading(false);
@@ -156,10 +195,16 @@ export function usePatientForm({
           }
         } catch (error: any) {
           console.error("Failed to save to API:", error);
-          const errorMessage = error?.response?.data?.message || error?.message || "Failed to save to server";
+          const validationErrors = error?.response?.data?.validationErrors;
+          const errorMessage =
+            (Array.isArray(validationErrors) && validationErrors.length > 0
+              ? validationErrors.join(", ")
+              : error?.response?.data?.message) || error?.message || "Failed to save to server";
+
           toast.error(`${errorMessage}. Data saved locally.`, { 
             toastId: "save-api-error",
-            autoClose: 4000 
+            autoClose: 4000,
+            position: "top-right"
           });
           setError(errorMessage);
         } finally {
@@ -180,7 +225,8 @@ export function usePatientForm({
       console.error("Failed to save patient data:", error);
       toast.error("Failed to save patient data", { 
         toastId: "auto-save-error",
-        autoClose: 3000 
+        autoClose: 3000,
+        position: "top-right"
       });
     }
   }, [methods, currentStep, completedSteps, slug, patientId, setPatientId, setLoading, setError, setHasUnsavedChanges, setIsSavedToAPI, setCurrentStep, onSaveSuccess]);
@@ -205,11 +251,11 @@ export function usePatientForm({
     
     if (!validation.isValid) {
       // Show detailed error message
-      const errorMessage = `Cannot save: Please fill in all required fields:\n\n${validation.errors.map((err, idx) => `${idx + 1}. ${err}`).join('\n')}\n\nRequired fields: First Name, Last Name, and Gender.`;
+      const errorMessage = `Cannot save: Please fill in all required fields:\n\n${validation.errors.map((err, idx) => `${idx + 1}. ${err}`).join('\n')}\n\nRequired fields: First Name, Last Name, Date of Birth, Email, Mobile Phone.`;
       toast.error(errorMessage, { 
         toastId: "save-validation-error",
         autoClose: 7000,
-        position: "bottom-right"
+        position: "top-right"
       });
       setError(validation.errors.join(', '));
       // Navigate to the first step with missing data

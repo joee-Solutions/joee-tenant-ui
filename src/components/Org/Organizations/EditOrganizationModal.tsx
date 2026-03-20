@@ -160,13 +160,21 @@ export default function EditOrganizationModal({
     const overrideKey = `${selectedCountryCode}-${selectedStateCode}`;
     const extraCities = cityOverrides[overrideKey] || [];
 
+    // International fallback:
+    // If state/province based lookup returns 0 cities (common for UK-style subdivisions),
+    // fall back to all cities in the selected country so the dropdown isn't empty.
+    const fallbackCities =
+      baseCities.length === 0
+        ? (City.getCitiesOfCountry(selectedCountryCode) || []).map((c) => c.name)
+        : [];
+
     // Ensure the organization's existing city is always present so it can be displayed
     const existingCity =
       (organization?.address_metadata?.city as string | undefined) ||
       (organization?.city as string | undefined) ||
       undefined;
 
-    const merged = [...baseCities, ...extraCities];
+    const merged = [...baseCities, ...extraCities, ...fallbackCities];
     if (existingCity && !merged.includes(existingCity)) {
       merged.push(existingCity);
     }
@@ -608,17 +616,28 @@ export default function EditOrganizationModal({
 
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                <LocationSearchableSelect
-                  control={form.control}
-                  name="city"
-                  label="City"
-                  options={cityOptions}
-                  placeholder={
-                    selectedStateName ? "Select City" : "Select State first"
-                  }
-                  searchPlaceholder="Search city..."
-                  disabled={!selectedStateName}
-                />
+                {cityOptions.length > 0 ? (
+                  <LocationSearchableSelect
+                    control={form.control}
+                    name="city"
+                    label="City"
+                    options={cityOptions}
+                    placeholder={
+                      selectedStateName ? "Select City" : "Select State first"
+                    }
+                    searchPlaceholder="Search city..."
+                    disabled={!selectedStateName}
+                  />
+                ) : (
+                  <FieldBox
+                    bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                    name="city"
+                    control={form.control}
+                    labelText="City"
+                    type="text"
+                    placeholder="Enter city"
+                  />
+                )}
               </div>
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"

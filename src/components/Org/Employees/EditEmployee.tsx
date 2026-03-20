@@ -24,7 +24,6 @@ const EmployeeSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone_number: z.string().min(1, "Phone number is required"),
   address: z.string().optional(),
-  region: z.string().optional(),
   date_of_birth: z.date().optional(),
   specialty: z.string().optional(),
   designation: z.string().min(1, "Title is required"),
@@ -65,7 +64,6 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       email: "",
       phone_number: "",
       address: "",
-      region: "",
       date_of_birth: undefined,
       specialty: "",
       designation: "",
@@ -210,7 +208,6 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
         email: employee.email || "",
         phone_number: employee.phone_number || "",
         address: (employee as any).address || "",
-        region: (employee as any).region || "",
         date_of_birth: validDob || undefined,
         specialty: (employee as any).specialty || "",
         designation: employee.designation || "",
@@ -277,7 +274,6 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       
       // Include all fields to return all employee data
       payload.address = data.address || "";
-      payload.region = data.region || "";
       if (data.date_of_birth instanceof Date) payload.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
       payload.specialty = data.specialty || "";
       payload.gender = data.gender || "";
@@ -413,17 +409,6 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
               <Input placeholder="Enter here" {...form.register("address")} className="w-full h-14 p-3 border border-[#737373] rounded" />
               {form.formState.errors.address && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-base text-black font-normal mb-2">Region/State</label>
-              <Input
-                placeholder="Enter here"
-                {...form.register("region")}
-                className="w-full h-14 p-3 border border-[#737373] rounded"
-              />
-              {form.formState.errors.region && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.region.message}</p>
               )}
             </div>
             <div>

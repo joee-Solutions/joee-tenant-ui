@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { formatDateFn } from "@/lib/utils";
-import { useTenantsData, authFectcher } from "@/hooks/swr";
+import { useTenantsData, authFectcher, useAdminProfile } from "@/hooks/swr";
 import { Tenant } from "@/lib/types";
 import NewOrg from "../NewOrg";
 import { useSearchParams } from "next/navigation";
@@ -47,6 +47,13 @@ function PageContent() {
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [deleteSuccessOpen, setDeleteSuccessOpen] = useState(false);
   const [deletedOrgName, setDeletedOrgName] = useState("");
+
+  // Admin can edit, but only Super Admin can delete
+  const { data: adminProfile } = useAdminProfile();
+  const roles: string[] = Array.isArray(adminProfile)
+    ? adminProfile[0]?.roles ?? []
+    : (adminProfile as any)?.roles ?? [];
+  const isSuperAdmin = roles.includes("Super_Admin");
 
   // Map sortBy to backend fields
   const sortFieldMap: Record<string, string> = {
@@ -125,6 +132,10 @@ function PageContent() {
   };
 
   const handleDeleteClick = (org: any) => {
+    if (!isSuperAdmin) {
+      toast.info("Only Super Admin can delete organizations.");
+      return;
+    }
     setSelectedOrg(org);
     setDeleteModalOpen(true);
     setOpenDropdownId(null);
@@ -141,6 +152,13 @@ function PageContent() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedOrg) return;
+
+    if (!isSuperAdmin) {
+      toast.info("Only Super Admin can delete organizations.");
+      setDeleteModalOpen(false);
+      setSelectedOrg(null);
+      return;
+    }
     
     setUpdatingId(selectedOrg.id);
     try {
@@ -408,17 +426,19 @@ function PageContent() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </div>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenDropdownId(null);
-                                handleDeleteClick(data);
-                              }}
-                              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </div>
+                            {isSuperAdmin && (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdownId(null);
+                                  handleDeleteClick(data);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

@@ -34,21 +34,25 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
     last_name: demographic?.lastName || '',
     preferred_name: demographic?.preferredName || '',
     sex: demographic?.sex || '',
-    date_of_birth: demographic?.dateOfBirth ? (() => {
-      try {
-        // Parse the date string (YYYY-MM-DD) to avoid timezone issues
-        const dateStr = demographic.dateOfBirth;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-          const [year, month, day] = dateStr.split('-').map(Number);
-          const date = new Date(year, month - 1, day);
-          return !isNaN(date.getTime()) ? date.toISOString() : '';
+    ...(demographic?.dateOfBirth
+      ? {
+          date_of_birth: (() => {
+            try {
+              // Parse the date string (YYYY-MM-DD) to avoid timezone issues
+              const dateStr = demographic.dateOfBirth;
+              if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const date = new Date(year, month - 1, day);
+                return !isNaN(date.getTime()) ? date.toISOString() : undefined;
+              }
+              const date = new Date(demographic.dateOfBirth);
+              return !isNaN(date.getTime()) ? date.toISOString() : undefined;
+            } catch {
+              return undefined;
+            }
+          })(),
         }
-        const date = new Date(demographic.dateOfBirth);
-        return !isNaN(date.getTime()) ? date.toISOString() : '';
-      } catch {
-        return '';
-      }
-    })() : '',
+      : {}),
     marital_status: demographic?.maritalStatus || '',
     race: demographic?.race || '',
     ethnicity: demographic?.ethnicity || '',
@@ -134,7 +138,16 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
         // If phone number was provided but is invalid, don't include it
       }
       
-      return contactInfo;
+      // Only send contact_info if we have at least one identifier.
+      // This prevents backend from validating `contact_info.email` / `phone_number_mobile`
+      // when they are missing/empty.
+      const hasEmailOrPhone =
+        !!contactInfo.email ||
+        !!contactInfo.email_work ||
+        !!contactInfo.phone_number_mobile ||
+        !!contactInfo.phone_number_home;
+
+      return hasEmailOrPhone ? contactInfo : undefined;
     })(),
 
     // Emergency info - build object without phone number first, then conditionally add it
@@ -267,21 +280,21 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
         if (!isNaN(date.getTime())) {
           mappedData.date_of_birth = date.toISOString();
         } else {
-          mappedData.date_of_birth = '';
+          delete mappedData.date_of_birth;
         }
       } else {
         const date = new Date(formData.demographic.dateOfBirth);
         if (!isNaN(date.getTime())) {
           mappedData.date_of_birth = date.toISOString();
         } else {
-          mappedData.date_of_birth = '';
+          delete mappedData.date_of_birth;
         }
       }
     } catch (e) {
-      mappedData.date_of_birth = '';
+      delete mappedData.date_of_birth;
     }
   } else {
-    mappedData.date_of_birth = '';
+    delete mappedData.date_of_birth;
   }
   
   // Ensure contact_info fields are properly formatted

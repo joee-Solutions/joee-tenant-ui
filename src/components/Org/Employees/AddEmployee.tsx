@@ -31,7 +31,6 @@ const EmployeeSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone_number: z.string().optional(),
   address: z.string().optional(),
-  region: z.string().optional(),
   date_of_birth: z.date().optional(),
   specialty: z.string().optional(),
   designation: z.string().min(1, "Title is required"),
@@ -60,7 +59,6 @@ export default function AddEmployee({ slug }: { slug: string }) {
       email: "",
       phone_number: "",
       address: "",
-      region: "",
       date_of_birth: undefined,
       specialty: "",
       designation: "",
@@ -141,7 +139,6 @@ export default function AddEmployee({ slug }: { slug: string }) {
         email: data.email,
         phone_number: data.phone_number,
         address: data.address,
-        region: data.region,
         date_of_birth: data.date_of_birth instanceof Date ? data.date_of_birth.toISOString().split('T')[0] : '',
         specialty: data.specialty,
         designation: data.designation,
@@ -334,21 +331,6 @@ export default function AddEmployee({ slug }: { slug: string }) {
               {...form.register("address")}
               className="w-full h-14 p-3 border border-[#737373] rounded"
             />
-          </div>
-
-          {/* Region/State */}
-          <div>
-            <label className="block text-base text-black font-normal mb-2">
-              Region/State
-            </label>
-            <Input
-              placeholder="Enter here"
-              {...form.register("region")}
-              className="w-full h-14 p-3 border border-[#737373] rounded"
-            />
-            {form.formState.errors.region && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.region.message}</p>
-            )}
           </div>
 
           {/* Date of Birth */}

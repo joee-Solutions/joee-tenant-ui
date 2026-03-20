@@ -1057,9 +1057,9 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
                     <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
                       <li>First Name</li>
                       <li>Last Name</li>
-                      <li>Gender</li>
+                      <li>Date of Birth</li>
                       <li>Email</li>
-                      <li>Address</li>
+                      <li>Mobile Phone</li>
                     </ul>
                   </div>
                 </AlertDialogDescription>

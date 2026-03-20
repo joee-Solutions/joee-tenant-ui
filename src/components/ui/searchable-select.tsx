@@ -104,7 +104,11 @@ export function SearchableSelect({
             ))
           ) : (
             <div className="px-2 py-6 text-center text-sm text-gray-500">
-              No conditions found matching "{searchQuery}"
+              {options.length === 0 && !searchQuery.trim()
+                ? "No options available."
+                : !searchQuery.trim()
+                  ? "No options available for this selection."
+                  : `No results matching "${searchQuery}"`}
             </div>
           )}
         </div>

@@ -1,34 +1,62 @@
 import { FormDataStepper } from "@/components/Org/Patients/PatientStepper";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const E164_REGEX = /^\+\d{10,15}$/;
 
 /**
- * Validate required fields before saving to API
+ * Validate required fields before saving to API.
+ * Backend expects:
+ * - `date_of_birth` to be a valid ISO 8601 date string
+ * - `contact_info.email` to be a valid email (if present)
+ * - `contact_info.phone_number_mobile` to be a valid phone in E.164 (if present)
  */
 export function validateRequiredFields(formData: FormDataStepper): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
-  // Check patient name (firstName and lastName)
-  if (!formData.demographic?.firstName || formData.demographic.firstName.trim() === '') {
-    errors.push('First name is required');
-  }
-  if (!formData.demographic?.lastName || formData.demographic.lastName.trim() === '') {
-    errors.push('Last name is required');
-  }
-  
-  // Check sex/gender
-  if (!formData.demographic?.sex || formData.demographic.sex.trim() === '') {
-    errors.push('Gender is required');
-  }
-  
-  // Email is optional; if provided, validate format
-  if (formData.addDemographic?.email && formData.addDemographic.email.trim() !== '') {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.addDemographic.email.trim())) {
-      errors.push('Please enter a valid email address');
+
+  // Names are required
+  const firstName = (formData.demographic?.firstName || "").trim();
+  const lastName = (formData.demographic?.lastName || "").trim();
+  if (!firstName) errors.push("First name is required");
+  if (!lastName) errors.push("Last name is required");
+
+  // DOB is required by backend
+  const dobStr = (formData.demographic?.dateOfBirth || "").trim();
+  if (!dobStr) {
+    errors.push("Date of birth is required");
+  } else {
+    let date: Date | null = null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dobStr)) {
+      const [year, month, day] = dobStr.split("-").map(Number);
+      date = new Date(year, month - 1, day);
+    } else {
+      date = new Date(dobStr);
+    }
+    if (!date || isNaN(date.getTime())) {
+      errors.push("Date of birth must be a valid ISO 8601 date string");
     }
   }
-  
+
+  // Email is required by backend
+  const email = (formData.addDemographic?.email || "").trim();
+  if (!email) {
+    errors.push("Email is required");
+  } else if (!EMAIL_REGEX.test(email)) {
+    errors.push("Email must be a valid email address");
+  }
+
+  // Mobile phone is required by backend
+  const mobileRaw = formData.addDemographic?.mobilePhone;
+  const mobileFormatted = formatPhoneNumber(mobileRaw);
+  if (!mobileRaw || mobileRaw.toString().trim() === "") {
+    errors.push("Mobile phone is required");
+  } else if (!mobileFormatted || !E164_REGEX.test(mobileFormatted)) {
+    errors.push("Mobile phone must be a valid phone number");
+  }
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -36,9 +64,27 @@ export function validateRequiredFields(formData: FormDataStepper): { isValid: bo
  * Get the step index for the first step with missing required data
  */
 export function getFirstStepWithMissingData(formData: FormDataStepper): number {
-  if (!formData.demographic?.firstName || !formData.demographic?.lastName || !formData.demographic?.sex) {
-    return 0; // Demographics step
+  // Step 0: demographics (first/last + DOB)
+  const firstName = (formData.demographic?.firstName || "").trim();
+  const lastName = (formData.demographic?.lastName || "").trim();
+  const dobStr = (formData.demographic?.dateOfBirth || "").trim();
+
+  if (!firstName || !lastName || !dobStr) return 0;
+
+  // Step 0: DOB format check
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dobStr)) {
+    const date = new Date(dobStr);
+    if (!date || isNaN(date.getTime())) return 0;
   }
-  return 0; // Default to first step
+
+  // Step 1: additional demographics (email + mobile)
+  const email = (formData.addDemographic?.email || "").trim();
+  const mobileRaw = formData.addDemographic?.mobilePhone;
+  const mobileFormatted = formatPhoneNumber(mobileRaw);
+
+  if (!email || !EMAIL_REGEX.test(email)) return 1;
+  if (!mobileRaw || mobileRaw.toString().trim() === "" || !mobileFormatted || !E164_REGEX.test(mobileFormatted)) return 1;
+
+  return 0;
 }
 

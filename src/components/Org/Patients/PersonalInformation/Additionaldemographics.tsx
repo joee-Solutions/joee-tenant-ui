@@ -14,6 +14,7 @@ import { FormDataStepper } from "../PatientStepper";
 import { Country, State, City } from "country-state-city";
 import { useMemo, useEffect } from "react";
 import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
+import { LocationSearchableSelect } from "@/components/shared/form/LocationSearchableSelect";
 
 // Validation schema
 export const addionalDemoSchema = z.object({
@@ -46,28 +47,6 @@ export const addionalDemoSchema = z.object({
 
 
 // Using country-state-city library - options will be generated dynamically
-const postalOptions = [
-  "10001",
-  "90001",
-  "60601",
-  "77001",
-  "85001",
-  "19101",
-  "78201",
-  "92101",
-  "75201",
-  "95101",
-  "73301",
-  "32099",
-  "76101",
-  "43085",
-  "46201",
-  "28201",
-  "94101",
-  "98101",
-  "80201",
-  "20001",
-];
 const contactMethodOptions = ["Email", "Phone", "Text Message", "Mail"];
 const livingSituationOptions = [
   "Own Home",
@@ -193,120 +172,62 @@ export default function ContactDemographicForm() {
     <div className=" mx-auto p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Country */}
-        <Controller
-          name="addDemographic.country"
-          render={({ field }) => (
-            <div>
-              <label
-                htmlFor="country"
-                className="block text-base text-black font-normal mb-2"
-              >
-                Country
-              </label>
-              <Select value={field.value || ""} onValueChange={field.onChange}>
-                <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder="Select Country" />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {countryOptions.map((option) => (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="hover:bg-gray-200"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.addDemographic?.country && (
-                <p className="text-red-500 text-sm">
-                  {errors.addDemographic.country.message}
-                </p>
-              )}
-            </div>
-          )}
-        />
+        <div className="w-full">
+          <LocationSearchableSelect
+            control={control as any}
+            name={"addDemographic.country" as any}
+            label="Country"
+            options={countryOptions}
+            placeholder="Select Country"
+            searchPlaceholder="Search country..."
+          />
+        </div>
 
         {/* State */}
-        <Controller
-          name="addDemographic.state"
-          render={({ field }) => (
-            <div>
-              <label
-                htmlFor="state"
-                className="block text-base text-black font-normal mb-2"
-              >
-                State
-              </label>
-              <Select 
-                value={field.value || ""} 
-                onValueChange={field.onChange}
-                disabled={!selectedCountry}
-              >
-                <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder={selectedCountry ? "Select State" : "Select Country first"} />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {stateOptions.map((option) => (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="hover:bg-gray-200"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.addDemographic?.state && (
-                <p className="text-red-500 text-sm">
-                  {errors.addDemographic.state.message}
-                </p>
-              )}
-            </div>
-          )}
-        />
+        <div className="w-full">
+          <LocationSearchableSelect
+            control={control as any}
+            name={"addDemographic.state" as any}
+            label="State/Province"
+            options={stateOptions}
+            placeholder={selectedCountry ? "Select State/Province" : "Select Country first"}
+            searchPlaceholder="Search state/province..."
+            disabled={!selectedCountry}
+          />
+        </div>
 
         {/* City */}
-        <Controller
-          name="addDemographic.city"
-          render={({ field }) => (
-            <div>
-              <label
-                htmlFor="city"
-                className="block text-base text-black font-normal mb-2"
-              >
-                City
-              </label>
-              <Select 
-                value={field.value || ""} 
-                onValueChange={field.onChange}
-                disabled={!selectedState}
-              >
-                <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder={selectedState ? "Select City" : "Select State first"} />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {cityOptions.map((option) => (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="hover:bg-gray-200"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.addDemographic?.city && (
-                <p className="text-red-500 text-sm">
-                  {errors.addDemographic.city.message}
-                </p>
-              )}
-            </div>
-          )}
-        />
+        <div className="w-full">
+          <Controller
+            name="addDemographic.city"
+            render={({ field }) => (
+              <div>
+                <label
+                  htmlFor="city"
+                  className="block text-base text-black font-normal mb-2"
+                >
+                  City
+                </label>
+                <Input
+                  type="text"
+                  id="city"
+                  name={field.name}
+                  value={field.value ?? ""}
+                  onChange={async (e) => field.onChange(e.target.value)}
+                  onBlur={async () => field.onBlur()}
+                  placeholder={selectedState ? "Enter city" : "Select state first"}
+                  className="w-full h-14 p-3 border border-[#737373] rounded"
+                  disabled={!selectedState}
+                />
+                {errors.addDemographic?.city && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.addDemographic.city.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+        </div>
 
         {/* Postal/Zip code */}
         <Controller
@@ -319,22 +240,16 @@ export default function ContactDemographicForm() {
               >
                 Postal/Zip code
               </label>
-              <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                <SelectTrigger className="w-full h-14 p-3 border border-[#737373] rounded">
-                  <SelectValue placeholder={`Select Postal/Zip code`} />
-                </SelectTrigger>
-                <SelectContent className="z-10 bg-white">
-                  {postalOptions.map((option, index) => (
-                    <SelectItem
-                      key={index}
-                      value={option}
-                      className="hover:bg-gray-200"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                type="text"
+                id="postal"
+                name={field.name}
+                value={field.value ?? ""}
+                onChange={async (e) => field.onChange(e.target.value)}
+                onBlur={async () => field.onBlur()}
+                placeholder="Enter here"
+                className="w-full h-14 p-3 border border-[#737373] rounded"
+              />
               {errors.addDemographic?.postal && (
                 <p className="text-red-500 text-sm">
                   {errors.addDemographic.postal.message}
