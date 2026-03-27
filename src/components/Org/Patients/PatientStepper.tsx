@@ -439,6 +439,7 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
   
   // Detect if this is a new patient page (not edit mode)
   const isNewPatient = pathname?.includes('/patients/new') || pathname?.endsWith('/new');
+  const isEditMode = !isNewPatient && !!patientId;
   
   // Extract patient ID from URL if editing (e.g., /patients/[patientId]/edit)
   // Or use propPatientId if provided (for modal edit)
@@ -1012,7 +1013,7 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
                         disabled={loading}
                         className="font-normal text-base text-white bg-green-600 hover:bg-green-700 h-[60px] px-6 flex items-center"
                       >
-                        {loading ? "Saving..." : "Save"}
+                        {loading ? (isEditMode ? "Updating..." : "Saving...") : (isEditMode ? "Update" : "Save")}
                       </Button>
                     <Button
                       type="button"
@@ -1031,7 +1032,7 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
                         disabled={loading}
                         className="font-normal text-base text-white bg-green-600 hover:bg-green-700 h-[60px] px-6 flex items-center"
                       >
-                        {loading ? "Saving..." : "Save"}
+                        {loading ? (isEditMode ? "Updating..." : "Saving...") : (isEditMode ? "Update" : "Save")}
                       </Button>
                       <p className="text-xs text-gray-500">Data is auto-saved as you enter information</p>
                     </div>

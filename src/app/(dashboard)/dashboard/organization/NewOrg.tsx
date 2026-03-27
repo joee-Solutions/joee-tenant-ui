@@ -13,8 +13,7 @@ import { useRouter } from "next/navigation";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "react-toastify";
-import { Country, State, City } from "country-state-city";
-import { cityOverrides } from "@/lib/geo/cityOverrides";
+import { Country, State } from "country-state-city";
 import { LocationSearchableSelect } from "@/components/shared/form/LocationSearchableSelect";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 import { useMemo, useEffect, useState } from "react";
@@ -22,23 +21,23 @@ import { useSWRConfig } from "swr";
 
 const NewOrganizationSchema = z.object({
   name: z.string().min(1, "This field is required"),
-  address: z.string().min(1, "This field is required"),
-  city: z.string().min(1, "This field is required"),
-  state: z.string().min(1, "This field is required"),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
   zip: z.string().optional(),
-  country: z.string().min(1, "This field is required"),
-  phone_number: z.string().min(1, "This field is required"),
+  country: z.string().optional(),
+  phone_number: z.string().optional(),
   fax: z.string().optional(),
   email: z
     .string()
     .email("Invalid email address")
     .min(1, "This field is required"),
   website: z.string().optional(),
-  adminFirstname: z.string().min(1, "Admin first name is required"),
-  adminLastname: z.string().min(1, "Admin last name is required"),
-  adminPhoneNumber: z.string().min(1, "This field is required"),
+  adminFirstname: z.string().optional(),
+  adminLastname: z.string().optional(),
+  adminPhoneNumber: z.string().optional(),
   org_type: z.string().optional(),
-  domain: z.string().min(1, "This field is required"),
+  domain: z.string().optional(),
 });
 
 type NewOrganizationSchemaType = z.infer<typeof NewOrganizationSchema>;
@@ -227,30 +226,6 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       .map((state) => state.name)
       .sort((a, b) => a.localeCompare(b));
   }, [selectedCountryCode]);
-
-  // Get cities based on selected country and state (as names for display) - sorted alphabetically
-  const cityOptions = useMemo(() => {
-    const countryCode = selectedCountryCode;
-    const stateCode = selectedStateCode;
-    if (!countryCode || !stateCode) return [];
-
-    const baseCities = City.getCitiesOfState(countryCode, stateCode)
-      .map((city) => city.name);
-
-    const overrideKey = `${countryCode}-${stateCode}`;
-    const extraCities = cityOverrides[overrideKey] || [];
-
-    // International fallback:
-    // Some countries (e.g. UK) might not return cities by state/province in the dataset.
-    // If that happens, fall back to *all* cities in the selected country to avoid empty city dropdown.
-    const fallbackCities =
-      baseCities.length === 0
-        ? (City.getCitiesOfCountry(countryCode) || []).map((c) => c.name)
-        : [];
-
-    const merged = [...baseCities, ...extraCities, ...fallbackCities];
-    return Array.from(new Set(merged)).sort((a, b) => a.localeCompare(b));
-  }, [selectedCountryCode, selectedStateCode]);
 
   // Reset state and city when country changes
   useEffect(() => {
@@ -525,28 +500,14 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
             </div>
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                {cityOptions.length > 0 ? (
-                  <LocationSearchableSelect
-                    control={form.control}
-                    name="city"
-                    label="City"
-                    options={cityOptions}
-                    placeholder={
-                      selectedStateName ? "Select City" : "Select State first"
-                    }
-                    searchPlaceholder="Search city..."
-                    disabled={!selectedStateName}
-                  />
-                ) : (
-                  <FieldBox
-                    bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                    name="city"
-                    control={form.control}
-                    labelText="City"
-                    type="text"
-                    placeholder="Enter city"
-                  />
-                )}
+                <FieldBox
+                  bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                  name="city"
+                  control={form.control}
+                  labelText="City"
+                  type="text"
+                  placeholder="Enter city"
+                />
               </div>
               <FieldBox
                 name="zip"

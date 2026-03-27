@@ -2,11 +2,10 @@
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React, { useState } from "react";
+import React from "react";
 import { SearchInput } from "../ui/search";
 
 const Breadcrumb = () => {
-  const [pageSize, setPageSize] = useState(10);
   const crumbKey = {
     send: "Send Notification",
     notifications: "Notification List",
@@ -50,11 +49,7 @@ const Breadcrumb = () => {
           </div>
         ))}
       </div>
-      {lastPath !== "send" && (
-        <SearchInput
-          onSearch={(query: string) => console.log("Searching:", query)}
-        />
-      )}
+     
     </header>
   );
 };

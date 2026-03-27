@@ -11,6 +11,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { useNotificationsByTab, useAdminProfile } from "@/hooks/swr";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
@@ -31,7 +32,6 @@ const notificationTableData = [
     title: "Title",
     message: "Message",
     date: "Date",
-    organization: "Organization",
     actions: "Actions",
   },
 ];
@@ -45,10 +45,12 @@ interface Notification {
   status: string;
   createdAt: string;
   sender?: string;
+  userId?: number;
   read?: boolean;
   isRead?: boolean;
   readAt?: string | null;
   user?: {
+    id?: number;
     first_name: string;
     last_name: string;
   };
@@ -69,8 +71,10 @@ export default function NotificationList() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState<number | null>(null);
 
-  // Fetch notifications data with tab filtering
-  const { data: notificationsData, meta, isLoading, error, mutate: mutateTabNotifications } = useNotificationsByTab(activeTab);
+  // Always fetch all notifications and apply tab filters client-side.
+  // This ensures "All" always shows all, while Sent/Received are derived by user.
+  const { data: notificationsData, meta, isLoading, error, mutate: mutateTabNotifications } = useNotificationsByTab("all");
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const { data: admin } = useAdminProfile();
   const adminData = Array.isArray(admin) ? admin[0] : admin;
 
@@ -80,9 +84,42 @@ export default function NotificationList() {
 
   // Extract notifications from the response structure
   const allNotifications = Array.isArray(notificationsData) ? notificationsData : [];
+  const currentUserId = Number((adminData as any)?.id);
+  const currentUserFullName = [
+    (adminData as any)?.first_name ?? (adminData as any)?.firstname,
+    (adminData as any)?.last_name ?? (adminData as any)?.lastname,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+    .toLowerCase();
+
+  const isOwnNotification = (notif: any) => {
+    const notifUserId = Number(notif?.user?.id ?? notif?.userId);
+    if (!isNaN(currentUserId) && currentUserId > 0 && !isNaN(notifUserId) && notifUserId > 0) {
+      return notifUserId === currentUserId;
+    }
+
+    const notifSenderName = (
+      notif?.sender ||
+      (notif?.user ? `${notif.user.first_name} ${notif.user.last_name}` : "")
+    )
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    return !!currentUserFullName && notifSenderName === currentUserFullName;
+  };
+
+  const tabFilteredNotifications = allNotifications.filter((notif: any) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "sent") return isOwnNotification(notif);
+    if (activeTab === "received") return !isOwnNotification(notif);
+    return true;
+  });
   
   // Filter notifications by search query
-  const filteredNotifications = allNotifications.filter((notif: any) => {
+  const filteredNotifications = tabFilteredNotifications.filter((notif: any) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -121,16 +158,19 @@ export default function NotificationList() {
         "delete",
         API_ENDPOINTS.DELETE_NOTIFICATION(notificationToDelete.id)
       );
-      
-      toast.success("Notification deleted successfully");
+
       setShowDeleteWarning(false);
       setNotificationToDelete(null);
-      
+
       // Refetch notifications from API to update the table
       mutateTabNotifications();
-      
+
       // Also invalidate main notifications cache to update bell icon
       mutate(API_ENDPOINTS.GET_NOTIFICATIONS);
+
+      triggerSuccess({
+        message: "Notification deleted successfully.",
+      });
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete notification");
@@ -308,7 +348,6 @@ export default function NotificationList() {
                   <TableCell><SkeletonBox className="h-4 w-32" /></TableCell>
                   <TableCell><SkeletonBox className="h-4 w-40" /></TableCell>
                   <TableCell><SkeletonBox className="h-4 w-20" /></TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-24" /></TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <SkeletonBox className="h-6 w-6 rounded" />
@@ -319,7 +358,7 @@ export default function NotificationList() {
               ))
             ) : error && (!notifications || (Array.isArray(notifications) && notifications.length === 0)) ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <p className="text-gray-600">Unable to load notifications at this time.</p>
                     <button
@@ -356,9 +395,6 @@ export default function NotificationList() {
                     <TableCell className="font-semibold text-xs text-[#737373]">
                       {data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'N/A'}
                     </TableCell>
-                    <TableCell className="font-semibold text-xs text-[#737373]">
-                      {data.tenant?.name || 'All'}
-                    </TableCell>
 
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -393,7 +429,7 @@ export default function NotificationList() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   {activeTab === "all"
                     ? "No notifications found"
                     : `No ${activeTab} notifications found`
@@ -542,6 +578,7 @@ export default function NotificationList() {
           </div>
         </div>
       )}
+      {SuccessModal}
     </section>
   );
 }

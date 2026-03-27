@@ -17,9 +17,20 @@ interface DataTableFilterProps {
   setStatus: (val: string) => void;
   searchPlaceholder?: string;
   sortOptions?: string[];
+  statusOptions?: string[];
 }
 
-export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, status, setStatus, searchPlaceholder = "Search...", sortOptions = ["Name", "Date", "Location", "Status"] }: DataTableFilterProps) {
+export default function DataTableFilter({
+  search,
+  setSearch,
+  sortBy,
+  setSortBy,
+  status,
+  setStatus,
+  searchPlaceholder = "Search...",
+  sortOptions = ["Name", "Date", "Location", "Status"],
+  statusOptions = ["Active", "Inactive"],
+}: DataTableFilterProps) {
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-[34px] mt-6">
       <div>
@@ -68,7 +79,7 @@ export default function DataTableFilter({ search, setSearch, sortBy, setSortBy, 
             <SelectItem value="all" className="cursor-pointer">
               All
             </SelectItem>
-            {["Active", "Inactive"].map((currSortVal) => (
+            {statusOptions.map((currSortVal) => (
               <SelectItem
                 key={currSortVal}
                 value={`${currSortVal}`}

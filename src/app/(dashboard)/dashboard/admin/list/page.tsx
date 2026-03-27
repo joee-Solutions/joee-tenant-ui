@@ -154,10 +154,32 @@ export default function AdminListPage() {
     if (!adminToDelete?.id) return;
     setDeletingId(adminToDelete.id);
     try {
-      await processRequestAuth(
-        "delete",
-        API_ENDPOINTS.DELETE_ADMIN(adminToDelete.id)
-      );
+      const adminId = adminToDelete.id;
+      // Try known/legacy delete routes - backend route can vary by deployment.
+      const deletePaths = [
+        API_ENDPOINTS.DELETE_ADMIN(adminId),
+        `/management/super/admins/${adminId}`,
+        `/management/super/admin/delete/${adminId}`,
+      ];
+
+      let deleted = false;
+      for (const path of deletePaths) {
+        try {
+          await processRequestAuth("delete", path);
+          deleted = true;
+          break;
+        } catch (err: any) {
+          const status = err?.response?.status;
+          if (status !== 404) {
+            throw err;
+          }
+        }
+      }
+
+      if (!deleted) {
+        throw new Error("Admin delete endpoint not found");
+      }
+
       toast.success("Admin deleted successfully");
       setDeleteModalOpen(false);
       setAdminToDelete(null);
@@ -165,8 +187,13 @@ export default function AdminListPage() {
         (key) =>
           typeof key === "string" && key.includes(API_ENDPOINTS.GET_SUPER_ADMIN)
       );
-    } catch (err) {
-      toast.error("Failed to delete admin");
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Failed to delete admin";
+      toast.error(message);
     } finally {
       setDeletingId(null);
     }

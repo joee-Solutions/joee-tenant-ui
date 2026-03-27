@@ -30,8 +30,8 @@ const EditOrganizationSchema = z.object({
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
-// Option values for role select (include API values like "Super_Admin" so they display correctly)
-const ROLE_OPTIONS = ["Admin", "User", "super_admin", "Super_Admin"];
+// Role options for profile select
+const ROLE_OPTIONS = ["Admin", "Super_Admin"];
 
 // Get role string from API (roles[0] or singular "role")
 function getAdminRoleString(admin?: AdminUser | null): string {
@@ -243,7 +243,7 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
             labelText="Company"
             type="text"
             placeholder="Enter here"
-            disabled={isDisabled}
+            disabled={true}
           />
 
           <div className="flex items-center gap-7">

@@ -90,6 +90,9 @@ export const API_ENDPOINTS = {
   DELETE_PATIENT: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}`,
   GET_ALL_PATIENTS: (tenantId: number) => `/super/tenants/${tenantId}/patients`,
   GET_PATIENT_APPOINTMENTS: (tenantId: number, patientId: number) => `/super/tenants/${tenantId}/patients/${patientId}/appointments`,
+
+  // Reports Dashboard
+  REPORT_DASHBOARD: (tenantId: number | string) => `/reports/dashboard/${tenantId}`,
   
   // Backup & Restore
   GET_TENANT_BACKUPS: (tenantId: number | string) => `/super/tenants/${tenantId}/backups`,

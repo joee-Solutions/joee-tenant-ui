@@ -95,6 +95,29 @@ function PageContent() {
     return [];
   }, [allTenantsData]);
 
+  // Frontend search fallback (in case inactive endpoint ignores `search` query)
+  const filteredTenantsData = useMemo(() => {
+    if (!Array.isArray(tenantsData)) return [];
+    const query = search.trim().toLowerCase();
+    if (!query) return tenantsData;
+
+    return tenantsData.filter((org: any) => {
+      const name = (org?.name || "").toString().toLowerCase();
+      const email = (org?.email || "").toString().toLowerCase();
+      const domain = (org?.domain || "").toString().toLowerCase();
+      const address = (org?.address || "").toString().toLowerCase();
+      const statusValue = (org?.status || "").toString().toLowerCase();
+
+      return (
+        name.includes(query) ||
+        email.includes(query) ||
+        domain.includes(query) ||
+        address.includes(query) ||
+        statusValue.includes(query)
+      );
+    });
+  }, [tenantsData, search]);
+
   // Get meta from response
   const meta = useMemo(() => {
     if (inactiveTenantsResponse && typeof inactiveTenantsResponse === 'object' && 'meta' in inactiveTenantsResponse) {
@@ -337,6 +360,7 @@ function PageContent() {
               setSortBy={setSortBy}
               status={status}
               setStatus={setStatus}
+          statusOptions={["Inactive"]}
             />
             <DataTable tableDataObj={AllOrgTableData[0]} showAction>
               {tenantsLoading ? (
@@ -356,7 +380,7 @@ function PageContent() {
                     <TableCell><SkeletonBox className="h-6 w-20" /></TableCell>
                   </TableRow>
                 ))
-              ) : tenantsError && (!tenantsData || (Array.isArray(tenantsData) && tenantsData.length === 0)) ? (
+              ) : tenantsError && (!filteredTenantsData || filteredTenantsData.length === 0) ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
@@ -367,8 +391,8 @@ function PageContent() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : Array.isArray(tenantsData) && tenantsData.length > 0 ? (
-                tenantsData.map((data: any, index: number) => (
+              ) : Array.isArray(filteredTenantsData) && filteredTenantsData.length > 0 ? (
+                filteredTenantsData.map((data: any, index: number) => (
                   <TableRow key={data.id} className="px-3 relative">
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="py-[21px]">
@@ -425,7 +449,7 @@ function PageContent() {
                         {openDropdownId === data.id && (
                           <div 
                             className={`absolute right-0 z-50 min-w-[120px] overflow-hidden rounded-md border bg-white p-1 shadow-md ${
-                              index >= tenantsData.length - 2 || tenantsData.length === 1 ? 'bottom-10' : 'top-10'
+                              index >= filteredTenantsData.length - 2 || filteredTenantsData.length === 1 ? 'bottom-10' : 'top-10'
                             }`}
                             onClick={(e) => e.stopPropagation()}
                           >
@@ -468,8 +492,14 @@ function PageContent() {
               )}
             </DataTable>
             <Pagination
-              dataLength={meta?.total || tenantsData?.length || 0}
-              numOfPages={meta?.total ? Math.ceil(meta.total / pageSize) : Math.ceil((tenantsData?.length || 0) / pageSize)}
+              dataLength={search.trim() ? (filteredTenantsData?.length || 0) : (meta?.total || filteredTenantsData?.length || 0)}
+              numOfPages={
+                search.trim()
+                  ? Math.ceil((filteredTenantsData?.length || 0) / pageSize)
+                  : meta?.total
+                    ? Math.ceil(meta.total / pageSize)
+                    : Math.ceil((filteredTenantsData?.length || 0) / pageSize)
+              }
               pageSize={pageSize}
               currentPage={page}
               setCurrentPage={setPage}

@@ -157,8 +157,31 @@ function PageContent() {
     // Check if organization status matches the selected filter
     const statusLower = status.toLowerCase();
     return allTenantsData.filter((org: any) => {
-      const orgStatus = org?.status?.toLowerCase() || '';
-      return orgStatus === statusLower;
+      // Backend sometimes returns `status` (active/inactive/deactivated) or `is_active` boolean
+      const statusFromField = (org?.status ?? "").toString().toLowerCase().trim();
+      const statusFromIsActive =
+        typeof org?.is_active === "boolean"
+          ? org.is_active
+            ? "active"
+            : "inactive"
+          : "";
+
+      const normalizedOrgStatus =
+        statusFromField || statusFromIsActive || "";
+
+      // Treat deactivated as inactive for filtering purposes
+      const normalized =
+        normalizedOrgStatus === "deactivated" ? "inactive" : normalizedOrgStatus;
+
+      if (statusLower === "inactive") {
+        return normalized === "inactive";
+      }
+
+      if (statusLower === "active") {
+        return normalized === "active";
+      }
+
+      return normalized === statusLower;
     });
   }, [allTenantsData, status]);
 

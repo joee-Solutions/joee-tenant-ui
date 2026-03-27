@@ -13,24 +13,35 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { Spinner } from "@/components/icons/Spinner";
 import { toast } from "react-toastify";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { CheckCircle2 } from "lucide-react";
 
 const DepartmentSchema = z.object({
   name: z.string().min(1, "Department name is required"),
   description: z.string().min(1, "Department description is required"),
-  status: z.boolean().default(false),
+  status: z.boolean().default(true),
 });
 
 type DepartmentSchemaType = z.infer<typeof DepartmentSchema>;
 
 export default function AddDepartment({ slug }: { slug: string }) {
   const router = useRouter();
+  const [successOpen, setSuccessOpen] = useState(false);
   const form = useForm<DepartmentSchemaType>({
     resolver: zodResolver(DepartmentSchema),
     mode: "onChange",
     defaultValues: {
       name: "",
       description: "",
-      status: false,
+      status: true,
     },
   });
   useEffect(() => {
@@ -53,7 +64,7 @@ export default function AddDepartment({ slug }: { slug: string }) {
       );
       if (res && (res.success || res.status)) {
         toast.success("Department created successfully");
-        router.push(`/dashboard/organization/${slug}/departments`);
+        setSuccessOpen(true);
       } else {
         toast.error(res?.message || "Failed to create department");
       }
@@ -147,6 +158,31 @@ export default function AddDepartment({ slug }: { slug: string }) {
           </Button>
         </div>
       </form>
+
+      <AlertDialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <AlertDialogContent className="bg-white flex flex-col items-center text-center">
+          <AlertDialogHeader className="flex flex-col items-center">
+            <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
+            <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">
+              Success
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-normal text-base text-[#737373]">
+              Department created successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base"
+              onClick={() => {
+                setSuccessOpen(false);
+                router.push(`/dashboard/organization/${slug}/departments`);
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

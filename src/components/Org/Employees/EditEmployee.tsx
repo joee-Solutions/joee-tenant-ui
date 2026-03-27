@@ -24,6 +24,7 @@ const EmployeeSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone_number: z.string().min(1, "Phone number is required"),
   address: z.string().optional(),
+  region: z.string().optional(),
   date_of_birth: z.date().optional(),
   specialty: z.string().optional(),
   designation: z.string().min(1, "Title is required"),
@@ -64,6 +65,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       email: "",
       phone_number: "",
       address: "",
+      region: "",
       date_of_birth: undefined,
       specialty: "",
       designation: "",
@@ -80,24 +82,43 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
     isValidOrgId ? API_ENDPOINTS.TENANTS_DEPARTMENTS(orgId) : null,
     authFectcher
   );
-  const departments: Array<{ id: number; name: string }> = Array.isArray(deptRes?.data) ? deptRes.data : [];
+  const departments: Array<{ id: number; name: string }> = useMemo(() => {
+    if (!deptRes) return [];
+    // Handle possible response shapes:
+    // - { success, data: Department[] }
+    // - { data: Department[] }
+    // - { data: { data: Department[] } }
+    // - Department[] directly
+    const raw = (deptRes as any)?.data?.data ?? (deptRes as any)?.data ?? deptRes;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((d: any) => d && d.id != null && typeof d.name === "string")
+      .map((d: any) => ({ id: Number(d.id), name: d.name }));
+  }, [deptRes]);
 
   const genders = ["Male", "Female", "Other", "Prefer not to say"];
   
-  const choosenDepartment = form.watch("department");
-  const deptId = departments.find((d) => d.name === choosenDepartment)?.id;
+  const chosenDepartmentValue = form.watch("department");
+  const deptId = departments.find(
+    (d) => d.name.trim().toLowerCase() === (chosenDepartmentValue || "").trim().toLowerCase()
+  )?.id;
 
-  // Load single employee using the specific endpoint
+  // Load employee details from the full employees endpoint (requested behavior)
   const { data: employeeRes, isLoading } = useSWR(
-    isValidOrgId && isValidEmployeeId ? API_ENDPOINTS.GET_TENANT_EMPLOYEE(orgId, employeeId) : null,
+    isValidOrgId ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId) : null,
     authFectcher
   );
   const employee = useMemo(() => {
     if (!employeeRes) return undefined;
-    // Handle different response structures
-    const employeeData = employeeRes?.data?.data || employeeRes?.data || employeeRes;
-    return employeeData;
-  }, [employeeRes]);
+    // Expected common shapes:
+    // - { success, data: Employee[] }
+    // - { data: Employee[] }
+    // - { data: { data: Employee[] } }
+    // - Employee[] directly
+    const raw = (employeeRes as any)?.data?.data ?? (employeeRes as any)?.data ?? employeeRes;
+    const employees = Array.isArray(raw) ? raw : [];
+    return employees.find((e: any) => Number(e?.id) === Number(employeeId));
+  }, [employeeRes, employeeId]);
 
   // Reset hasPopulated when employeeId changes
   useEffect(() => {
@@ -147,36 +168,34 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       const employeeStatus = String((employee as any).status || "").toLowerCase();
       const statusValue = employeeStatus === "active" ? "active" : employeeStatus === "inactive" ? "inactive" : "active";
       
-      // Get department name - ensure it matches one of the available departments
-      let deptName = "";
-      if (employee.department) {
-        if (typeof employee.department === "object") {
-          deptName = (employee.department as any)?.name || "";
-        } else {
-          // If it's a number/ID, find the department name
-          const deptId = typeof employee.department === "number" ? employee.department : parseInt(String(employee.department));
-          if (!isNaN(deptId) && departments.length > 0) {
-            const foundDept = departments.find(d => d.id === deptId);
-            deptName = foundDept?.name || "";
-          } else {
-            deptName = String(employee.department);
+      // Use department name for Select value: employee.department.name
+      let deptValue = "";
+      const employeeDepartment = (employee as any)?.department;
+      if (employeeDepartment) {
+        if (typeof employeeDepartment === "object") {
+          const name = String((employeeDepartment as any)?.name || "").trim();
+          if (name) {
+            const foundByName = departments.find(
+              (d) => d.name.trim().toLowerCase() === name.toLowerCase()
+            );
+            // Keep exact department name from options when available
+            deptValue = foundByName?.name ?? name;
+          } else if ((employeeDepartment as any)?.id != null) {
+            const foundById = departments.find((d) => d.id === Number((employeeDepartment as any)?.id));
+            deptValue = foundById?.name ?? "";
           }
-        }
-      }
-      
-      // Ensure department name exists in the departments list (case-insensitive match)
-      if (deptName && departments.length > 0) {
-        const exactMatch = departments.find(d => d.name === deptName);
-        if (!exactMatch) {
-          // Try case-insensitive match
-          const caseInsensitiveMatch = departments.find(d => 
-            d.name.toLowerCase() === deptName.toLowerCase()
-          );
-          if (caseInsensitiveMatch) {
-            deptName = caseInsensitiveMatch.name; // Use the exact case from departments list
+        } else {
+          // If it's a number/ID or string, resolve to department name
+          const parsedDepartment = parseInt(String(employeeDepartment), 10);
+          if (!isNaN(parsedDepartment)) {
+            const foundById = departments.find((d) => d.id === parsedDepartment);
+            deptValue = foundById?.name ?? "";
           } else {
-            console.warn("Department not found in list:", deptName);
-            deptName = ""; // Reset if no match found
+            const name = String(employeeDepartment).trim();
+            const foundByName = departments.find(
+              (d) => d.name.trim().toLowerCase() === name.toLowerCase()
+            );
+            deptValue = foundByName?.name ?? name;
           }
         }
       }
@@ -208,10 +227,14 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
         email: employee.email || "",
         phone_number: employee.phone_number || "",
         address: (employee as any).address || "",
+        region:
+          (employee as any).region ||
+          (employee as any)?.tenant?.address_metadata?.state ||
+          "",
         date_of_birth: validDob || undefined,
         specialty: (employee as any).specialty || "",
         designation: employee.designation || "",
-        department: deptName,
+        department: deptValue,
         gender: genderValue,
         image_url: (employee as any).image_url || (employee as any).imageUrl || "",
         hire_date: validHire || undefined,
@@ -221,7 +244,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       
       console.log("Form data to reset:", formData);
       console.log("Available departments:", departments.map(d => d.name));
-      console.log("Department match:", deptName);
+      console.log("Department selected value:", deptValue);
       console.log("Gender match:", genderValue);
       
       form.reset(formData, {
@@ -230,8 +253,8 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       
       // Force update Select components after a brief delay to ensure they reflect the values
       setTimeout(() => {
-        if (deptName) {
-          form.setValue("department", deptName, { shouldValidate: false });
+        if (deptValue) {
+          form.setValue("department", deptValue, { shouldValidate: false });
         }
         if (genderValue) {
           form.setValue("gender", genderValue, { shouldValidate: false });
@@ -274,6 +297,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       
       // Include all fields to return all employee data
       payload.address = data.address || "";
+      payload.region = data.region || "";
       if (data.date_of_birth instanceof Date) payload.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
       payload.specialty = data.specialty || "";
       payload.gender = data.gender || "";
@@ -363,7 +387,11 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
         <Button
           type="button"
           onClick={() => {
-            router.back();
+            if (onDone) {
+              onDone();
+            } else {
+              router.push(`/dashboard/organization/${slug}/employees`);
+            }
           }}
           className="font-normal text-base text-white bg-[#003465] h-[60px] px-6"
         >
@@ -409,6 +437,13 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
               <Input placeholder="Enter here" {...form.register("address")} className="w-full h-14 p-3 border border-[#737373] rounded" />
               {form.formState.errors.address && (
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-base text-black font-normal mb-2">Region/State</label>
+              <Input placeholder="Enter here" {...form.register("region")} className="w-full h-14 p-3 border border-[#737373] rounded" />
+              {form.formState.errors.region && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.region.message}</p>
               )}
             </div>
             <div>
@@ -494,9 +529,9 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
               >
                 Upload Employee Image
               </label>
-              <div className="flex">
-                <div className="flex-1 border rounded flex items-center px-4 h-14 border-[#737373]">
-                  <span className="mr-2">
+              <div className="flex min-w-0">
+                <div className="flex-1 min-w-0 border rounded flex items-center px-4 h-14 border-[#737373]">
+                  <span className="mr-2 shrink-0">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -513,7 +548,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
                       <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                   </span>
-                  <span className="text-gray-500">
+                  <span className="text-gray-500 min-w-0 flex-1 truncate whitespace-nowrap overflow-hidden">
                     {fileSelected || form.watch("image_url") || "Choose File"}
                   </span>
                 </div>

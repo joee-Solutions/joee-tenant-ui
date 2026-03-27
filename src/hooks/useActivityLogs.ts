@@ -66,11 +66,13 @@ export interface ActivityStats {
     successRate: string;
   };
   topActions: Array<{
-    action: string;
+    activity_action?: string;
+    action?: string;
     count: string;
   }>;
   activityByType: Array<{
-    activityType: string;
+    activity_activityType?: string;
+    activityType?: string;
     count: string;
   }>;
 }
@@ -119,11 +121,20 @@ export const useActivityStats = (query: Omit<ActivityLogQuery, 'page' | 'limit'>
     }
   });
 
+  const endpoint = queryString.toString()
+    ? `/management/super/activity-logs/stats?${queryString.toString()}`
+    : `/management/super/activity-logs/stats`;
+
   const { data, error, isLoading, mutate } = useSWR(
-    queryString.toString() ? `/management/super/activity-logs/stats?${queryString}` : null,
+    endpoint,
     async (url) => {
       const response = await processRequestAuth('get', url);
-      return response?.data as ActivityStats;
+      // Backend returns: { success, message, data: { summary, topActions, activityByType } }
+      const payload = response?.data as any;
+      if (payload && typeof payload === "object" && payload.data) {
+        return payload.data as ActivityStats;
+      }
+      return payload as ActivityStats;
     },
     {
       revalidateOnFocus: false,

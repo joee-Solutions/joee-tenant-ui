@@ -257,6 +257,73 @@ export const useDashboardData = () => {
   };
 };
 
+// Reports dashboard (tenant-scoped)
+export interface ReportsDashboardData {
+  totalPatients: number;
+  totalAppointments: number;
+  totalUsers: number;
+  totalDepartments: number;
+  appointmentsToday: number;
+  appointmentsThisWeek: number;
+  appointmentsThisMonth: number;
+  newPatientsThisMonth: number;
+  completedAppointments: number;
+  pendingAppointments: number;
+}
+
+export const useTenantReportsDashboard = (tenantId: number | string | null) => {
+  const { data, isLoading, error } = useSWR(
+    tenantId ? API_ENDPOINTS.REPORT_DASHBOARD(tenantId) : null,
+    authFectcher,
+    {
+      onError: (err) => {
+        console.error("Reports dashboard fetch failed:", err);
+      },
+      shouldRetryOnError: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+
+  // The reports endpoint has historically returned different nested shapes
+  // (e.g. `data.data` vs direct fields). Unwrap defensively so the UI doesn't
+  // silently fall back to `0` when fields live one level deeper.
+  const normalized: ReportsDashboardData | null = (() => {
+    if (!data) return null;
+
+    const resp = data as any;
+
+    // New standardized response: { success: true, data: ... }
+    if (resp && typeof resp === "object" && "success" in resp) {
+      const inner = resp?.data;
+      if (inner && typeof inner === "object" && "data" in inner) {
+        const candidate = inner.data;
+        return Array.isArray(candidate) ? (candidate[0] ?? null) : (candidate ?? null);
+      }
+      return Array.isArray(inner) ? (inner[0] ?? null) : (inner ?? null);
+    }
+
+    // Legacy-ish response: { data: ... }
+    if (resp && typeof resp === "object" && "data" in resp) {
+      const inner = resp?.data;
+      if (inner && typeof inner === "object" && "data" in inner) {
+        const candidate = inner.data;
+        return Array.isArray(candidate) ? (candidate[0] ?? null) : (candidate ?? null);
+      }
+      return Array.isArray(inner) ? (inner[0] ?? null) : (inner ?? null);
+    }
+
+    // As a last resort, treat the response as the dashboard payload
+    return Array.isArray(resp) ? (resp[0] ?? null) : (resp ?? null);
+  })();
+
+  return {
+    data: normalized,
+    isLoading,
+    error: error ?? null,
+  };
+};
+
 // Helper function to extract nested data from response
 const extractNestedData = (responseData: any): any => {
   if (!responseData || typeof responseData !== 'object') return null;

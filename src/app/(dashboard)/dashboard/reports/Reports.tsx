@@ -21,9 +21,11 @@ import EnhancedPatientsList from "@/components/admin/EnhancedPatientsList";
 import EnhancedAppointmentsList from "@/components/admin/EnhancedAppointmentsList";
 import EnhancedPrescriptionsList from "@/components/admin/EnhancedPrescriptionsList";
 import { useRecentActivity, useActivityStats } from "@/hooks/useActivityLogs";
-import { useDashboardData } from "@/hooks/swr";
+import { useTenantReportsDashboard } from "@/hooks/swr";
 import { formatDistanceToNow } from "date-fns";
 import { clsx } from "clsx";
+import Cookies from "js-cookie";
+import { siteConfig } from "@/framework/site-config";
 
 export default function ReportsPage() {
   const searchParams = useSearchParams();
@@ -40,7 +42,87 @@ export default function ReportsPage() {
   }, [tabFromUrl]);
   const { activityLogs: recentActivity, isLoading: activityLoading } = useRecentActivity({ limit: 5 });
   const { stats: activityStats, isLoading: statsLoading } = useActivityStats();
-  const { data: dashboardData, isLoading: dashboardLoading } = useDashboardData();
+  const activityTopAction = (activityStats as any)?.topActions?.[0] ?? null;
+  const activityTopActionLabel =
+    activityTopAction?.activity_action ?? activityTopAction?.action ?? "—";
+  const activityTopActionCount = activityTopAction?.count ?? 0;
+  const activitySummaryTotal = (activityStats as any)?.summary?.total ?? 0;
+  const activitySummarySuccessful = (activityStats as any)?.summary?.successful ?? 0;
+  const activitySummaryFailed = (activityStats as any)?.summary?.failed ?? 0;
+  const activitySummaryPending = (activityStats as any)?.summary?.pending ?? 0;
+  const activitySummarySuccessRate = (activityStats as any)?.summary?.successRate ?? "0.00";
+
+  // Resolve tenantId for the tenant-scoped reports endpoint.
+  // Priority: URL (?tenantId=...) then `user` cookie payload.
+  const tenantId = (() => {
+    const fromUrl = searchParams.get("tenantId");
+    const urlId = fromUrl ? parseInt(fromUrl, 10) : NaN;
+    if (!isNaN(urlId) && urlId > 0) return urlId;
+
+    try {
+      const raw = Cookies.get("user");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as any;
+      const candidate =
+        parsed?.tenantId ??
+        parsed?.tenant_id ??
+        parsed?.tenant?.id ??
+        parsed?.orgId ??
+        parsed?.org_id ??
+        parsed?.organizationId ??
+        parsed?.organization?.id ??
+        parsed?.organization_id;
+
+      const num = typeof candidate === "string" ? parseInt(candidate, 10) : typeof candidate === "number" ? candidate : NaN;
+      return !isNaN(num) && num > 0 ? num : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // Fallback: if the user cookie doesn't include tenant id, use configured orgId.
+  // This prevents cards from staying at 0 due to a missing tenantId.
+  const fallbackTenantId = Number(siteConfig.orgId);
+  const tenantIdForReports =
+    tenantId ?? (!isNaN(fallbackTenantId) && fallbackTenantId > 0 ? fallbackTenantId : null);
+
+  const {
+    data: reportDashboardData,
+    isLoading: reportDashboardLoading,
+  } = useTenantReportsDashboard(tenantIdForReports);
+
+  // Dev-only debugging to confirm tenantId + payload
+  if (process.env.NODE_ENV === "development") {
+    console.log("=== REPORTS DASHBOARD DEBUG ===", {
+      tenantId,
+      tenantIdForReports,
+      endpoint: tenantIdForReports ? `/reports/dashboard/${tenantIdForReports}` : null,
+      urlTenantId: searchParams.get("tenantId"),
+    });
+    console.log("reportDashboardLoading/data", {
+      reportDashboardLoading,
+      reportDashboardData,
+    });
+
+    try {
+      const raw = Cookies.get("user");
+      if (raw) {
+        const parsed = JSON.parse(raw) as any;
+        console.log("=== REPORTS DASHBOARD DEBUG user-cookie ===", {
+          keys: Object.keys(parsed || {}),
+          tenantId: parsed?.tenantId,
+          tenant_id: parsed?.tenant_id,
+          orgId: parsed?.orgId,
+          org_id: parsed?.org_id,
+          tenant: parsed?.tenant,
+          organization_id: parsed?.organization_id,
+          organization: parsed?.organization,
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const reportTabs = [
     {
@@ -104,21 +186,29 @@ export default function ReportsPage() {
             <Card className="rounded-xl shadow-md border-t-4 border-blue-500 bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-500" /> Total Organizations
+                  <FileText className="h-5 w-5 text-blue-500" /> Total Activity
                 </CardTitle>
-                <Building2 className="h-5 w-5 text-blue-400" />
+                <FileText className="h-5 w-5 text-blue-300" />
               </CardHeader>
               <CardContent>
-                {dashboardLoading ? (
+                {statsLoading ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded mb-2"></div>
                     <div className="h-4 bg-gray-100 rounded"></div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{dashboardData?.totalTenants || 0}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {activitySummaryTotal}
+                    </div>
                     <p className="text-xs text-green-600 font-semibold">
-                      +12% <span className="text-gray-500 font-normal">from last month</span>
+                      {activitySummarySuccessRate}%{" "}
+                      <span className="text-gray-500 font-normal">success</span>
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Top action:{" "}
+                      <span className="font-semibold text-gray-900">{activityTopActionLabel}</span>{" "}
+                      <span className="text-gray-500 font-normal">({activityTopActionCount})</span>
                     </p>
                   </>
                 )}
@@ -127,21 +217,22 @@ export default function ReportsPage() {
             <Card className="rounded-xl shadow-md border-t-4 border-green-500 bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <UserCheck className="h-5 w-5 text-green-500" /> Total Users
+                  <Users className="h-5 w-5 text-green-500" /> Successful Actions
                 </CardTitle>
                 <Users className="h-5 w-5 text-green-400" />
               </CardHeader>
               <CardContent>
-                {dashboardLoading ? (
+                {statsLoading ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded mb-2"></div>
                     <div className="h-4 bg-gray-100 rounded"></div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{0}</div>
+                    <div className="text-2xl font-bold text-gray-900">{activitySummarySuccessful}</div>
                     <p className="text-xs text-green-600 font-semibold">
-                      +8% <span className="text-gray-500 font-normal">from last month</span>
+                      {activitySummaryFailed} <span className="text-gray-500 font-normal">failed</span> •{" "}
+                      {activitySummaryPending} <span className="text-gray-500 font-normal">pending</span>
                     </p>
                   </>
                 )}
@@ -150,21 +241,21 @@ export default function ReportsPage() {
             <Card className="rounded-xl shadow-md border-t-4 border-purple-500 bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Pill className="h-5 w-5 text-purple-500" /> Total Patients
+                  <Building2 className="h-5 w-5 text-purple-500" /> Failed Actions
                 </CardTitle>
                 <Pill className="h-5 w-5 text-purple-400" />
               </CardHeader>
               <CardContent>
-                {dashboardLoading ? (
+                {statsLoading ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded mb-2"></div>
                     <div className="h-4 bg-gray-100 rounded"></div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{0}</div>
+                    <div className="text-2xl font-bold text-gray-900">{activitySummaryFailed}</div>
                     <p className="text-xs text-green-600 font-semibold">
-                      +15% <span className="text-gray-500 font-normal">from last month</span>
+                      {activitySummaryPending} <span className="text-gray-500 font-normal">pending</span>
                     </p>
                   </>
                 )}
@@ -173,21 +264,21 @@ export default function ReportsPage() {
             <Card className="rounded-xl shadow-md border-t-4 border-yellow-500 bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-yellow-500" /> Monthly Appointments
+                  <Calendar className="h-5 w-5 text-yellow-500" /> Top Action
                 </CardTitle>
                 <Calendar className="h-5 w-5 text-yellow-400" />
               </CardHeader>
               <CardContent>
-                {dashboardLoading ? (
+                {statsLoading ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded mb-2"></div>
                     <div className="h-4 bg-gray-100 rounded"></div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold text-gray-900">{0}</div>
+                    <div className="text-2xl font-bold text-gray-900">{activityTopActionCount}</div>
                     <p className="text-xs text-green-600 font-semibold">
-                      +5% <span className="text-gray-500 font-normal">from last month</span>
+                      {activityTopActionLabel} <span className="text-gray-500 font-normal">most frequent</span>
                     </p>
                   </>
                 )}
@@ -205,25 +296,27 @@ export default function ReportsPage() {
                   <TrendingUp className="w-5 h-5 text-blue-500" />
                   System Growth
                 </CardTitle>
-                <CardDescription className="text-blue-700">Key metrics over the last 12 months</CardDescription>
+                <CardDescription className="text-blue-700">Key appointment metrics</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Organizations</span>
-                    <span className="text-sm text-green-600 font-semibold">+24% growth</span>
+                    <span className="text-sm font-medium">Appointments today</span>
+                    <span className="text-sm text-green-600 font-semibold">{reportDashboardData?.appointmentsToday ?? 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Users</span>
-                    <span className="text-sm text-green-600 font-semibold">+18% growth</span>
+                    <span className="text-sm font-medium">Appointments this week</span>
+                    <span className="text-sm text-green-600 font-semibold">{reportDashboardData?.appointmentsThisWeek ?? 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Patients</span>
-                    <span className="text-sm text-green-600 font-semibold">+32% growth</span>
+                    <span className="text-sm font-medium">New patients this month</span>
+                    <span className="text-sm text-green-600 font-semibold">{reportDashboardData?.newPatientsThisMonth ?? 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Appointments</span>
-                    <span className="text-sm text-green-600 font-semibold">+12% growth</span>
+                    <span className="text-sm font-medium">Completed / Pending</span>
+                    <span className="text-sm text-green-600 font-semibold">
+                      {reportDashboardData?.completedAppointments ?? 0} / {reportDashboardData?.pendingAppointments ?? 0}
+                    </span>
                   </div>
                 </div>
               </CardContent>

@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 // Define Department type
 interface Department {
@@ -81,7 +82,6 @@ function EditDepartmentModal({
         `${API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug))}/${department.id}`,
         payload
       );
-      toast.success("Department updated successfully");
       onSuccess();
     } catch (error) {
       console.error(error);
@@ -199,6 +199,7 @@ export default function Page({ slug }: { slug: string }) {
   const [deptToDelete, setDeptToDelete] = useState<Department | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const { data, mutate } = useSWR(
     API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug)),
     authFectcher
@@ -261,10 +262,12 @@ export default function Page({ slug }: { slug: string }) {
         "delete",
         `${API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug))}/${deptToDelete.id}`
       );
-      toast.success("Department deleted successfully");
       mutate();
       setShowDeleteWarning(false);
       setDeptToDelete(null);
+      triggerSuccess({
+        message: "Department deleted successfully.",
+      });
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete department");
@@ -425,12 +428,16 @@ export default function Page({ slug }: { slug: string }) {
             setSelectedDept(null);
           }}
           onSuccess={() => {
-                  setEditModalOpen(false);
-                  setSelectedDept(null);
+            setEditModalOpen(false);
+            setSelectedDept(null);
             mutate();
-                      }}
-                    />
+            triggerSuccess({
+              message: "Department updated successfully.",
+            });
+          }}
+        />
       )}
+      {SuccessModal}
     </section>
   );
 }
