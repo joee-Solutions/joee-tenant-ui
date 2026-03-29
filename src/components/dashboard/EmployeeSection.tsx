@@ -24,6 +24,21 @@ interface EmployeeSectionProps {
   employees: Employee[];
 }
 
+const FALLBACK_EMPLOYEE_IMAGE = "/assets/images/employeeprofile.png";
+
+function getSafeImageSrc(src?: string): string {
+  if (!src) return FALLBACK_EMPLOYEE_IMAGE;
+  const value = src.trim();
+  if (!value) return FALLBACK_EMPLOYEE_IMAGE;
+
+  // Allow known-safe forms for next/image.
+  if (value.startsWith("/")) return value;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  if (value.startsWith("data:image/")) return value;
+
+  return FALLBACK_EMPLOYEE_IMAGE;
+}
+
 const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
@@ -97,7 +112,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
 
       <div className="flex flex-col items-center -mt-12 text-center">
         <div className="relative w-[180px] h-[180px] rounded-full border-8 border-[#003465] overflow-hidden">
-          <Image src={mainEmployee?.image || "/assets/images/employeeprofile.png"} alt={mainEmployee?.name || "Employee"} layout="fill" objectFit="cover" />
+          <Image src={getSafeImageSrc(mainEmployee?.image)} alt={mainEmployee?.name || "Employee"} layout="fill" objectFit="cover" />
         </div>
         <h4 className="mt-4 text-xl font-medium text-black">{mainEmployee?.name}</h4>
         <p className="text-gray-500">{mainEmployee?.organization}</p>
@@ -119,7 +134,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
                 employee.role.includes("Doctor") ? "border-red-500" : "border-yellow-500"
               }`}
             >
-              <Image src={employee?.image || "/assets/images/employeeprofile.png"} alt={employee?.name || "Employee"} layout="fill" objectFit="cover" />
+              <Image src={getSafeImageSrc(employee?.image)} alt={employee?.name || "Employee"} layout="fill" objectFit="cover" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-900">{employee?.name}</h4>
@@ -159,7 +174,7 @@ const EmployeeSection: FC<EmployeeSectionProps> = ({ employees }) => {
                 <div className="flex justify-center mb-6">
                   <div className="relative w-[120px] h-[120px] rounded-full border-4 border-[#003465] overflow-hidden">
                     <Image 
-                      src={selectedEmployee.image_url || "/assets/images/employeeprofile.png"} 
+                      src={getSafeImageSrc(selectedEmployee.image_url)} 
                       alt={`${selectedEmployee.firstname} ${selectedEmployee.lastname}`} 
                       width={120}
                       height={120}

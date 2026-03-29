@@ -40,7 +40,8 @@ export const API_ENDPOINTS = {
   GET_SUPER_ADMIN: "/management/super/admin/all",
   ADD_SUPER_ADMIN: "/auth/super/create",
   UPDATE_ADMIN: (adminId: number) => `/management/super/admin/${adminId}`,
-  DELETE_ADMIN: (adminId: number) => `/management/super/admin/${adminId}`,
+  /** DELETE super admin by auth user id (not admin profile row id when they differ). */
+  DELETE_ADMIN: (userId: number) => `/management/super/user/${userId}`,
   
   // Training Guides
   GET_TRAINING_GUIDES: "/management/super/training-guides",

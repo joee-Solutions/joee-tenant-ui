@@ -19,7 +19,7 @@ interface UsePatientFormOptions {
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setIsSavedToAPI: (saved: boolean) => void;
   setCurrentStep?: (step: number) => void;
-  onSaveSuccess?: () => void;
+  onSaveSuccess?: (ctx: { mode: "create" | "update" }) => void;
 }
 
 /**
@@ -71,6 +71,7 @@ export function usePatientForm({
         setLoading(true);
         setError(null);
         try {
+          const saveMode: "create" | "update" = patientId ? "update" : "create";
           // Map and normalize form data for API
           const mappedData = mapFormDataToPatientDto(formData);
           normalizePatientData(mappedData, formData);
@@ -178,19 +179,13 @@ export function usePatientForm({
             }
           }
           
-          toast.success(patientId ? "Patient data saved successfully." : "Patient created successfully.", { 
-            toastId: "save-success",
-            autoClose: 4000,
-            position: "top-right"
-          });
           setHasUnsavedChanges(false);
           setIsSavedToAPI(true); // Mark as saved to API
           setError(null);
           
-          // Call onSaveSuccess callback if provided
           if (onSaveSuccess) {
             setTimeout(() => {
-              onSaveSuccess();
+              onSaveSuccess({ mode: saveMode });
             }, 500);
           }
         } catch (error: any) {

@@ -25,6 +25,7 @@ import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import EditEmployee from "./EditEmployee";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 // Define Employee type
 interface Employee {
@@ -38,7 +39,20 @@ interface Employee {
   email?: string;
   gender?: string;
   image_url?: string;
+  imageUrl?: string;
   status?: string;
+}
+
+function getSafeEmployeeImageSrc(src?: string) {
+  if (!src) return orgPlaceholder;
+  const value = src.trim();
+  if (!value) return orgPlaceholder;
+
+  if (value.startsWith("/")) return value;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  if (value.startsWith("data:image/")) return value;
+
+  return orgPlaceholder;
 }
 
 export default function Page({ slug }: { slug: string }) {
@@ -51,7 +65,8 @@ export default function Page({ slug }: { slug: string }) {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-  
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
+
   const orgId = slug && !isNaN(parseInt(slug)) ? parseInt(slug) : null;
   
   const { data, isLoading, error, mutate } = useSWR(
@@ -124,10 +139,12 @@ export default function Page({ slug }: { slug: string }) {
         "delete",
         API_ENDPOINTS.UPDATE_TENANT_EMPLOYEE(parseInt(slug), employeeToDelete.id)
       );
-      toast.success("Employee deleted successfully");
       mutate();
       setShowDeleteWarning(false);
       setEmployeeToDelete(null);
+      triggerSuccess({
+        message: "Employee deleted successfully.",
+      });
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete employee");
@@ -142,10 +159,15 @@ export default function Page({ slug }: { slug: string }) {
     setOpenDropdownId(null);
   };
 
-  const handleEditDone = () => {
+  const handleEditDone = (opts?: { updated?: boolean }) => {
     setEditModalOpen(false);
     setSelectedEmployeeId(null);
     mutate();
+    if (opts?.updated) {
+      triggerSuccess({
+        message: "Employee updated successfully.",
+      });
+    }
   };
 
   return (
@@ -199,7 +221,9 @@ export default function Page({ slug }: { slug: string }) {
                   <div className="flex items-center gap-[10px]">
                     <span className="w-[42px] h-[42px] rounded-full overflow-hidden">
                       <Image
-                        src={employee?.image_url || orgPlaceholder}
+                        src={getSafeEmployeeImageSrc(
+                          employee?.image_url ?? employee?.imageUrl
+                        )}
                         alt="employee image"
                         width={42}
                         height={42}
@@ -333,6 +357,7 @@ export default function Page({ slug }: { slug: string }) {
           </div>
         </div>
       )}
+      {SuccessModal}
     </section>
   );
 }

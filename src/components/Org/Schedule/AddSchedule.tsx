@@ -9,8 +9,6 @@ import { Calendar, Clock, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { format } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -23,17 +21,28 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import Link from "next/link";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const ScheduleSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
   availableDays: z.array(z.object({
-    date: z.date({ required_error: "Date is required" }),
+    day: z.string().min(1, "Day is required"),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
   })).min(1, "At least one schedule day is required"),
 });
 
 type ScheduleSchemaType = z.infer<typeof ScheduleSchema>;
+
+const WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 interface ScheduleFormProps {
   slug: string;
@@ -43,9 +52,9 @@ interface ScheduleFormProps {
 
 export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleFormProps) {
   const router = useRouter();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   // Fetch employees for dropdown
   const orgId = slug && !isNaN(parseInt(slug)) ? parseInt(slug) : null;
@@ -61,7 +70,7 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
       employeeId: "",
       availableDays: [
         {
-          date: undefined,
+          day: "",
           startTime: "",
           endTime: "",
         },
@@ -77,12 +86,11 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
   const onSubmit = async (data: ScheduleSchemaType) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
       const scheduleData = {
         availableDays: data.availableDays.map(day => ({
-          day: day.date ? format(day.date, 'EEEE') : '', // Convert date to day name
+          day: day.day,
           startTime: day.startTime,
           endTime: day.endTime,
         })),
@@ -95,22 +103,24 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
       );
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
-        setSuccess(true);
         form.reset({
           employeeId: "",
           availableDays: [{
-            date: undefined,
+            day: "",
             startTime: "",
             endTime: "",
           }],
         });
-        setTimeout(() => {
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            router.push(`/dashboard/organization/${slug}/schedules`);
-          }
-        }, 1500);
+        triggerSuccess({
+          message: "Schedule created successfully.",
+          onContinue: () => {
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              router.push(`/dashboard/organization/${slug}/schedules`);
+            }
+          },
+        });
       } else {
         setError(res?.message || res?.error || "Failed to create schedule. Please try again.");
       }
@@ -156,12 +166,6 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
         </div>
       )}
       
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Schedule created successfully! Redirecting...
-        </div>
-      )}
-
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Employee Section */}
         <div className="p-6 border border-gray-200 rounded-lg bg-gray-50">
@@ -187,7 +191,7 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white">
+                  <SelectContent className="bg-white">
                     {Array.isArray(employeesData?.data) && employeesData.data.map((employee: any) => (
                       <SelectItem key={employee.id} value={employee.id.toString()} className="hover:bg-gray-200">
                         {employee.firstname} {employee.lastname}
@@ -237,26 +241,32 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                {/* Date Selection */}
+                {/* Day Selection */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
-                    Date <span className="text-red-500">*</span>
+                    Day <span className="text-red-500">*</span>
                   </label>
                   <Controller
-                    name={`availableDays.${index}.date`}
+                    name={`availableDays.${index}.day`}
                     control={form.control}
                     render={({ field }) => (
-                      <DatePicker
-                        date={field.value}
-                        onDateChange={field.onChange}
-                        placeholder="Pick a date"
-                        className="w-full"
-                      />
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {WEEK_DAYS.map((weekDay) => (
+                            <SelectItem key={weekDay} value={weekDay} className="hover:bg-gray-200">
+                              {weekDay}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
-                  {form.formState.errors.availableDays?.[index]?.date && (
+                  {form.formState.errors.availableDays?.[index]?.day && (
                     <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.availableDays[index]?.date?.message}
+                      {form.formState.errors.availableDays[index]?.day?.message}
                     </p>
                   )}
                 </div>
@@ -303,11 +313,11 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
             <Button
               type="button"
               variant="outline"
-               onClick={() => append({ date: new Date(), startTime: "", endTime: "" })}
+              onClick={() => append({ day: "", startTime: "", endTime: "" })}
                 className="w-full md:w-auto text-[#003465] border-[#003465] hover:bg-[#003465] hover:text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Another Date
+              Add Another Day
             </Button>
             </div>
           </div>
@@ -338,6 +348,7 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
           </Button>
         </div>
       </form>
+      {SuccessModal}
     </div>
   );
 }

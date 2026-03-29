@@ -16,40 +16,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { Spinner } from "@/components/icons/Spinner";
 import { processRequestAuth } from "@/framework/https";
-import { parse } from "path";
 import { toast } from "react-toastify";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const EmployeeSchema = z.object({
-  firstname: z.string().min(1, "First name is required"),
-  lastname: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  phone_number: z.string().optional(),
-  address: z.string().optional(),
-  region: z.string().optional(),
+  firstname: z.string().default(""),
+  lastname: z.string().default(""),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Invalid email address"),
+  phone_number: z.string().optional().default(""),
+  address: z.string().optional().default(""),
+  region: z.string().optional().default(""),
   date_of_birth: z.date().optional(),
-  specialty: z.string().optional(),
-  designation: z.string().min(1, "Title is required"),
+  specialty: z.string().optional().default(""),
+  designation: z.string().default(""),
   department: z.string().min(1, "Department is required"),
-  gender: z.string().optional(),
-  image_url: z.string().optional(),
+  gender: z.string().optional().default(""),
+  image_url: z.string().optional().default(""),
   hire_date: z.date().optional(),
-  about: z.string().optional(),
-  status: z.string(),
+  about: z.string().optional().default(""),
+  status: z.string().optional().default("active"),
 });
 
 type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
 
 export default function AddEmployee({ slug }: { slug: string }) {
   const router = useRouter();
+  const { mutate: globalMutate } = useSWRConfig();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [fileSelected, setFileSelected] = useState<string>("");
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
   const [hireDate, setHireDate] = useState<Date | undefined>(undefined);
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Failed to read image file."));
+      reader.readAsDataURL(file);
+    });
 
   const form = useForm<EmployeeSchemaType>({
     resolver: zodResolver(EmployeeSchema),
@@ -69,7 +82,7 @@ export default function AddEmployee({ slug }: { slug: string }) {
       image_url: "",
       hire_date: undefined,
       about: "",
-      status: undefined,
+      status: "active",
     },
   });
 
@@ -107,51 +120,45 @@ export default function AddEmployee({ slug }: { slug: string }) {
 
   const onSubmit = async (data: EmployeeSchemaType) => {
     try {
-      // Validate that status is selected
-      if (!data.status) {
-        toast.error("Please select a status (Active or Inactive)", {
-          toastId: "status-required-error",
-        });
-        form.setError("status", {
-          type: "manual",
-          message: "Status is required. Please select Active or Inactive.",
-        });
-        return;
-      }
-      
-      // Get the current status value directly from form state to ensure accuracy
       const currentStatus = form.getValues("status");
-      const statusToSend = currentStatus || data.status;
-      
-      // Ensure status is explicitly set and is either "active" or "inactive"
-      if (!statusToSend || (statusToSend !== "active" && statusToSend !== "inactive")) {
-        toast.error("Please select a status (Active or Inactive)", {
-          toastId: "status-required-error",
-        });
-        form.setError("status", {
+      let statusToSend = (currentStatus || data.status || "active").toLowerCase();
+      if (statusToSend !== "active" && statusToSend !== "inactive") {
+        statusToSend = "active";
+      }
+
+      if (deptId == null || Number.isNaN(Number(deptId))) {
+        toast.error("Please select a department.", { toastId: "dept-required-error" });
+        form.setError("department", {
           type: "manual",
-          message: "Status is required. Please select Active or Inactive.",
+          message: "Department is required.",
         });
         return;
       }
-      
-      const payload = {
+
+      const payload: Record<string, unknown> = {
         firstname: data.firstname,
         lastname: data.lastname,
         email: data.email,
         phone_number: data.phone_number,
         address: data.address,
         region: data.region,
-        date_of_birth: data.date_of_birth instanceof Date ? data.date_of_birth.toISOString().split('T')[0] : '',
         specialty: data.specialty,
         designation: data.designation,
         department: deptId,
         gender: data.gender,
         image_url: data.image_url,
-        hire_date: data.hire_date instanceof Date ? data.hire_date.toISOString().split('T')[0] : '',
         about: data.about,
-        status: statusToSend, // Explicitly set status as "active" or "inactive"
+        status: statusToSend,
       };
+
+      const dob = data.date_of_birth;
+      if (dob instanceof Date && !Number.isNaN(dob.getTime())) {
+        payload.date_of_birth = dob.toISOString();
+      }
+      const hire = data.hire_date;
+      if (hire instanceof Date && !Number.isNaN(hire.getTime())) {
+        payload.hire_date = hire.toISOString();
+      }
 
       const res = await processRequestAuth(
         "post",
@@ -203,12 +210,23 @@ export default function AddEmployee({ slug }: { slug: string }) {
       }
       
       if (res?.status || res?.success) {
-        toast.success("Employee created successfully!", {
-          toastId: "employee-create-success",
+        triggerSuccess({
+          message: "Employee created successfully.",
+          onContinue: () => {
+            const orgId = parseInt(slug, 10);
+            if (!Number.isNaN(orgId)) {
+              const employeesKey = API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId);
+              void globalMutate(
+                (key) =>
+                  typeof key === "string" &&
+                  (key === employeesKey || key.includes(employeesKey)),
+                undefined,
+                { revalidate: true }
+              );
+            }
+            router.push(`/dashboard/organization/${slug}/employees`);
+          },
         });
-        setTimeout(() => {
-          router.push(`/dashboard/organization/${slug}/employees`);
-        }, 1000);
       } else {
         toast.error(res?.message || "Failed to create employee. Please try again.", {
           toastId: "employee-create-error",
@@ -401,7 +419,11 @@ export default function AddEmployee({ slug }: { slug: string }) {
               Department
             </label>
             <Select
-              onValueChange={(value) => form.setValue("department", value)}
+              value={form.watch("department") || undefined}
+              onValueChange={(value) => {
+                form.setValue("department", value, { shouldValidate: true });
+                form.clearErrors("department");
+              }}
             >
               <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                 <SelectValue placeholder="select" />
@@ -418,6 +440,11 @@ export default function AddEmployee({ slug }: { slug: string }) {
                 ))}
               </SelectContent>
             </Select>
+            {form.formState.errors.department && (
+              <p className="text-red-500 text-sm mt-1">
+                {form.formState.errors.department.message}
+              </p>
+            )}
           </div>
 
           {/* Gender */}
@@ -489,7 +516,13 @@ export default function AddEmployee({ slug }: { slug: string }) {
                   const file = e.target.files?.[0];
                   if (file) {
                     setFileSelected(file.name);
-                    form.setValue("image_url", file.name);
+                    void fileToDataUrl(file)
+                      .then((dataUrl) => {
+                        form.setValue("image_url", dataUrl, { shouldValidate: true });
+                      })
+                      .catch(() => {
+                        toast.error("Failed to process image file.");
+                      });
                   }
                 }}
               />
@@ -599,13 +632,14 @@ export default function AddEmployee({ slug }: { slug: string }) {
           </Button>
           <Button
             type="submit"
-            disabled={!form.formState.isValid || form.formState.isSubmitting}
+            disabled={form.formState.isSubmitting}
             className=" bg-[#003465] hover:bg-[#0d2337] text-white py-8 px-16 text-md rounded min-w-[200px]"
           >
             {form.formState.isSubmitting ? <Spinner /> : "Submit"}
           </Button>
         </div>
       </form>
+      {SuccessModal}
     </div>
   );
 }

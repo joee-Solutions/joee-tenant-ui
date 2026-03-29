@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import FieldBox from "@/components/shared/form/FieldBox";
-import FieldSelect from "@/components/shared/form/FieldSelect";
+import FieldSelect, {
+  matchSelectValueToOption,
+} from "@/components/shared/form/FieldSelect";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
@@ -19,8 +21,8 @@ const EditAdminSchema = z.object({
   last_name: z.string().min(1, "This field is required"),
   email: z
     .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
+    .min(1, "This field is required")
+    .email("Invalid email address"),
   role: z.string().min(1, "This field is required"),
   phone_number: z.string().min(1, "This field is required"),
   company: z.string().min(1, "This field is required"),
@@ -29,7 +31,68 @@ const EditAdminSchema = z.object({
 
 type EditAdminSchemaType = z.infer<typeof EditAdminSchema>;
 
-const orgStatus = ["Admin", "Super_Admin", "User"];
+const ROLE_OPTIONS = ["Admin", "Super_Admin"];
+
+function getAdminRoleString(admin: AdminUser): string {
+  const single = (admin as { role?: string }).role;
+  if (typeof single === "string" && single.trim()) return single.trim();
+
+  const rolesUnknown = (admin as { roles?: unknown }).roles;
+
+  if (typeof rolesUnknown === "string" && rolesUnknown.trim()) {
+    const t = rolesUnknown.trim();
+    if (t.startsWith("[") && t.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(t) as unknown;
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] != null) {
+          return String(parsed[0]).trim();
+        }
+      } catch {
+        /* use raw string */
+      }
+    }
+    return t;
+  }
+
+  if (!rolesUnknown) return "";
+
+  if (Array.isArray(rolesUnknown)) {
+    if (rolesUnknown.length === 0) return "";
+    const first = rolesUnknown[0];
+    if (typeof first === "string") return first.trim();
+    if (typeof first === "number" || typeof first === "boolean") {
+      return String(first);
+    }
+    if (first && typeof first === "object" && first !== null) {
+      const o = first as { name?: unknown; role?: unknown };
+      if (typeof o.name === "string" && o.name.trim()) return o.name.trim();
+      if (typeof o.role === "string" && o.role.trim()) return o.role.trim();
+    }
+    return "";
+  }
+
+  const user = (admin as { user?: { roles?: unknown; role?: string } }).user;
+  if (user?.role && typeof user.role === "string" && user.role.trim()) {
+    return user.role.trim();
+  }
+  if (Array.isArray(user?.roles) && user.roles.length > 0) {
+    const fr = user.roles[0];
+    if (typeof fr === "string") return fr.trim();
+  }
+
+  return "";
+}
+
+function getRoleForForm(roleStr: string): string {
+  if (!roleStr) return "";
+  const trimmed = roleStr.trim();
+  if (ROLE_OPTIONS.includes(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase().replace(/\s+/g, "_");
+  const found = ROLE_OPTIONS.find(
+    (o) => o.toLowerCase().replace(/\s+/g, "_") === lower
+  );
+  return found ?? trimmed;
+}
 
 interface EditAdminModalProps {
   admin: AdminUser;
@@ -43,6 +106,15 @@ export default function EditAdminModal({
   onSuccess,
 }: EditAdminModalProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const roleOptions = useMemo(() => {
+    const raw = getAdminRoleString(admin).trim();
+    const normalized = (getRoleForForm(raw) || raw).trim();
+    const opts = [...ROLE_OPTIONS];
+    if (raw && !opts.includes(raw)) opts.push(raw);
+    if (normalized && !opts.includes(normalized)) opts.push(normalized);
+    return opts;
+  }, [admin]);
 
   const form = useForm<EditAdminSchemaType>({
     resolver: zodResolver(EditAdminSchema),
@@ -58,30 +130,53 @@ export default function EditAdminModal({
     },
   });
 
-  // Populate form when admin data is available
+  // Populate form when admin data is available (role must match a SelectItem value)
   useEffect(() => {
-    if (admin) {
-      form.reset({
-        first_name: admin.first_name || "",
-        last_name: admin.last_name || "",
-        email: admin.email || "",
-        phone_number: admin.phone_number || "",
-        role: admin.roles?.[0] || "",
-        company: "Joee Solution", // Default or from admin data if available
-        address: admin.address || "",
+    if (!admin) return;
+    const roleRaw = getAdminRoleString(admin);
+    const normalized = getRoleForForm(roleRaw) || roleRaw;
+    const role =
+      matchSelectValueToOption(normalized, roleOptions) ??
+      matchSelectValueToOption(roleRaw, roleOptions) ??
+      "";
+
+    form.reset({
+      first_name: admin.first_name || "",
+      last_name: admin.last_name || "",
+      email: admin.email || "",
+      phone_number: admin.phone_number || "",
+      role,
+      company: "Joee Solution",
+      address: admin.address || "",
+    });
+
+    // Radix Select often misses the first programmatic value; sync after paint.
+    if (role) {
+      queueMicrotask(() => {
+        form.setValue("role", role, { shouldValidate: true, shouldDirty: false });
       });
     }
-  }, [admin, form]);
+  }, [admin, form, roleOptions]);
 
   const handleSubmit = async (payload: EditAdminSchemaType) => {
     if (!admin?.id) return;
 
     setIsUpdating(true);
     try {
+      const updatePayload = {
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        address: payload.address ?? "",
+        email: payload.email,
+        phone_number: payload.phone_number,
+        role: payload.role,
+        company: payload.company,
+      };
+
       const response = await processRequestAuth(
-        "put",
-        API_ENDPOINTS.UPDATE_ADMIN(admin.id),
-        payload
+        "patch",
+        API_ENDPOINTS.UPDATE_ADMIN_PROFILE(admin.id),
+        updatePayload
       );
 
       const hasError =
@@ -201,14 +296,17 @@ export default function EditAdminModal({
                 placeholder="Enter Phone number"
               />
 
-              <FieldSelect
-                bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                name="role"
-                control={form.control}
-                options={orgStatus}
-                labelText="Role"
-                placeholder="Select"
-              />
+              <div className="w-full overflow-visible">
+                <FieldSelect
+                  bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                  name="role"
+                  control={form.control}
+                  options={roleOptions}
+                  labelText="Role"
+                  placeholder="Select"
+                  selectKey={`${admin.id}-${form.watch("role") || "none"}`}
+                />
+              </div>
 
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -217,6 +315,7 @@ export default function EditAdminModal({
                 labelText="Company"
                 type="text"
                 placeholder="Enter here"
+                disabled={true}
               />
 
               <div className="flex gap-3 justify-end mt-4">

@@ -30,7 +30,10 @@ export default function OrganizationSuccessModal({
 }: Props) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-white flex flex-col items-center text-center sm:max-w-md">
+      <AlertDialogContent
+        overlayClassName="z-[10050]"
+        className="z-[10050] bg-white flex flex-col items-center text-center sm:max-w-md"
+      >
         <AlertDialogHeader className="flex flex-col items-center">
           <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
           <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">

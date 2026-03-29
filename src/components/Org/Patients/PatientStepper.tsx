@@ -35,6 +35,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { usePatientForm } from "@/hooks/usePatientForm";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 // Import form components
 import PatientDemographicsForm from "./PersonalInformation/PatientDemographicsForm";
@@ -423,6 +424,7 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
 };
 
 export default function PatientStepper({ slug, patientId: propPatientId, onSaveComplete }: PatientStepperProps): React.ReactElement {
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -562,6 +564,19 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
     }
   }, [patientData, patientId, isLoadingPatient, methods, setIsSavedToAPI, setHasUnsavedChanges]);
 
+  const handlePatientSaveSuccess = useCallback(
+    (ctx: { mode: "create" | "update" }) => {
+      triggerSuccess({
+        message:
+          ctx.mode === "update"
+            ? "Patient updated successfully."
+            : "Patient created successfully.",
+      });
+      onSaveComplete?.();
+    },
+    [triggerSuccess, onSaveComplete]
+  );
+
   // Use the patient form hook for save and auto-save logic
   const { saveToLocalStorage, handleSave } = usePatientForm({
     methods,
@@ -575,7 +590,7 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
     setHasUnsavedChanges,
     setIsSavedToAPI,
     setCurrentStep,
-    onSaveSuccess: onSaveComplete,
+    onSaveSuccess: handlePatientSaveSuccess,
   });
   
   // Update isSavedToAPI when patientId changes or when save succeeds
@@ -1081,6 +1096,7 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          {SuccessModal}
         </div>
       </div>
     </div>

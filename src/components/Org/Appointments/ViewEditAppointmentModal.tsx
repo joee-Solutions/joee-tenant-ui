@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Edit, Check, Clock, CheckCircle2 } from "lucide-react";
+import { X, Edit, Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -22,15 +22,6 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -49,21 +40,26 @@ interface ViewEditAppointmentModalProps {
   orgId?: number;
   /** Tenant id to use in API path (from GET_TENANT); use this for PATCH/DELETE to avoid 404 */
   tenantIdForPath?: number | string;
+  /** When true (e.g. opened from list "Edit"), form opens in edit mode without an extra Edit click */
+  openInEditMode?: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  /** Close the edit modal first, then show success (parent-owned success modal) */
+  onOperationSuccess?: (message: string) => void;
 }
 
 export default function ViewEditAppointmentModal({
   appointment,
   orgId,
   tenantIdForPath,
+  openInEditMode = false,
   onClose,
   onUpdate,
+  onOperationSuccess,
 }: ViewEditAppointmentModalProps) {
   const tenantId = tenantIdForPath ?? orgId ?? null;
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(openInEditMode);
   const [loading, setLoading] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // Normalize time to HH:mm for API (backend rejects HH:mm:ss)
   const toHHmm = (time: string) => {
@@ -192,23 +188,20 @@ export default function ViewEditAppointmentModal({
     },
   });
 
-  // Load appointment data into form when appointment or providers/patients change
   useEffect(() => {
-    if (appointment && appointment.id) {
-      const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-      const doctorId = resolvedDoctorId;
-      setTimeout(() => {
-        form.reset({
-          patientId,
-          doctorId,
-          date: appointment.date || "",
-          startTime: toHHmm(appointment.startTime || ""),
-          endTime: toHHmm(appointment.endTime || ""),
-          description: appointment.description || "",
-        });
-      }, 100);
-    }
-  }, [appointment?.id, appointment?.date, appointment?.user, resolvedDoctorId, form]);
+    if (!appointment?.id) return;
+    const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
+    const doctorId = resolvedDoctorId;
+    form.reset({
+      patientId,
+      doctorId,
+      date: appointment.date || "",
+      startTime: toHHmm(appointment.startTime || ""),
+      endTime: toHHmm(appointment.endTime || ""),
+      description: appointment.description || "",
+    });
+    setIsEditMode(!!openInEditMode);
+  }, [appointment?.id, appointment?.date, appointment?.user, resolvedDoctorId, openInEditMode, form]);
 
   const handleEdit = () => {
     if (!appointment) return;
@@ -225,9 +218,12 @@ export default function ViewEditAppointmentModal({
   };
 
   const handleCancel = () => {
+    if (openInEditMode) {
+      onClose();
+      return;
+    }
     if (isEditMode) {
       setIsEditMode(false);
-      // Reset form to original values
       if (appointment) {
         const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
         const doctorId = resolvedDoctorId;
@@ -240,9 +236,9 @@ export default function ViewEditAppointmentModal({
           description: appointment.description || "",
         });
       }
-    } else {
-      onClose();
+      return;
     }
+    onClose();
   };
 
   const handleSave = async (data: AppointmentSchemaType) => {
@@ -262,11 +258,16 @@ export default function ViewEditAppointmentModal({
           description: data.description || "",
         }
       );
-      toast.success("Appointment updated successfully");
-      setShowSuccessAlert(true);
+      setLoading(false);
+      if (onOperationSuccess) {
+        onOperationSuccess("Appointment updated successfully.");
+      } else {
+        onUpdate();
+        onClose();
+        toast.success("Appointment updated successfully");
+      }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update appointment");
-    } finally {
       setLoading(false);
     }
   };
@@ -281,34 +282,21 @@ export default function ViewEditAppointmentModal({
         "delete",
         `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointment.id}`
       );
-      toast.success("Appointment canceled successfully");
-      onUpdate();
-      onClose();
+      setLoading(false);
+      if (onOperationSuccess) {
+        onOperationSuccess("Appointment canceled successfully.");
+      } else {
+        onUpdate();
+        onClose();
+        toast.success("Appointment canceled successfully");
+      }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to cancel appointment");
-    } finally {
       setLoading(false);
     }
   };
 
   if (!appointment) return null;
-
-  // Reset edit mode when appointment changes
-  useEffect(() => {
-    if (appointment?.id) {
-      setIsEditMode(false);
-      const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-      const doctorId = resolvedDoctorId;
-      form.reset({
-        patientId,
-        doctorId,
-        date: appointment.date || "",
-        startTime: toHHmm(appointment.startTime || ""),
-        endTime: toHHmm(appointment.endTime || ""),
-        description: appointment.description || "",
-      });
-    }
-  }, [appointment?.id, resolvedDoctorId, form]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
@@ -316,7 +304,7 @@ export default function ViewEditAppointmentModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold">
-            {isEditMode ? "Edit Appointment" : "View Appointment"}
+            {openInEditMode || isEditMode ? "Edit Appointment" : "View Appointment"}
           </h2>
           <button
             onClick={onClose}
@@ -639,34 +627,6 @@ export default function ViewEditAppointmentModal({
           </div>
         </form>
       </div>
-
-      {/* Success alert — ensure it appears above the modal */}
-      <AlertDialog open={showSuccessAlert} onOpenChange={setShowSuccessAlert}>
-        <AlertDialogContent overlayClassName="z-[10002]" className="z-[10002] bg-white flex flex-col items-center text-center">
-          <AlertDialogHeader className="flex flex-col items-center">
-            <CheckCircle2 className="size-[100px] fill-[#3FA907] text-white" />
-            <AlertDialogTitle className="font-medium text-[#3FA907] text-4xl">
-              Success
-            </AlertDialogTitle>
-            <AlertDialogDescription className="font-normal text-base text-[#737373]">
-              Appointment has been updated successfully.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              className="h-12 w-full max-w-[291px] bg-[#3FA907] text-white font-medium text-base"
-              onClick={() => {
-                setShowSuccessAlert(false);
-                setIsEditMode(false);
-                onUpdate();
-                onClose();
-              }}
-            >
-              OK
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

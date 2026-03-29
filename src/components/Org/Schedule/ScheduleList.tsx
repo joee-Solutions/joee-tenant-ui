@@ -30,42 +30,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
-import { DatePicker } from "@/components/ui/date-picker";
-import { format, parse } from "date-fns";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const ScheduleEditSchema = z.object({
   availableDays: z.array(z.object({
-    date: z.date({ required_error: "Date is required" }),
+    day: z.string().min(1, "Day is required"),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
   })).min(1, "At least one schedule day is required"),
 });
 
 type ScheduleEditSchemaType = z.infer<typeof ScheduleEditSchema>;
+const WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+const normalizeDayLabel = (day?: string) => {
+  if (!day) return "-";
+  const clean = day.trim().toLowerCase();
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+};
 
 function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: string; schedule: any; onClose: () => void; onSuccess: () => void }) {
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [loading, setLoading] = useState(false);
-
-  // Helper function to convert day name to a date (next occurrence of that day)
-  const getDateFromDayName = (dayName: string): Date => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayIndex = days.findIndex(d => d.toLowerCase() === dayName.toLowerCase());
-    if (dayIndex === -1) return new Date();
-    
-    const today = new Date();
-    const currentDay = today.getDay();
-    let daysUntil = dayIndex - currentDay;
-    if (daysUntil <= 0) daysUntil += 7; // Next week if today or past
-    const nextDate = new Date(today);
-    nextDate.setDate(today.getDate() + daysUntil);
-    return nextDate;
-  };
 
   const editForm = useForm<ScheduleEditSchemaType>({
     resolver: zodResolver(ScheduleEditSchema),
     defaultValues: {
       availableDays: (schedule.availableDays || []).map((day: any) => ({
-        date: day.day ? getDateFromDayName(day.day) : new Date(),
+        day: day.day || "",
         startTime: day.startTime || "",
         endTime: day.endTime || "",
       })),
@@ -82,7 +82,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
     try {
       const scheduleData = {
         availableDays: data.availableDays.map(day => ({
-          day: day.date ? format(day.date, 'EEEE') : '', // Convert date to day name
+          day: day.day,
           startTime: day.startTime,
           endTime: day.endTime,
         })),
@@ -92,6 +92,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
       const employeeId = schedule.user?.id || schedule.userId || schedule.employeeId;
       if (!employeeId) {
         toast.error("Employee ID not found");
+        setLoading(false);
         return;
       }
       
@@ -100,8 +101,10 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
         `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`,
         scheduleData
       );
-      toast.success("Schedule updated successfully");
-      onSuccess();
+      triggerSuccess({
+        message: "Schedule updated successfully.",
+        onContinue: () => onSuccess(),
+      });
     } catch (error) {
       console.error(error);
       toast.error("Failed to update schedule");
@@ -157,19 +160,30 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-base text-black font-normal mb-2">Date</label>
+                  <label className="block text-base text-black font-normal mb-2">Day</label>
                   <Controller
-                    name={`availableDays.${index}.date`}
+                    name={`availableDays.${index}.day`}
                     control={editForm.control}
                     render={({ field }) => (
-                      <DatePicker
-                        date={field.value}
-                        onDateChange={field.onChange}
-                        placeholder="Pick a date"
-                        className="w-full"
-                      />
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {WEEK_DAYS.map((weekDay) => (
+                            <SelectItem key={weekDay} value={weekDay} className="hover:bg-gray-200">
+                              {weekDay}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
+                  {editForm.formState.errors.availableDays?.[index]?.day && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {editForm.formState.errors.availableDays[index]?.day?.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -206,11 +220,11 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
           <Button
             type="button"
             variant="outline"
-            onClick={() => append({ date: new Date(), startTime: "", endTime: "" })}
+            onClick={() => append({ day: "", startTime: "", endTime: "" })}
             className="mt-4 w-full sm:w-auto bg-[#003465] hover:bg-[#00254a] text-white border-[#003465] font-medium px-6 py-2"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Another Date
+            Add Another Day
           </Button>
 
           <div className="flex gap-3 pt-4">
@@ -232,12 +246,14 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
           </div>
         </form>
       </div>
+      {SuccessModal}
     </div>
   );
 }
 
 export default function Page({ slug }: { slug: string }) {
   const router = useRouter();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -329,7 +345,7 @@ export default function Page({ slug }: { slug: string }) {
         "delete",
         `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`
       );
-      toast.success("Schedule deleted successfully");
+      triggerSuccess({ message: "Schedule deleted successfully." });
       mutate();
       setShowDeleteWarning(false);
       setScheduleToDelete(null);
@@ -415,7 +431,7 @@ export default function Page({ slug }: { slug: string }) {
                     {scheduleItem.department}
                   </TableCell>
                   <TableCell className="font-semibold text-xs text-[#737373]">
-                    {day.day}
+                    {normalizeDayLabel(day.day)}
                   </TableCell>
                   <TableCell className="font-semibold text-xs text-[#737373]">
                     {day.startTime}
@@ -506,6 +522,7 @@ export default function Page({ slug }: { slug: string }) {
           }}
         />
       )}
+      {SuccessModal}
     </section>
   );
 }

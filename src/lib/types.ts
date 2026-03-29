@@ -85,6 +85,9 @@ export interface ErrorResponse {
 // Specific data types
 export interface AdminUser {
   id: number;
+  /** Auth/user id for management routes such as DELETE /management/super/user/:id */
+  user_id?: number;
+  userId?: number;
   first_name: string;
   last_name: string;
   email: string;

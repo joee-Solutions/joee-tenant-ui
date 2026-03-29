@@ -9,7 +9,7 @@ import DataTable from "@/components/shared/table/DataTable";
 import Pagination from "@/components/shared/table/pagination";
 import { useAdminUsersData } from "@/hooks/swr";
 import { AdminUser } from "@/lib/types";
-import { Eye, User, MoreVertical, Trash2 } from "lucide-react";
+import { Pencil, User, MoreVertical, Trash2 } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -17,13 +17,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ViewAdminModal from "@/components/admin/ViewAdminModal";
+import EditAdminModal from "@/components/admin/EditAdminModal";
 import SuperAdminGuard from "@/components/admin/SuperAdminGuard";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { useSWRConfig } from "swr";
 import { toast } from "react-toastify";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 // Mock table data structure - replace with actual data from API
 const adminTableData = [
@@ -33,7 +34,6 @@ const adminTableData = [
     email: "Email",
     role: "Role",
     phone: "Phone",
-    status: "Status",
     actions: "Actions",
   },
 ];
@@ -43,14 +43,14 @@ export default function AdminListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("");
-  const [status, setStatus] = useState("");
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [adminToEdit, setAdminToEdit] = useState<AdminUser | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const { mutate: globalMutate } = useSWRConfig();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
   // Fetch admin users
   const { data: adminsData, isLoading, error } = useAdminUsersData();
@@ -93,10 +93,7 @@ export default function AdminListPage() {
                role.includes(searchLower);
       });
     }
-    
-    // Status filter (if needed in the future)
-    // Currently all admins are shown as "Active", but we can add status filtering later
-    
+
     // Sort
     if (sortBy) {
       filtered.sort((a: AdminUser, b: AdminUser) => {
@@ -118,7 +115,7 @@ export default function AdminListPage() {
     }
     
     return filtered;
-  }, [normalizedAdmins, search, sortBy, status]);
+  }, [normalizedAdmins, search, sortBy]);
 
   // Paginate filtered data
   const paginatedAdmins = useMemo(() => {
@@ -128,21 +125,20 @@ export default function AdminListPage() {
   }, [filteredAdmins, currentPage, pageSize]);
 
   // Reset to page 1 when search or filters change
-  const prevFilters = useRef({ search, sortBy, status });
+  const prevFilters = useRef({ search, sortBy });
   useEffect(() => {
     if (
       prevFilters.current.search !== search ||
-      prevFilters.current.sortBy !== sortBy ||
-      prevFilters.current.status !== status
+      prevFilters.current.sortBy !== sortBy
     ) {
       setCurrentPage(1);
     }
-    prevFilters.current = { search, sortBy, status };
-  }, [search, sortBy, status]);
+    prevFilters.current = { search, sortBy };
+  }, [search, sortBy]);
 
-  const handleViewClick = (admin: AdminUser) => {
-    setSelectedAdmin(admin);
-    setViewModalOpen(true);
+  const handleEditClick = (admin: AdminUser) => {
+    setAdminToEdit(admin);
+    setEditModalOpen(true);
   };
 
   const handleDeleteClick = (admin: AdminUser) => {
@@ -151,42 +147,33 @@ export default function AdminListPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!adminToDelete?.id) return;
+    if (!adminToDelete) return;
+    const userId =
+      adminToDelete.user_id ??
+      adminToDelete.userId ??
+      adminToDelete.id;
+    const userIdNum = Number(userId);
+    if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
+      toast.error("Could not resolve user id for this admin.");
+      return;
+    }
+
     setDeletingId(adminToDelete.id);
     try {
-      const adminId = adminToDelete.id;
-      // Try known/legacy delete routes - backend route can vary by deployment.
-      const deletePaths = [
-        API_ENDPOINTS.DELETE_ADMIN(adminId),
-        `/management/super/admins/${adminId}`,
-        `/management/super/admin/delete/${adminId}`,
-      ];
+      await processRequestAuth(
+        "delete",
+        API_ENDPOINTS.DELETE_ADMIN(userIdNum)
+      );
 
-      let deleted = false;
-      for (const path of deletePaths) {
-        try {
-          await processRequestAuth("delete", path);
-          deleted = true;
-          break;
-        } catch (err: any) {
-          const status = err?.response?.status;
-          if (status !== 404) {
-            throw err;
-          }
-        }
-      }
-
-      if (!deleted) {
-        throw new Error("Admin delete endpoint not found");
-      }
-
-      toast.success("Admin deleted successfully");
       setDeleteModalOpen(false);
       setAdminToDelete(null);
       globalMutate(
         (key) =>
           typeof key === "string" && key.includes(API_ENDPOINTS.GET_SUPER_ADMIN)
       );
+      triggerSuccess({
+        message: "Admin deleted successfully.",
+      });
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
@@ -236,8 +223,7 @@ export default function AdminListPage() {
             setSearch={setSearch}
             sortBy={sortBy}
             setSortBy={setSortBy}
-            status={status}
-            setStatus={setStatus}
+            hideStatus
             searchPlaceholder="Search admins by name, email, phone, or role..."
             sortOptions={["Name", "Email", "Role"]}
           />
@@ -257,7 +243,6 @@ export default function AdminListPage() {
                   <TableCell><SkeletonBox className="h-4 w-32" /></TableCell>
                   <TableCell><SkeletonBox className="h-4 w-16" /></TableCell>
                   <TableCell><SkeletonBox className="h-4 w-20" /></TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-12" /></TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <SkeletonBox className="h-8 w-8 rounded" />
@@ -303,11 +288,6 @@ export default function AdminListPage() {
                     {admin.phone_number || 'N/A'}
                   </TableCell>
                   <TableCell>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                      Active
-                    </span>
-                  </TableCell>
-                  <TableCell>
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <button 
@@ -322,11 +302,11 @@ export default function AdminListPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
                         <DropdownMenuItem
-                          onClick={() => handleViewClick(admin)}
+                          onClick={() => handleEditClick(admin)}
                           className="cursor-pointer flex items-center gap-2"
                         >
-                          <Eye className="size-4" />
-                          View
+                          <Pencil className="size-4" />
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDeleteClick(admin)}
@@ -343,7 +323,7 @@ export default function AdminListPage() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   {search ? "No admin users found matching your search" : "No admin users found"}
                 </TableCell>
               </TableRow>
@@ -360,13 +340,20 @@ export default function AdminListPage() {
         </div>
       </section>
 
-      {/* View Admin Modal */}
-      {viewModalOpen && selectedAdmin && (
-        <ViewAdminModal
-          admin={selectedAdmin}
+      {/* Edit Admin Modal */}
+      {editModalOpen && adminToEdit && (
+        <EditAdminModal
+          key={adminToEdit.id}
+          admin={adminToEdit}
           onClose={() => {
-            setViewModalOpen(false);
-            setSelectedAdmin(null);
+            setEditModalOpen(false);
+            setAdminToEdit(null);
+          }}
+          onSuccess={() => {
+            globalMutate(
+              (key) =>
+                typeof key === "string" && key.includes(API_ENDPOINTS.GET_SUPER_ADMIN)
+            );
           }}
         />
       )}
@@ -389,6 +376,7 @@ export default function AdminListPage() {
           isDeleting={deletingId === adminToDelete?.id}
         />
       )}
+      {SuccessModal}
     </div>
       )}
     </SuperAdminGuard>

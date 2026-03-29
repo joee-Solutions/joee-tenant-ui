@@ -25,6 +25,7 @@ import { formatDateFn } from "@/lib/utils";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 // Helper function to validate and normalize image URLs
 function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): string | any {
@@ -68,6 +69,7 @@ function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): s
 }
 
 export default function PatientList({ org }: { org: string }) {
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");
@@ -131,7 +133,7 @@ export default function PatientList({ org }: { org: string }) {
         "delete",
         API_ENDPOINTS.DELETE_PATIENT(parseInt(org), patientToDelete.id)
       );
-      toast.success("Patient deleted successfully");
+      triggerSuccess({ message: "Patient deleted successfully." });
       mutate();
       setOpenDropdownId(null);
     } catch (error) {
@@ -289,6 +291,7 @@ export default function PatientList({ org }: { org: string }) {
           isDeleting={deletingId !== null}
         />
       )}
+      {SuccessModal}
     </section>
   );
 }

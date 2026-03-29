@@ -10,13 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { Spinner } from "@/components/icons/Spinner";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const EmployeeSchema = z.object({
   firstname: z.string().min(1, "First name is required"),
@@ -41,15 +42,25 @@ type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
 interface EditEmployeeProps {
   slug: string;
   employeeId: number;
-  onDone?: () => void;
+  onDone?: (opts?: { updated?: boolean }) => void;
 }
 
 export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeProps) {
   const router = useRouter();
+  const { mutate: globalMutate } = useSWRConfig();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [fileSelected, setFileSelected] = useState<string>("");
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
   const [hireDate, setHireDate] = useState<Date | undefined>(undefined);
   const hasPopulated = useRef(false);
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Failed to read image file."));
+      reader.readAsDataURL(file);
+    });
 
   // Validate slug and employeeId - parse but don't return early (hooks must be called)
   const orgId = parseInt(slug);
@@ -298,11 +309,17 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       // Include all fields to return all employee data
       payload.address = data.address || "";
       payload.region = data.region || "";
-      if (data.date_of_birth instanceof Date) payload.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
+      const dob = data.date_of_birth;
+      if (dob instanceof Date && !Number.isNaN(dob.getTime())) {
+        payload.date_of_birth = dob.toISOString();
+      }
       payload.specialty = data.specialty || "";
       payload.gender = data.gender || "";
       payload.image_url = data.image_url || "";
-      if (data.hire_date instanceof Date) payload.hire_date = data.hire_date.toISOString().split('T')[0];
+      const hire = data.hire_date;
+      if (hire instanceof Date && !Number.isNaN(hire.getTime())) {
+        payload.hire_date = hire.toISOString();
+      }
       payload.about = data.about || "";
       
       const res = await processRequestAuth(
@@ -312,16 +329,37 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       );
       
       if (res?.status || res?.success) {
-        toast.success("Employee updated successfully!", {
-          toastId: "employee-update-success",
-        });
-        setTimeout(() => {
-          if (onDone) {
-            onDone();
-          } else {
-            router.push(`/dashboard/organization/${slug}/employees`);
+        if (onDone) {
+          if (!Number.isNaN(orgId)) {
+            const employeesKey = API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId);
+            void globalMutate(
+              (key) =>
+                typeof key === "string" &&
+                (key === employeesKey || key.includes(employeesKey)),
+              undefined,
+              { revalidate: true }
+            );
           }
-        }, 1000);
+          onDone({ updated: true });
+          return;
+        }
+
+        triggerSuccess({
+          message: "Employee updated successfully.",
+          onContinue: () => {
+            if (!Number.isNaN(orgId)) {
+              const employeesKey = API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId);
+              void globalMutate(
+                (key) =>
+                  typeof key === "string" &&
+                  (key === employeesKey || key.includes(employeesKey)),
+                undefined,
+                { revalidate: true }
+              );
+            }
+            router.push(`/dashboard/organization/${slug}/employees`);
+          },
+        });
       } else {
         toast.error(res?.message || "Failed to update employee. Please try again.", {
           toastId: "employee-update-error",
@@ -568,7 +606,13 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
                     const file = e.target.files?.[0];
                     if (file) {
                       setFileSelected(file.name);
-                      form.setValue("image_url", file.name, { shouldValidate: true });
+                      void fileToDataUrl(file)
+                        .then((dataUrl) => {
+                          form.setValue("image_url", dataUrl, { shouldValidate: true });
+                        })
+                        .catch(() => {
+                          toast.error("Failed to process image file.");
+                        });
                     }
                   }}
                 />
@@ -676,6 +720,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
           </div>
         </form>
       )}
+      {SuccessModal}
     </div>
   );
 }

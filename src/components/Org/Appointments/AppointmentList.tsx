@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { parseISO } from "date-fns";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -53,6 +53,7 @@ import { processRequestAuth } from "@/framework/https";
 import { formatDateFn } from "@/lib/utils";
 import ViewEditAppointmentModal from "./ViewEditAppointmentModal";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 /* ---------------- schema ---------------- */
 
@@ -74,6 +75,8 @@ const imgSrc = (src: any, fallback: any) =>
 
 export default function Page({ slug }: { slug: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
   const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
   const [calendarViewMode, setCalendarViewMode] =
@@ -89,6 +92,12 @@ export default function Page({ slug }: { slug: string }) {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<any | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const v = searchParams.get("view");
+    if (v === "calendar") setViewMode("calendar");
+    else if (v === "list") setViewMode("list");
+  }, [searchParams]);
 
   /* ---------------- data ---------------- */
 
@@ -243,7 +252,7 @@ export default function Page({ slug }: { slug: string }) {
       "delete",
         `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantIdForPath)}/${appointmentToDelete.id}`
     );
-      toast.success("Appointment deleted successfully");
+      triggerSuccess({ message: "Appointment deleted successfully." });
     mutate();
       setShowDeleteWarning(false);
       setAppointmentToDelete(null);
@@ -257,9 +266,18 @@ export default function Page({ slug }: { slug: string }) {
 
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [appointmentModalOpenInEdit, setAppointmentModalOpenInEdit] = useState(false);
 
   const handleViewAppointment = (appointment: any) => {
     setSelectedAppointment(appointment);
+    setAppointmentModalOpenInEdit(false);
+    setShowAppointmentModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleEditAppointment = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setAppointmentModalOpenInEdit(true);
     setShowAppointmentModal(true);
     setOpenDropdownId(null);
   };
@@ -267,6 +285,13 @@ export default function Page({ slug }: { slug: string }) {
   const handleCloseAppointmentModal = () => {
     setShowAppointmentModal(false);
     setSelectedAppointment(null);
+    setAppointmentModalOpenInEdit(false);
+  };
+
+  const handleAppointmentOperationSuccess = (message: string) => {
+    handleCloseAppointmentModal();
+    mutate();
+    triggerSuccess({ message });
   };
 
   // Close dropdown when clicking outside
@@ -459,7 +484,7 @@ export default function Page({ slug }: { slug: string }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
                       <DropdownMenuItem
-                        onClick={() => handleViewAppointment(a)}
+                        onClick={() => handleEditAppointment(a)}
                         className="cursor-pointer flex items-center gap-2"
                       >
                         <Edit className="size-4" />
@@ -496,8 +521,10 @@ export default function Page({ slug }: { slug: string }) {
           appointment={selectedAppointment}
           orgId={typeof tenantIdForPath === "number" ? tenantIdForPath : (/^\d+$/.test(String(tenantIdForPath)) ? parseInt(String(tenantIdForPath), 10) : undefined)}
           tenantIdForPath={tenantIdForPath}
+          openInEditMode={appointmentModalOpenInEdit}
           onClose={handleCloseAppointmentModal}
           onUpdate={() => mutate()}
+          onOperationSuccess={handleAppointmentOperationSuccess}
         />
       )}
 
@@ -515,6 +542,7 @@ export default function Page({ slug }: { slug: string }) {
           isDeleting={deletingId !== null}
         />
       )}
+      {SuccessModal}
     </section>
   );
 }

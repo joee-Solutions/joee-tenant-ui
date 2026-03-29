@@ -13,8 +13,9 @@ interface DataTableFilterProps {
   setSearch: (val: string) => void;
   sortBy: string;
   setSortBy: (val: string) => void;
-  status: string;
-  setStatus: (val: string) => void;
+  status?: string;
+  setStatus?: (val: string) => void;
+  hideStatus?: boolean;
   searchPlaceholder?: string;
   sortOptions?: string[];
   statusOptions?: string[];
@@ -25,8 +26,9 @@ export default function DataTableFilter({
   setSearch,
   sortBy,
   setSortBy,
-  status,
-  setStatus,
+  status = "",
+  setStatus = () => {},
+  hideStatus = false,
   searchPlaceholder = "Search...",
   sortOptions = ["Name", "Date", "Location", "Status"],
   statusOptions = ["Active", "Inactive"],
@@ -66,31 +68,32 @@ export default function DataTableFilter({
         </Select>
       </div>
 
-      {/* Status */}
-      <div>
-        <Select
-          value={status || ""}
-          onValueChange={(value) => setStatus(value === "all" ? "" : value)}
-        >
-          <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            <SelectItem value="all" className="cursor-pointer">
-              All
-            </SelectItem>
-            {statusOptions.map((currSortVal) => (
-              <SelectItem
-                key={currSortVal}
-                value={`${currSortVal}`}
-                className="cursor-pointer"
-              >
-                {currSortVal}
+      {!hideStatus && (
+        <div>
+          <Select
+            value={status || ""}
+            onValueChange={(value) => setStatus(value === "all" ? "" : value)}
+          >
+            <SelectTrigger className="h-full rounded-[8px] border border-[#B2B2B2] focus:ring-transparent">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              <SelectItem value="all" className="cursor-pointer">
+                All
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+              {statusOptions.map((currSortVal) => (
+                <SelectItem
+                  key={currSortVal}
+                  value={`${currSortVal}`}
+                  className="cursor-pointer"
+                >
+                  {currSortVal}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
     </div>
   );

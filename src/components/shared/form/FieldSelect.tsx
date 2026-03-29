@@ -25,6 +25,23 @@ interface FieldSelectProps<T extends FieldValues> {
   bgSelectClass?: string;
   defaultOption?: string;
   disabled?: boolean;
+  /** Remount Select when this changes (fixes Radix not showing value after programmatic reset, e.g. in modals). */
+  selectKey?: string | number;
+}
+
+/** Map form value to an entry in `options` (exact, then case/underscore-normalized). */
+export function matchSelectValueToOption(
+  value: unknown,
+  options: string[]
+): string | undefined {
+  if (value == null) return undefined;
+  const v = String(value).trim();
+  if (!v) return undefined;
+  if (options.includes(v)) return v;
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
+  const nv = norm(v);
+  const found = options.find((o) => norm(o) === nv);
+  return found;
 }
 
 function FieldSelect<T extends FieldValues>({
@@ -36,7 +53,8 @@ function FieldSelect<T extends FieldValues>({
   fieldDescription,
   bgSelectClass,
   defaultOption,
-  disabled = false
+  disabled = false,
+  selectKey,
 }: FieldSelectProps<T>) {
   return (
     <FormField
@@ -50,9 +68,10 @@ function FieldSelect<T extends FieldValues>({
             </FormLabel>
           )}
           <Select
+            key={selectKey}
             onValueChange={field.onChange}
             disabled={disabled}
-            value={field.value && options.includes(field.value) ? field.value : undefined}
+            value={matchSelectValueToOption(field.value, options)}
           >
             <FormControl>
               <SelectTrigger

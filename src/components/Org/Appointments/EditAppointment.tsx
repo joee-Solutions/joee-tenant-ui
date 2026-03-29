@@ -24,6 +24,7 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -51,9 +52,9 @@ type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
 export default function EditAppointment({ slug, appointmentId }: { slug: string; appointmentId: number }) {
   const router = useRouter();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   // Validate slug and get orgId
   const orgId = useMemo(() => {
@@ -252,7 +253,6 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
   const onSubmit = async (data: AppointmentSchemaType) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
       const appointmentData = {
@@ -271,11 +271,12 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
       );
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
-        setSuccess(true);
-        toast.success("Appointment updated successfully");
-        setTimeout(() => {
-          router.push(`/dashboard/organization/${slug}/appointments`);
-        }, 1500);
+        triggerSuccess({
+          message: "Appointment updated successfully.",
+          onContinue: () => {
+            router.push(`/dashboard/organization/${slug}/appointments`);
+          },
+        });
       } else {
         if (res?.validationErrors && Array.isArray(res.validationErrors)) {
           setError(res.validationErrors.join(", "));
@@ -365,12 +366,6 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-          Appointment updated successfully! Redirecting...
         </div>
       )}
 
@@ -593,6 +588,7 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
           </Button>
         </div>
       </form>
+      {SuccessModal}
     </div>
   );
 }

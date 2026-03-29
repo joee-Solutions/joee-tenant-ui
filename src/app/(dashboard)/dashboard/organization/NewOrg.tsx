@@ -30,14 +30,14 @@ const NewOrganizationSchema = z.object({
   fax: z.string().optional(),
   email: z
     .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
+    .min(1, "This field is required")
+    .email("Invalid email address"),
   website: z.string().optional(),
   adminFirstname: z.string().optional(),
   adminLastname: z.string().optional(),
   adminPhoneNumber: z.string().optional(),
   org_type: z.string().optional(),
-  domain: z.string().optional(),
+  domain: z.string().min(1, "Subdomain is required"),
 });
 
 type NewOrganizationSchemaType = z.infer<typeof NewOrganizationSchema>;
@@ -50,7 +50,8 @@ const REQUIRED_FIELD_LABELS: Record<string, string> = {
   country: "Country",
   phone_number: "Organization Phone number",
   email: "Organization Email",
-  domain: "Domain",
+  domain: "Subdomain",
+  org_type: "Organization type",
   adminFirstname: "Admin first name",
   adminLastname: "Admin last name",
   adminPhoneNumber: "Admin phone number",

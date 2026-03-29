@@ -23,6 +23,7 @@ import { processRequestAuth } from "@/framework/https";
 import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -50,9 +51,9 @@ type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
 export default function AddAppointment({ slug }: { slug: string }) {
   const router = useRouter();
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   // Validate slug and get orgId - handle both string and number
   const orgId = useMemo(() => {
@@ -110,7 +111,6 @@ export default function AddAppointment({ slug }: { slug: string }) {
   const onSubmit = async (data: AppointmentSchemaType) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
       const appointmentData = {
@@ -127,10 +127,12 @@ export default function AddAppointment({ slug }: { slug: string }) {
       );
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
-        setSuccess(true);
-        setTimeout(() => {
-          router.push(`/dashboard/organization/${slug}/appointments`);
-        }, 1500);
+        triggerSuccess({
+          message: "Appointment created successfully.",
+          onContinue: () => {
+            router.push(`/dashboard/organization/${slug}/appointments?view=calendar`);
+          },
+        });
       } else {
         // Check for validation errors first
         if (res?.validationErrors && Array.isArray(res.validationErrors)) {
@@ -186,12 +188,6 @@ export default function AddAppointment({ slug }: { slug: string }) {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-          Appointment created successfully! Redirecting...
         </div>
       )}
 
@@ -381,6 +377,7 @@ export default function AddAppointment({ slug }: { slug: string }) {
           </Button>
         </div>
       </form>
+      {SuccessModal}
     </div>
   );
 }
