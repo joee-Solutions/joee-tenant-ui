@@ -51,7 +51,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
 import { formatDateFn } from "@/lib/utils";
-import ViewEditAppointmentModal from "./ViewEditAppointmentModal";
+import EditAppointmentModal from "./EditAppointmentModal";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
@@ -266,18 +266,9 @@ export default function Page({ slug }: { slug: string }) {
 
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
-  const [appointmentModalOpenInEdit, setAppointmentModalOpenInEdit] = useState(false);
-
-  const handleViewAppointment = (appointment: any) => {
-    setSelectedAppointment(appointment);
-    setAppointmentModalOpenInEdit(false);
-    setShowAppointmentModal(true);
-    setOpenDropdownId(null);
-  };
 
   const handleEditAppointment = (appointment: any) => {
     setSelectedAppointment(appointment);
-    setAppointmentModalOpenInEdit(true);
     setShowAppointmentModal(true);
     setOpenDropdownId(null);
   };
@@ -285,7 +276,6 @@ export default function Page({ slug }: { slug: string }) {
   const handleCloseAppointmentModal = () => {
     setShowAppointmentModal(false);
     setSelectedAppointment(null);
-    setAppointmentModalOpenInEdit(false);
   };
 
   const handleAppointmentOperationSuccess = (message: string) => {
@@ -403,9 +393,13 @@ export default function Page({ slug }: { slug: string }) {
           setSelectedDate={setSelectedDate}
           appointments={calendarAppointments}
             onViewAppointment={(apt) => {
-              const foundAppointment = appointments.find((a: any) => String(a.id) === apt.id);
+              const foundAppointment = appointments.find(
+                (a: any) => String(a.id) === String(apt.id)
+              );
               if (foundAppointment) {
-                handleViewAppointment(foundAppointment);
+                setSelectedAppointment(foundAppointment);
+                setShowAppointmentModal(true);
+                setOpenDropdownId(null);
               }
             }}
           onAddAppointment={() =>
@@ -515,16 +509,15 @@ export default function Page({ slug }: { slug: string }) {
         </>
       )}
 
-      {/* View / Edit Appointment Modal (calendar click or list Edit) */}
+      {/* Edit Appointment Modal (calendar click or list Edit) */}
       {showAppointmentModal && selectedAppointment && tenantIdForPath != null && tenantIdForPath !== "" && (
-        <ViewEditAppointmentModal
-          appointment={selectedAppointment}
-          orgId={typeof tenantIdForPath === "number" ? tenantIdForPath : (/^\d+$/.test(String(tenantIdForPath)) ? parseInt(String(tenantIdForPath), 10) : undefined)}
+        <EditAppointmentModal
+          key={selectedAppointment.id}
+          slug={slug}
           tenantIdForPath={tenantIdForPath}
-          openInEditMode={appointmentModalOpenInEdit}
+          appointment={selectedAppointment}
           onClose={handleCloseAppointmentModal}
-          onUpdate={() => mutate()}
-          onOperationSuccess={handleAppointmentOperationSuccess}
+          onSuccess={() => handleAppointmentOperationSuccess("Appointment updated successfully.")}
         />
       )}
 

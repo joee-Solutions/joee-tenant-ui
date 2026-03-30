@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type MouseEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Edit, Check, Clock } from "lucide-react";
+import { X, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -22,6 +22,16 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import {
+  extractPatientsFromResponse,
+  extractEmployeesFromResponse,
+  resolveAppointmentPatientId,
+  resolveAppointmentDoctorId,
+} from "@/components/Org/Appointments/appointmentFormUtils";
+import {
+  TIME_OPTIONS_24H,
+  normalizeTimeForSelect,
+} from "@/components/Org/Schedule/scheduleFormUtils";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -70,70 +80,35 @@ export default function ViewEditAppointmentModal({
   };
 
   // Fetch data for dropdowns
-  const { data: patientsData, error: patientsError, isLoading: isLoadingPatients } = useSWR(
+  const { data: patientsData, isLoading: isLoadingPatients } = useSWR(
     tenantId != null && tenantId !== "" ? API_ENDPOINTS.TENANTS_PATIENTS(tenantId) : null,
     authFectcher
   );
 
-  const { data: employeesData, error: employeesError, isLoading: isLoadingEmployees } = useSWR(
+  const { data: employeesData, isLoading: isLoadingEmployees } = useSWR(
     tenantId != null ? API_ENDPOINTS.GET_TENANTS_EMPLOYEES(tenantId) : null,
     authFectcher
   );
 
-  console.log("=== MODAL DATA FETCH DEBUG ===");
-  console.log("orgId:", orgId);
-  console.log("patientsData:", patientsData);
-  console.log("patientsError:", patientsError);
-  console.log("isLoadingPatients:", isLoadingPatients);
-  console.log("employeesData:", employeesData);
-  console.log("employeesError:", employeesError);
-  console.log("isLoadingEmployees:", isLoadingEmployees);
+  const patients = useMemo(
+    () => extractPatientsFromResponse(patientsData),
+    [patientsData]
+  );
 
-  const patients = useMemo(() => {
-    // Try different data structures like AddAppointment does
-    let result: any[] = [];
-    if (Array.isArray(patientsData?.data?.data)) {
-      result = patientsData.data.data;
-    } else if (Array.isArray(patientsData?.data)) {
-      result = patientsData.data;
-    } else if (Array.isArray(patientsData)) {
-      result = patientsData as any[];
-    }
-    console.log("=== PATIENTS DEBUG ===");
-    console.log("patientsData:", patientsData);
-    console.log("patients array:", result);
-    console.log("patients length:", result.length);
-    return result;
-  }, [patientsData]);
+  const providers = useMemo(
+    () => extractEmployeesFromResponse(employeesData),
+    [employeesData]
+  );
 
-  const providers = useMemo(() => {
-    // Try different data structures (data.data, data, or raw array)
-    let result: any[] = [];
-    if (Array.isArray(employeesData?.data?.data)) {
-      result = employeesData.data.data;
-    } else if (Array.isArray(employeesData?.data)) {
-      result = employeesData.data;
-    } else if (Array.isArray(employeesData)) {
-      result = employeesData;
-    }
-    return result;
-  }, [employeesData]);
+  const resolvedPatientId = useMemo(
+    () => resolveAppointmentPatientId(appointment, patients),
+    [appointment, patients]
+  );
 
-  // Resolve doctorId: use user.id if present, else match by user firstname/lastname in providers list
-  const resolvedDoctorId = useMemo(() => {
-    if (!appointment?.user) return "";
-    const u = appointment.user;
-    if (u.id != null) return String(u.id);
-    const first = (u.firstname ?? u.first_name ?? "").toString().trim().toLowerCase();
-    const last = (u.lastname ?? u.last_name ?? "").toString().trim().toLowerCase();
-    if (!first && !last) return "";
-    const found = providers.find((p: any) => {
-      const pFirst = (p.firstname ?? p.first_name ?? "").toString().trim().toLowerCase();
-      const pLast = (p.lastname ?? p.last_name ?? "").toString().trim().toLowerCase();
-      return pFirst === first && pLast === last;
-    });
-    return found?.id != null ? String(found.id) : "";
-  }, [appointment?.user, providers]);
+  const resolvedDoctorId = useMemo(
+    () => resolveAppointmentDoctorId(appointment, providers),
+    [appointment, providers]
+  );
 
   // Format time for display (HH:mm to HH:MM AM/PM)
   const formatTimeForDisplay = (time: string) => {
@@ -149,6 +124,28 @@ export default function ViewEditAppointmentModal({
   const formatTimeRange = (start: string, end: string) => {
     if (!start || !end) return "";
     return `${formatTimeForDisplay(start)} - ${formatTimeForDisplay(end)}`;
+  };
+
+  const getPatientSelectValue = (p: any): string => {
+    const id =
+      p?.id ??
+      p?.patient_id ??
+      p?.patientId ??
+      p?.user_id ??
+      p?.userId;
+    return id != null && id !== "" ? String(id) : "";
+  };
+
+  const getProviderSelectValue = (e: any): string => {
+    const id =
+      e?.id ??
+      e?.userId ??
+      e?.user_id ??
+      e?.employeeId ??
+      e?.employee_id ??
+      e?.providerId ??
+      e?.provider_id;
+    return id != null && id !== "" ? String(id) : "";
   };
 
   // Format date for display (e.g., "10 February, 2022")
@@ -188,32 +185,61 @@ export default function ViewEditAppointmentModal({
     },
   });
 
+  const { reset } = form;
+
+  // Reset form when appointment or resolved dropdown ids change (SWR may load after open).
   useEffect(() => {
     if (!appointment?.id) return;
-    const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-    const doctorId = resolvedDoctorId;
-    form.reset({
-      patientId,
-      doctorId,
+    reset({
+      patientId: resolvedPatientId,
+      doctorId: resolvedDoctorId,
       date: appointment.date || "",
-      startTime: toHHmm(appointment.startTime || ""),
-      endTime: toHHmm(appointment.endTime || ""),
+      startTime: normalizeTimeForSelect(
+        appointment.startTime ?? appointment.start_time ?? ""
+      ),
+      endTime: normalizeTimeForSelect(
+        appointment.endTime ?? appointment.end_time ?? ""
+      ),
       description: appointment.description || "",
     });
-    setIsEditMode(!!openInEditMode);
-  }, [appointment?.id, appointment?.date, appointment?.user, resolvedDoctorId, openInEditMode, form]);
+  }, [
+    appointment?.id,
+    appointment?.date,
+    appointment?.description,
+    appointment?.startTime,
+    appointment?.endTime,
+    appointment?.start_time,
+    appointment?.end_time,
+    resolvedPatientId,
+    resolvedDoctorId,
+    reset,
+  ]);
 
-  const handleEdit = () => {
+  // Only sync edit vs view when opening a different appointment or explicit openInEditMode — not when SWR fills ids.
+  useEffect(() => {
+    if (!appointment?.id) return;
+    setIsEditMode(!!openInEditMode);
+  }, [appointment?.id, openInEditMode]);
+
+  const handleEdit = (e?: MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     if (!appointment) return;
-    const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-    const doctorId = resolvedDoctorId;
-    form.setValue("patientId", patientId, { shouldValidate: false, shouldDirty: false });
-    form.setValue("doctorId", doctorId, { shouldValidate: false, shouldDirty: false });
+    form.setValue("patientId", resolvedPatientId, { shouldValidate: false, shouldDirty: false });
+    form.setValue("doctorId", resolvedDoctorId, { shouldValidate: false, shouldDirty: false });
     form.setValue("date", appointment.date || "", { shouldValidate: false, shouldDirty: false });
-    form.setValue("startTime", toHHmm(appointment.startTime || ""), { shouldValidate: false, shouldDirty: false });
-    form.setValue("endTime", toHHmm(appointment.endTime || ""), { shouldValidate: false, shouldDirty: false });
+    form.setValue(
+      "startTime",
+      normalizeTimeForSelect(appointment.startTime ?? appointment.start_time ?? ""),
+      { shouldValidate: false, shouldDirty: false }
+    );
+    form.setValue(
+      "endTime",
+      normalizeTimeForSelect(appointment.endTime ?? appointment.end_time ?? ""),
+      { shouldValidate: false, shouldDirty: false }
+    );
     form.setValue("description", appointment.description || "", { shouldValidate: false, shouldDirty: false });
-    
+
     setIsEditMode(true);
   };
 
@@ -225,14 +251,16 @@ export default function ViewEditAppointmentModal({
     if (isEditMode) {
       setIsEditMode(false);
       if (appointment) {
-        const patientId = appointment.patient?.id ? String(appointment.patient.id) : "";
-        const doctorId = resolvedDoctorId;
         form.reset({
-          patientId,
-          doctorId,
+          patientId: resolvedPatientId,
+          doctorId: resolvedDoctorId,
           date: appointment.date || "",
-          startTime: toHHmm(appointment.startTime || ""),
-          endTime: toHHmm(appointment.endTime || ""),
+          startTime: normalizeTimeForSelect(
+            appointment.startTime ?? appointment.start_time ?? ""
+          ),
+          endTime: normalizeTimeForSelect(
+            appointment.endTime ?? appointment.end_time ?? ""
+          ),
           description: appointment.description || "",
         });
       }
@@ -315,7 +343,14 @@ export default function ViewEditAppointmentModal({
         </div>
 
         {/* Content */}
-        <form onSubmit={form.handleSubmit(handleSave)} className="p-6 space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isEditMode) return;
+            void form.handleSubmit(handleSave)(e);
+          }}
+          className="p-6 space-y-6"
+        >
           {/* Patient Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -327,19 +362,10 @@ export default function ViewEditAppointmentModal({
                 control={form.control}
                 render={({ field }) => {
                   const currentValue = field.value ? String(field.value) : "";
-                  console.log("=== PATIENT SELECT DEBUG ===");
-                  console.log("field.value:", field.value);
-                  console.log("currentValue:", currentValue);
-                  console.log("patients:", patients);
-                  console.log("patients length:", patients.length);
-                  
                   return (
                     <Select
                       value={currentValue || undefined}
-                      onValueChange={(value) => {
-                        console.log("Patient selected:", value);
-                        field.onChange(value);
-                      }}
+                      onValueChange={field.onChange}
                       disabled={loading || isLoadingPatients}
                     >
                       <SelectTrigger className="w-full h-12">
@@ -351,14 +377,16 @@ export default function ViewEditAppointmentModal({
                         ) : patients.length === 0 ? (
                           <div className="px-2 py-1.5 text-sm text-gray-500">No patients available</div>
                         ) : (
-                          patients.map((patient: any) => (
-                            <SelectItem
-                              key={patient.id}
-                              value={String(patient.id)}
-                            >
-                              {patient.first_name || patient.firstname} {patient.last_name || patient.lastname}
-                            </SelectItem>
-                          ))
+                          patients.map((patient: any) => {
+                            const value = getPatientSelectValue(patient);
+                            if (!value) return null;
+                            return (
+                              <SelectItem key={value} value={value}>
+                                {patient.first_name || patient.firstname}{" "}
+                                {patient.last_name || patient.lastname}
+                              </SelectItem>
+                            );
+                          })
                         )}
                       </SelectContent>
                     </Select>
@@ -388,19 +416,10 @@ export default function ViewEditAppointmentModal({
                 control={form.control}
                 render={({ field }) => {
                   const currentValue = field.value ? String(field.value) : "";
-                  console.log("=== PROVIDER SELECT DEBUG ===");
-                  console.log("field.value:", field.value);
-                  console.log("currentValue:", currentValue);
-                  console.log("providers:", providers);
-                  console.log("providers length:", providers.length);
-                  
                   return (
                     <Select
                       value={currentValue || undefined}
-                      onValueChange={(value) => {
-                        console.log("Provider selected:", value);
-                        field.onChange(value);
-                      }}
+                      onValueChange={field.onChange}
                       disabled={loading || isLoadingEmployees}
                     >
                       <SelectTrigger className="w-full h-12">
@@ -412,17 +431,19 @@ export default function ViewEditAppointmentModal({
                         ) : providers.length === 0 ? (
                           <div className="px-2 py-1.5 text-sm text-gray-500">No providers available</div>
                         ) : (
-                          providers.map((provider: any) => (
-                            <SelectItem
-                              key={provider.id}
-                              value={String(provider.id)}
-                            >
-                              {provider.firstname || provider.first_name} {provider.lastname || provider.last_name}
-                              {provider.department?.name &&
-                                ` - ${provider.department.name}`}
-                              {provider.designation && ` (${provider.designation})`}
-                            </SelectItem>
-                          ))
+                          providers.map((provider: any) => {
+                            const value = getProviderSelectValue(provider);
+                            if (!value) return null;
+                            return (
+                              <SelectItem key={value} value={value}>
+                                {provider.firstname || provider.first_name}{" "}
+                                {provider.lastname || provider.last_name}
+                                {provider.department?.name &&
+                                  ` - ${provider.department.name}`}
+                                {provider.designation && ` (${provider.designation})`}
+                              </SelectItem>
+                            );
+                          })
                         )}
                       </SelectContent>
                     </Select>
@@ -471,19 +492,12 @@ export default function ViewEditAppointmentModal({
                     }
                   }
                   
-                  console.log("=== DATE PICKER DEBUG ===");
-                  console.log("field.value:", field.value);
-                  console.log("dateValue:", dateValue);
-                  console.log("isEditMode:", isEditMode);
-                  
                   return (
                     <DatePicker
                       key={`date-picker-${field.value || 'empty'}`}
                       date={dateValue}
                       onDateChange={(date) => {
-                        console.log("Date selected:", date);
                         const formattedDate = date ? formatDateLocal(date) : "";
-                        console.log("formattedDate:", formattedDate);
                         field.onChange(formattedDate);
                       }}
                       placeholder="Select appointment date"
@@ -504,10 +518,10 @@ export default function ViewEditAppointmentModal({
             )}
           </div>
 
-          {/* Appointment Time */}
+          {/* Appointment Time (24h) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Appointment Time
+              Appointment time (24h)
             </label>
             {isEditMode ? (
               <div className="grid grid-cols-2 gap-4">
@@ -516,18 +530,21 @@ export default function ViewEditAppointmentModal({
                     name="startTime"
                     control={form.control}
                     render={({ field }) => (
-                      <div className="relative">
-                        <input
-                          placeholder="Select appointment start time"
-                          type="time"
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                        />
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                      </div>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
+                        <SelectTrigger className="w-full h-14 border border-[#737373]">
+                          <SelectValue placeholder="Start time" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[10001] bg-white max-h-[280px]">
+                          {TIME_OPTIONS_24H.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
                   {form.formState.errors.startTime && (
@@ -541,18 +558,21 @@ export default function ViewEditAppointmentModal({
                     name="endTime"
                     control={form.control}
                     render={({ field }) => (
-                      <div className="relative">
-                        <input
-                          placeholder="Select appointment end time"
-                          type="time"
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                        />
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                      </div>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
+                        <SelectTrigger className="w-full h-14 border border-[#737373]">
+                          <SelectValue placeholder="End time" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[10001] bg-white max-h-[280px]">
+                          {TIME_OPTIONS_24H.map((t) => (
+                            <SelectItem key={`e-${t}`} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
                   {form.formState.errors.endTime && (
@@ -564,7 +584,10 @@ export default function ViewEditAppointmentModal({
               </div>
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {formatTimeRange(appointment.startTime, appointment.endTime)}
+                {formatTimeRange(
+                  appointment.startTime ?? appointment.start_time ?? "",
+                  appointment.endTime ?? appointment.end_time ?? ""
+                )}
               </div>
             )}
           </div>
@@ -593,6 +616,19 @@ export default function ViewEditAppointmentModal({
               </div>
             )}
           </div>
+
+          {isEditMode && (
+            <div className="flex justify-end -mt-2">
+              <button
+                type="button"
+                className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                disabled={loading}
+                onClick={() => void handleDelete()}
+              >
+                Cancel this appointment
+              </button>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4 border-t">

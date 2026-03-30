@@ -20,17 +20,21 @@ import { authFectcher } from "@/hooks/swr";
 import { ScheduleList } from "@/components/shared/table/data";
 import AddSchedule from "./AddSchedule";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import {
+  WEEK_DAYS,
+  TIME_OPTIONS_24H,
+  mapScheduleAvailableDays,
+} from "@/components/Org/Schedule/scheduleFormUtils";
 
 const ScheduleEditSchema = z.object({
   availableDays: z.array(z.object({
@@ -41,15 +45,6 @@ const ScheduleEditSchema = z.object({
 });
 
 type ScheduleEditSchemaType = z.infer<typeof ScheduleEditSchema>;
-const WEEK_DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
 
 const normalizeDayLabel = (day?: string) => {
   if (!day) return "-";
@@ -57,20 +52,31 @@ const normalizeDayLabel = (day?: string) => {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 };
 
-function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: string; schedule: any; onClose: () => void; onSuccess: () => void }) {
-  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
+function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: string; schedule: any; onClose: () => void; onSuccess: (message: string) => void }) {
   const [loading, setLoading] = useState(false);
+
+  const mappedDays = mapScheduleAvailableDays(schedule);
 
   const editForm = useForm<ScheduleEditSchemaType>({
     resolver: zodResolver(ScheduleEditSchema),
     defaultValues: {
-      availableDays: (schedule.availableDays || []).map((day: any) => ({
-        day: day.day || "",
-        startTime: day.startTime || "",
-        endTime: day.endTime || "",
-      })),
+      availableDays:
+        mappedDays.length > 0
+          ? mappedDays
+          : [{ day: "", startTime: "", endTime: "" }],
     },
   });
+
+  const { reset } = editForm;
+  const scheduleDaysKey = JSON.stringify(schedule?.availableDays ?? null);
+
+  useEffect(() => {
+    const next = mapScheduleAvailableDays(schedule);
+    reset({
+      availableDays:
+        next.length > 0 ? next : [{ day: "", startTime: "", endTime: "" }],
+    });
+  }, [scheduleDaysKey, reset, schedule]);
 
   const { fields, append, remove } = useFieldArray({
     control: editForm.control,
@@ -101,10 +107,7 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
         `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`,
         scheduleData
       );
-      triggerSuccess({
-        message: "Schedule updated successfully.",
-        onContinue: () => onSuccess(),
-      });
+      onSuccess("Schedule updated successfully.");
     } catch (error) {
       console.error(error);
       toast.error("Failed to update schedule");
@@ -165,11 +168,14 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
                     name={`availableDays.${index}.day`}
                     control={editForm.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
                         <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                           <SelectValue placeholder="Select day" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white max-h-[280px]">
                           {WEEK_DAYS.map((weekDay) => (
                             <SelectItem key={weekDay} value={weekDay} className="hover:bg-gray-200">
                               {weekDay}
@@ -187,11 +193,27 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
                 </div>
 
                 <div>
-                  <label className="block text-base text-black font-normal mb-2">Start Time</label>
-                  <Input
-                    type="time"
-                    {...editForm.register(`availableDays.${index}.startTime`)}
-                    className="w-full p-3 border border-[#737373] h-14 rounded"
+                  <label className="block text-base text-black font-normal mb-2">Start time (24h)</label>
+                  <Controller
+                    name={`availableDays.${index}.startTime`}
+                    control={editForm.control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select start time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white max-h-[280px]">
+                          {TIME_OPTIONS_24H.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                   {editForm.formState.errors.availableDays?.[index]?.startTime && (
                     <p className="text-red-500 text-sm mt-1">
@@ -201,11 +223,27 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
                 </div>
 
                 <div>
-                  <label className="block text-base text-black font-normal mb-2">End Time</label>
-                  <Input
-                    type="time"
-                    {...editForm.register(`availableDays.${index}.endTime`)}
-                    className="w-full p-3 border border-[#737373] h-14 rounded"
+                  <label className="block text-base text-black font-normal mb-2">End time (24h)</label>
+                  <Controller
+                    name={`availableDays.${index}.endTime`}
+                    control={editForm.control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select end time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white max-h-[280px]">
+                          {TIME_OPTIONS_24H.map((t) => (
+                            <SelectItem key={`e-${t}`} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                   {editForm.formState.errors.availableDays?.[index]?.endTime && (
                     <p className="text-red-500 text-sm mt-1">
@@ -246,13 +284,13 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
           </div>
         </form>
       </div>
-      {SuccessModal}
     </div>
   );
 }
 
 export default function Page({ slug }: { slug: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -265,9 +303,21 @@ export default function Page({ slug }: { slug: string }) {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<any | null>(null);
 
+  useEffect(() => {
+    const success = searchParams.get("success");
+    if (success === "created") {
+      triggerSuccess({ message: "Schedule created successfully." });
+      router.replace(`/dashboard/organization/${slug}/schedules`);
+    }
+  }, [searchParams, triggerSuccess, router, slug]);
+
   const { data, isLoading, error, mutate } = useSWR(
     API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug)),
-    authFectcher
+    authFectcher,
+    {
+      refreshInterval: 15000,
+      revalidateOnFocus: true,
+    }
   );
 
   // Get schedules array safely
@@ -509,16 +559,18 @@ export default function Page({ slug }: { slug: string }) {
       {/* Edit Schedule Modal */}
       {editModalOpen && selectedSchedule && (
         <EditScheduleModal
+          key={`${selectedSchedule.user?.id ?? "u"}-${selectedSchedule.id ?? "s"}`}
           slug={slug}
           schedule={selectedSchedule}
           onClose={() => {
             setEditModalOpen(false);
             setSelectedSchedule(null);
           }}
-          onSuccess={() => {
+          onSuccess={(message) => {
             setEditModalOpen(false);
             setSelectedSchedule(null);
             mutate();
+            triggerSuccess({ message });
           }}
         />
       )}

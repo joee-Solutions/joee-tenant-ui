@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Clock } from "lucide-react";
 import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 import {
   Select,
@@ -25,6 +23,16 @@ import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import {
+  extractPatientsFromResponse,
+  extractEmployeesFromResponse,
+  resolveAppointmentPatientId,
+  resolveAppointmentDoctorId,
+} from "@/components/Org/Appointments/appointmentFormUtils";
+import {
+  TIME_OPTIONS_24H,
+  normalizeTimeForSelect,
+} from "@/components/Org/Schedule/scheduleFormUtils";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -137,6 +145,16 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
     authFectcher
   );
 
+  const patients = useMemo(
+    () => extractPatientsFromResponse(patientsData),
+    [patientsData]
+  );
+
+  const providers = useMemo(
+    () => extractEmployeesFromResponse(employeesData),
+    [employeesData]
+  );
+
   const form = useForm<AppointmentSchemaType>({
     resolver: zodResolver(AppointmentSchema),
     mode: "onChange",
@@ -150,124 +168,81 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
     },
   });
 
-  // Track if appointment data has been loaded to prevent re-loading
-  const appointmentDataLoadedRef = useRef<number | null>(null);
+  const { reset } = form;
 
-  // Load appointment data into form
   useEffect(() => {
-    // Reset ref when appointmentId changes
-    if (appointmentId !== appointmentDataLoadedRef.current) {
-      appointmentDataLoadedRef.current = null;
+    if (
+      !appointmentData ||
+      isLoadingAppointment ||
+      !appointmentId ||
+      isLoadingPatients ||
+      isLoadingEmployees
+    ) {
+      return;
     }
 
-    // Wait for appointment data and dropdown data to be loaded
-    if (
-      appointmentData && 
-      !isLoadingAppointment && 
-      appointmentId && 
-      appointmentDataLoadedRef.current !== appointmentId &&
-      !isLoadingPatients &&
-      !isLoadingEmployees
-    ) {
-      appointmentDataLoadedRef.current = appointmentId;
-      
-      // Try different response structures
-      let appointment = appointmentData;
-      if (appointmentData?.data?.data) {
-        appointment = appointmentData.data.data;
-      } else if (appointmentData?.data) {
-        appointment = appointmentData.data;
-      }
-      
-      if (appointment) {
-        // Extract patient ID - same pattern as doctorId
-        const patientId = appointment.patient?.id 
-          ? String(appointment.patient.id) 
-          : appointment.patientId 
-          ? String(appointment.patientId)
-          : "";
-        
-        // Extract doctor ID - try all possible fields, exactly like patient
-        let doctorId = appointment.user?.id 
-          ? String(appointment.user.id) 
-          : appointment.provider?.id
-          ? String(appointment.provider.id)
-          : appointment.providerId !== undefined && appointment.providerId !== null
-          ? String(appointment.providerId)
-          : appointment.doctor?.id
-          ? String(appointment.doctor.id)
-          : appointment.doctorId !== undefined && appointment.doctorId !== null
-          ? String(appointment.doctorId)
-          : appointment.userId !== undefined && appointment.userId !== null
-          ? String(appointment.userId)
-          : appointment.employee?.id
-          ? String(appointment.employee.id)
-          : appointment.employeeId !== undefined && appointment.employeeId !== null
-          ? String(appointment.employeeId)
-          : "";
-        
-        // Last resort: if still empty, search all numeric fields for matching employee ID
-        if (!doctorId && employeesData?.data && Array.isArray(employeesData.data) && appointment) {
-          const employeeIds = employeesData.data.map((e: any) => e.id);
-          for (const [key, value] of Object.entries(appointment)) {
-            if (typeof value === 'number' && employeeIds.includes(value)) {
-              const keyLower = key.toLowerCase();
-              if (keyLower !== 'id' && 
-                  !keyLower.includes('patient') && 
-                  !keyLower.includes('appointment') &&
-                  value !== appointment.id &&
-                  value !== (appointment as any).patientId &&
-                  value !== (appointment as any).patient?.id) {
-                doctorId = String(value);
-                break;
-              }
-            }
-          }
-        }
-        
-        const formValues = {
-          patientId,
-          doctorId: doctorId ? String(doctorId) : "",
-          date: appointment.date || "",
-          startTime: appointment.startTime || appointment.start_time || "",
-          endTime: appointment.endTime || appointment.end_time || "",
-          description: appointment.description || "",
-        };
-        
-        // Use setTimeout to ensure form is ready
-        setTimeout(() => {
-          form.reset(formValues);
-          
-          // Also set values individually to ensure they're set - exactly like patient
-          form.setValue("patientId", patientId, { shouldValidate: false, shouldDirty: false });
-          form.setValue("doctorId", formValues.doctorId, { shouldValidate: false, shouldDirty: false });
-          form.setValue("date", formValues.date, { shouldValidate: false, shouldDirty: false });
-          form.setValue("startTime", formValues.startTime, { shouldValidate: false, shouldDirty: false });
-          form.setValue("endTime", formValues.endTime, { shouldValidate: false, shouldDirty: false });
-          form.setValue("description", formValues.description, { shouldValidate: false, shouldDirty: false });
-        }, 200);
-      }
+    let appointment: any = appointmentData;
+    if (appointmentData?.data?.data) {
+      appointment = appointmentData.data.data;
+    } else if (appointmentData?.data) {
+      appointment = appointmentData.data;
     }
-  }, [appointmentData, isLoadingAppointment, appointmentId, form, patientsData, employeesData, isLoadingPatients, isLoadingEmployees]);
+
+    if (!appointment || typeof appointment !== "object") return;
+
+    const patientId = resolveAppointmentPatientId(appointment, patients);
+    const doctorId = resolveAppointmentDoctorId(appointment, providers);
+
+    reset({
+      patientId,
+      doctorId,
+      date: appointment.date || "",
+      startTime: normalizeTimeForSelect(
+        appointment.startTime ?? appointment.start_time ?? ""
+      ),
+      endTime: normalizeTimeForSelect(
+        appointment.endTime ?? appointment.end_time ?? ""
+      ),
+      description: appointment.description || "",
+    });
+  }, [
+    appointmentData,
+    isLoadingAppointment,
+    appointmentId,
+    isLoadingPatients,
+    isLoadingEmployees,
+    patients,
+    providers,
+    reset,
+  ]);
+
+  const toHHmm = (time: string) => {
+    if (!time) return "";
+    const parts = time.trim().split(":");
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+    }
+    return time;
+  };
 
   const onSubmit = async (data: AppointmentSchemaType) => {
     setLoading(true);
     setError(null);
 
     try {
-      const appointmentData = {
+      const patchPayload = {
         patientId: Number(data.patientId),
         doctorId: Number(data.doctorId),
         date: data.date,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startTime: toHHmm(data.startTime),
+        endTime: toHHmm(data.endTime),
         description: data.description || "",
       };
 
       const res = await processRequestAuth(
         "patch",
         `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId!)}/${appointmentId}`,
-        appointmentData
+        patchPayload
       );
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
@@ -378,29 +353,34 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
               name="patientId"
               control={form.control}
               render={({ field }) => (
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ? String(field.value) : undefined}
                 >
-                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
-                      <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
-                    </SelectTrigger>
-                    <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
-                      {isLoadingPatients ? (
-                        <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
-                      ) : Array.isArray(patientsData?.data?.data) && patientsData.data.data.length > 0 ? (
-                        patientsData.data.data.map((patient: any) => (
-                          <SelectItem key={patient.id} value={patient.id.toString()} className="hover:bg-gray-200">
-                            {patient.firstname || patient.first_name} {patient.lastname || patient.last_name} {patient.gender && `(${patient.gender})`}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="px-2 py-1.5 text-sm text-gray-500">
-                          {patientsData ? 'No patients available' : 'Loading...'}
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-[300px] overflow-y-auto">
+                    {isLoadingPatients ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
+                    ) : patients.length > 0 ? (
+                      patients.map((patient: any) => (
+                        <SelectItem
+                          key={patient.id}
+                          value={String(patient.id)}
+                          className="hover:bg-gray-200"
+                        >
+                          {patient.first_name || patient.firstname} {patient.last_name || patient.lastname}
+                          {patient.gender && ` (${patient.gender})`}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        {patientsData ? "No patients available" : "Loading..."}
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
               )}
             />
             {form.formState.errors.patientId && (
@@ -415,27 +395,31 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
               name="doctorId"
               control={form.control}
               render={({ field }) => (
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ? String(field.value) : undefined}
                 >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                     <SelectValue placeholder={isLoadingEmployees ? "Loading providers..." : "Select provider"} />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
+                  <SelectContent className="bg-white max-h-[300px] overflow-y-auto">
                     {isLoadingEmployees ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500">Loading providers...</div>
-                    ) : Array.isArray(employeesData?.data) && employeesData.data.length > 0 ? (
-                      employeesData.data.map((employee: any) => (
-                        <SelectItem key={employee.id} value={employee.id.toString()} className="hover:bg-gray-200">
-                          {employee.firstname} {employee.lastname}
+                    ) : providers.length > 0 ? (
+                      providers.map((employee: any) => (
+                        <SelectItem
+                          key={employee.id}
+                          value={String(employee.id)}
+                          className="hover:bg-gray-200"
+                        >
+                          {employee.firstname || employee.first_name} {employee.lastname || employee.last_name}
                           {employee.department?.name && ` - ${employee.department.name}`}
                           {employee.designation && ` (${employee.designation})`}
                         </SelectItem>
                       ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-gray-500">
-                        {employeesData ? 'No providers available' : 'Loading...'}
+                        {employeesData ? "No providers available" : "Loading..."}
                       </div>
                     )}
                   </SelectContent>
@@ -473,18 +457,12 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
                   }
                 }
                 
-                console.log("=== DATE PICKER DEBUG ===");
-                console.log("field.value:", field.value);
-                console.log("dateValue:", dateValue);
-                
                 return (
                   <DatePicker
                     key={`date-picker-${field.value || 'empty'}`}
                     date={dateValue}
                     onDateChange={(date) => {
-                      console.log("Date selected:", date);
-                      const formattedDate = date ? formatDateLocal(date) : '';
-                      console.log("formattedDate:", formattedDate);
+                      const formattedDate = date ? formatDateLocal(date) : "";
                       field.onChange(formattedDate);
                     }}
                     placeholder="Select appointment date"
@@ -497,25 +475,25 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
             )}
           </div>
 
-          {/* Start Time */}
+          {/* Start time (24h) */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">Start Time</label>
+            <label className="block text-base text-black font-normal mb-2">Start time (24h)</label>
             <Controller
               name="startTime"
               control={form.control}
               render={({ field }) => (
-                <div className="relative">
-                  <input
-                    placeholder="Select appointment start time"
-                    type="time"
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                  />
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                </div>
+                <Select onValueChange={field.onChange} value={field.value ? field.value : undefined}>
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder="Select start time" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-[280px]">
+                    {TIME_OPTIONS_24H.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
             {form.formState.errors.startTime && (
@@ -523,25 +501,25 @@ export default function EditAppointment({ slug, appointmentId }: { slug: string;
             )}
           </div>
 
-          {/* End Time */}
+          {/* End time (24h) */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">End Time</label>
+            <label className="block text-base text-black font-normal mb-2">End time (24h)</label>
             <Controller
               name="endTime"
               control={form.control}
               render={({ field }) => (
-                <div className="relative">
-                  <input
-                    placeholder="Select appointment end time"
-                    type="time"
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                  />
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                </div>
+                <Select onValueChange={field.onChange} value={field.value ? field.value : undefined}>
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder="Select end time" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-[280px]">
+                    {TIME_OPTIONS_24H.map((t) => (
+                      <SelectItem key={`e-${t}`} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
             {form.formState.errors.endTime && (

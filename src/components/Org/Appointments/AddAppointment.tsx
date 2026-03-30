@@ -7,10 +7,8 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Clock } from "lucide-react";
 import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 import {
   Select,
@@ -24,6 +22,11 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import {
+  extractPatientsFromResponse,
+  extractEmployeesFromResponse,
+} from "@/components/Org/Appointments/appointmentFormUtils";
+import { TIME_OPTIONS_24H } from "@/components/Org/Schedule/scheduleFormUtils";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -79,21 +82,15 @@ export default function AddAppointment({ slug }: { slug: string }) {
     authFectcher
   );
 
-  const patients = useMemo(() => {
-    let result: any[] = [];
-    if (Array.isArray(patientsData?.data?.data)) result = patientsData.data.data;
-    else if (Array.isArray(patientsData?.data)) result = patientsData.data;
-    else if (Array.isArray(patientsData)) result = patientsData;
-    return result;
-  }, [patientsData]);
+  const patients = useMemo(
+    () => extractPatientsFromResponse(patientsData),
+    [patientsData]
+  );
 
-  const providers = useMemo(() => {
-    let result: any[] = [];
-    if (Array.isArray(employeesData?.data?.data)) result = employeesData.data.data;
-    else if (Array.isArray(employeesData?.data)) result = employeesData.data;
-    else if (Array.isArray(employeesData)) result = employeesData;
-    return result;
-  }, [employeesData]);
+  const providers = useMemo(
+    () => extractEmployeesFromResponse(employeesData),
+    [employeesData]
+  );
 
   const form = useForm<AppointmentSchemaType>({
     resolver: zodResolver(AppointmentSchema),
@@ -200,11 +197,14 @@ export default function AddAppointment({ slug }: { slug: string }) {
               name="patientId"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ? String(field.value) : undefined}
+                >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                     <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
+                  <SelectContent className="bg-white max-h-[300px] overflow-y-auto">
                     {isLoadingPatients ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
                     ) : patients.length > 0 ? (
@@ -235,11 +235,14 @@ export default function AddAppointment({ slug }: { slug: string }) {
               name="doctorId"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ? String(field.value) : undefined}
+                >
                   <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                     <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select provider"} />
                   </SelectTrigger>
-                  <SelectContent className="z-10 bg-white max-h-[300px] overflow-y-auto">
+                  <SelectContent className="bg-white max-h-[300px] overflow-y-auto">
                     {isLoadingEmployees ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500">Loading providers...</div>
                     ) : providers.length > 0 ? (
@@ -286,25 +289,25 @@ export default function AddAppointment({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* Start Time */}
+          {/* Start time (24h) */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">Start Time</label>
+            <label className="block text-base text-black font-normal mb-2">Start time (24h)</label>
             <Controller
               name="startTime"
               control={form.control}
               render={({ field }) => (
-                <div className="relative">
-                  <input
-                    placeholder="Select appointment start time"
-                    type="time"
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                  />
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                </div>
+                <Select onValueChange={field.onChange} value={field.value ? field.value : undefined}>
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder="Select start time" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-[280px]">
+                    {TIME_OPTIONS_24H.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
             {form.formState.errors.startTime && (
@@ -312,25 +315,25 @@ export default function AddAppointment({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* End Time */}
+          {/* End time (24h) */}
           <div>
-            <label className="block text-base text-black font-normal mb-2">End Time</label>
+            <label className="block text-base text-black font-normal mb-2">End time (24h)</label>
             <Controller
               name="endTime"
               control={form.control}
               render={({ field }) => (
-                <div className="relative">
-                  <input
-                    placeholder="Select appointment end time"
-                    type="time"
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                  />
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                </div>
+                <Select onValueChange={field.onChange} value={field.value ? field.value : undefined}>
+                  <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                    <SelectValue placeholder="Select end time" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-[280px]">
+                    {TIME_OPTIONS_24H.map((t) => (
+                      <SelectItem key={`e-${t}`} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
             {form.formState.errors.endTime && (

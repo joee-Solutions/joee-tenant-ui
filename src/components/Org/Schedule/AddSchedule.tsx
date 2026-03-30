@@ -7,7 +7,6 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { Calendar, Clock, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   Select,
@@ -21,7 +20,7 @@ import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import Link from "next/link";
-import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { WEEK_DAYS, TIME_OPTIONS_24H } from "@/components/Org/Schedule/scheduleFormUtils";
 
 const ScheduleSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -34,16 +33,6 @@ const ScheduleSchema = z.object({
 
 type ScheduleSchemaType = z.infer<typeof ScheduleSchema>;
 
-const WEEK_DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
-
 interface ScheduleFormProps {
   slug: string;
   onSuccess?: () => void;
@@ -52,7 +41,6 @@ interface ScheduleFormProps {
 
 export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleFormProps) {
   const router = useRouter();
-  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,25 +99,37 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
             endTime: "",
           }],
         });
-        triggerSuccess({
-          message: "Schedule created successfully.",
-          onContinue: () => {
-            if (onSuccess) {
-              onSuccess();
-            } else {
-              router.push(`/dashboard/organization/${slug}/schedules`);
-            }
-          },
-        });
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/dashboard/organization/${slug}/schedules?success=created`);
+        }
       } else {
         setError(res?.message || res?.error || "Failed to create schedule. Please try again.");
       }
     } catch (err: unknown) {
       console.error("Schedule creation error:", err);
-      const errorMessage = err instanceof Error ? err.message : 
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 
-        (err as { message?: string })?.message || 
-        "Failed to create schedule. Please check your connection and try again.";
+      const status = (err as any)?.response?.status as number | undefined;
+      const respData = (err as any)?.response?.data as any | undefined;
+      const rawMessage =
+        respData?.message ??
+        respData?.error ??
+        respData?.validationErrors ??
+        (err as any)?.message;
+
+      const normalized = String(rawMessage ?? "").toLowerCase();
+      const isDuplicate =
+        status === 400 &&
+        (normalized.includes("duplicate key") ||
+          normalized.includes("unique constraint") ||
+          normalized.includes("duplicate"));
+
+      const errorMessage = isDuplicate
+        ? "There is already a schedule for this employee. Please edit the existing schedule."
+        : err instanceof Error
+          ? err.message
+          : String(rawMessage ?? "Failed to create schedule. Please check your connection and try again.");
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -250,11 +250,14 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
                     name={`availableDays.${index}.day`}
                     control={form.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
                         <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
                           <SelectValue placeholder="Select day" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white max-h-[280px]">
                           {WEEK_DAYS.map((weekDay) => (
                             <SelectItem key={weekDay} value={weekDay} className="hover:bg-gray-200">
                               {weekDay}
@@ -271,15 +274,31 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
                   )}
                 </div>
 
-                {/* Start Time */}
+                {/* Start time (24h) */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
-                    Start Time <span className="text-red-500">*</span>
+                    Start time (24h) <span className="text-red-500">*</span>
                   </label>
-                  <Input
-                    type="time"
-                    {...form.register(`availableDays.${index}.startTime`)}
-                    className="w-full p-3 border border-[#737373] h-14 rounded"
+                  <Controller
+                    name={`availableDays.${index}.startTime`}
+                    control={form.control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select start time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white max-h-[280px]">
+                          {TIME_OPTIONS_24H.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                   {form.formState.errors.availableDays?.[index]?.startTime && (
                     <p className="text-red-500 text-sm mt-1">
@@ -288,15 +307,31 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
                   )}
                 </div>
 
-                {/* End Time */}
+                {/* End time (24h) */}
                 <div>
                   <label className="block text-base text-black font-normal mb-2">
-                    End Time <span className="text-red-500">*</span>
+                    End time (24h) <span className="text-red-500">*</span>
                   </label>
-                  <Input
-                    type="time"
-                    {...form.register(`availableDays.${index}.endTime`)}
-                    className="w-full p-3 border border-[#737373] h-14 rounded"
+                  <Controller
+                    name={`availableDays.${index}.endTime`}
+                    control={form.control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value : undefined}
+                      >
+                        <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded flex justify-between items-center">
+                          <SelectValue placeholder="Select end time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white max-h-[280px]">
+                          {TIME_OPTIONS_24H.map((t) => (
+                            <SelectItem key={`e-${t}`} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                   {form.formState.errors.availableDays?.[index]?.endTime && (
                     <p className="text-red-500 text-sm mt-1">
@@ -348,7 +383,6 @@ export default function ScheduleForm({ slug, onSuccess, onCancel }: ScheduleForm
           </Button>
         </div>
       </form>
-      {SuccessModal}
     </div>
   );
 }

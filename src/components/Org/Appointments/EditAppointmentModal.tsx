@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Clock, X } from "lucide-react";
+import { X } from "lucide-react";
 import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
 import {
   Select,
@@ -22,6 +22,16 @@ import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { Spinner } from "@/components/icons/Spinner";
+import {
+  extractPatientsFromResponse,
+  extractEmployeesFromResponse,
+  resolveAppointmentPatientId,
+  resolveAppointmentDoctorId,
+} from "@/components/Org/Appointments/appointmentFormUtils";
+import {
+  TIME_OPTIONS_24H,
+  normalizeTimeForSelect,
+} from "@/components/Org/Schedule/scheduleFormUtils";
 
 const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Patient is required"),
@@ -49,6 +59,7 @@ type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
 interface EditAppointmentModalProps {
   slug: string;
+  tenantIdForPath?: number | string;
   appointment: any;
   onClose: () => void;
   onSuccess: () => void;
@@ -56,22 +67,27 @@ interface EditAppointmentModalProps {
 
 export default function EditAppointmentModal({ 
   slug, 
+  tenantIdForPath,
   appointment, 
   onClose, 
   onSuccess 
 }: EditAppointmentModalProps) {
   const [loading, setLoading] = useState(false);
-  const appointmentDataLoadedRef = useRef(false);
-
-  // Validate slug and get orgId
   const orgId = useMemo(() => {
+    if (tenantIdForPath != null && tenantIdForPath !== "") {
+      return tenantIdForPath;
+    }
     if (!slug) return null;
-    const slugStr = String(slug);
-    const parsed = parseInt(slugStr);
-    return isNaN(parsed) ? null : parsed;
-  }, [slug]);
+    return /^\d+$/.test(String(slug)) ? parseInt(String(slug), 10) : null;
+  }, [slug, tenantIdForPath]);
 
-  // Fetch patients and employees
+  const toHHmm = (time: string) => {
+    if (!time) return "";
+    const parts = time.trim().split(":");
+    if (parts.length >= 2) return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+    return time;
+  };
+
   const { data: patientsData, isLoading: isLoadingPatients } = useSWR(
     orgId ? API_ENDPOINTS.TENANTS_PATIENTS(orgId) : null,
     authFectcher
@@ -94,99 +110,71 @@ export default function EditAppointmentModal({
     },
   });
 
-  // Load appointment data into form
+  const patients = useMemo(
+    () => extractPatientsFromResponse(patientsData),
+    [patientsData]
+  );
+  const employees = useMemo(
+    () => extractEmployeesFromResponse(employeesData),
+    [employeesData]
+  );
+
+  const resolvedPatientId = useMemo(
+    () => resolveAppointmentPatientId(appointment, patients),
+    [appointment, patients]
+  );
+  const resolvedDoctorId = useMemo(
+    () => resolveAppointmentDoctorId(appointment, employees),
+    [appointment, employees]
+  );
+
+  const getPatientSelectValue = (p: any): string => {
+    const id = p?.id ?? p?.patient_id ?? p?.patientId ?? p?.user_id ?? p?.userId;
+    return id != null && id !== "" ? String(id) : "";
+  };
+  const getProviderSelectValue = (e: any): string => {
+    const id =
+      e?.id ??
+      e?.userId ??
+      e?.user_id ??
+      e?.employeeId ??
+      e?.employee_id ??
+      e?.providerId ??
+      e?.provider_id;
+    return id != null && id !== "" ? String(id) : "";
+  };
+
   useEffect(() => {
-    if (appointment && !appointmentDataLoadedRef.current && !isLoadingPatients && !isLoadingEmployees) {
-      appointmentDataLoadedRef.current = true;
-      
-      // Extract patient ID
-      let patientId = "";
-      if (appointment.patientId) {
-        patientId = String(appointment.patientId);
-      } else if (appointment.patient?.id) {
-        patientId = String(appointment.patient.id);
-      } else if (appointment.patient_id) {
-        patientId = String(appointment.patient_id);
-      }
-
-      // Extract doctor/provider ID
-      let doctorId = "";
-      if (appointment.doctorId) {
-        doctorId = String(appointment.doctorId);
-      } else if (appointment.doctor?.id) {
-        doctorId = String(appointment.doctor.id);
-      } else if (appointment.doctor_id) {
-        doctorId = String(appointment.doctor_id);
-      } else if (appointment.user?.id) {
-        doctorId = String(appointment.user.id);
-      } else if (appointment.userId) {
-        doctorId = String(appointment.userId);
-      } else if (appointment.provider?.id) {
-        doctorId = String(appointment.provider.id);
-      } else if (appointment.providerId) {
-        doctorId = String(appointment.providerId);
-      } else if (appointment.employee?.id) {
-        doctorId = String(appointment.employee.id);
-      } else if (appointment.employeeId) {
-        doctorId = String(appointment.employeeId);
-      } else {
-        // Last resort: search through numeric fields
-        for (const [key, value] of Object.entries(appointment)) {
-          if (typeof value === 'number' && value > 0) {
-            const keyLower = key.toLowerCase();
-            if (keyLower !== 'id' && 
-                !keyLower.includes('patient') && 
-                !keyLower.includes('appointment') &&
-                value !== appointment.id &&
-                value !== (appointment as any).patientId &&
-                value !== (appointment as any).patient?.id) {
-              doctorId = String(value);
-              break;
-            }
-          }
-        }
-      }
-
-      const formValues = {
-        patientId,
-        doctorId: doctorId ? String(doctorId) : "",
-        date: appointment.date || "",
-        startTime: appointment.startTime || appointment.start_time || "",
-        endTime: appointment.endTime || appointment.end_time || "",
-        description: appointment.description || "",
-      };
-
-      setTimeout(() => {
-        form.reset(formValues);
-        form.setValue("patientId", patientId, { shouldValidate: false, shouldDirty: false });
-        form.setValue("doctorId", formValues.doctorId, { shouldValidate: false, shouldDirty: false });
-        form.setValue("date", formValues.date, { shouldValidate: false, shouldDirty: false });
-        form.setValue("startTime", formValues.startTime, { shouldValidate: false, shouldDirty: false });
-        form.setValue("endTime", formValues.endTime, { shouldValidate: false, shouldDirty: false });
-        form.setValue("description", formValues.description, { shouldValidate: false, shouldDirty: false });
-      }, 200);
-    }
-  }, [appointment, isLoadingPatients, isLoadingEmployees, form]);
+    if (!appointment?.id) return;
+    form.reset({
+      patientId: resolvedPatientId,
+      doctorId: resolvedDoctorId,
+      date: appointment.date || "",
+      startTime: normalizeTimeForSelect(appointment.startTime ?? appointment.start_time ?? ""),
+      endTime: normalizeTimeForSelect(appointment.endTime ?? appointment.end_time ?? ""),
+      description: appointment.description || "",
+    });
+  }, [appointment, resolvedPatientId, resolvedDoctorId, form]);
 
   const handleSubmit = async (data: AppointmentSchemaType) => {
+    if (!appointment?.id || orgId == null) return;
     setLoading(true);
     try {
       const appointmentData = {
         patientId: Number(data.patientId),
         doctorId: Number(data.doctorId),
         date: data.date,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startTime: toHHmm(data.startTime),
+        endTime: toHHmm(data.endTime),
         description: data.description || "",
       };
 
       await processRequestAuth(
         "patch",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId!)}/${appointment.id}`,
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointment.id}`,
         appointmentData
       );
 
-      toast.success("Appointment updated successfully");
       onSuccess();
     } catch (error: any) {
       console.error(error);
@@ -196,16 +184,6 @@ export default function EditAppointmentModal({
       setLoading(false);
     }
   };
-
-  const patients = useMemo(() => {
-    const data = patientsData?.data?.data || patientsData?.data || patientsData || [];
-    return Array.isArray(data) ? data : [];
-  }, [patientsData]);
-
-  const employees = useMemo(() => {
-    const data = employeesData?.data || employeesData || [];
-    return Array.isArray(data) ? data : [];
-  }, [employeesData]);
 
   return (
     <div 
@@ -241,7 +219,7 @@ export default function EditAppointmentModal({
                 render={({ field }) => (
                   <Select 
                     onValueChange={field.onChange} 
-                    value={field.value}
+                    value={field.value ? String(field.value) : undefined}
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                       <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
@@ -250,11 +228,15 @@ export default function EditAppointmentModal({
                       {isLoadingPatients ? (
                         <div className="px-2 py-1.5 text-sm text-gray-500">Loading patients...</div>
                       ) : patients.length > 0 ? (
-                        patients.map((patient: any) => (
-                          <SelectItem key={patient.id} value={patient.id.toString()}>
+                        patients.map((patient: any) => {
+                          const value = getPatientSelectValue(patient);
+                          if (!value) return null;
+                          return (
+                            <SelectItem key={value} value={value}>
                             {patient.firstname || patient.first_name} {patient.lastname || patient.last_name}
-                          </SelectItem>
-                        ))
+                            </SelectItem>
+                          );
+                        })
                       ) : (
                         <div className="px-2 py-1.5 text-sm text-gray-500">No patients available</div>
                       )}
@@ -276,7 +258,7 @@ export default function EditAppointmentModal({
                 render={({ field }) => (
                   <Select 
                     onValueChange={field.onChange} 
-                    value={field.value}
+                    value={field.value ? String(field.value) : undefined}
                   >
                     <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
                       <SelectValue placeholder={isLoadingEmployees ? "Loading providers..." : "Select provider"} />
@@ -285,12 +267,16 @@ export default function EditAppointmentModal({
                       {isLoadingEmployees ? (
                         <div className="px-2 py-1.5 text-sm text-gray-500">Loading providers...</div>
                       ) : employees.length > 0 ? (
-                        employees.map((employee: any) => (
-                          <SelectItem key={employee.id} value={employee.id.toString()}>
+                        employees.map((employee: any) => {
+                          const value = getProviderSelectValue(employee);
+                          if (!value) return null;
+                          return (
+                            <SelectItem key={value} value={value}>
                             {employee.firstname} {employee.lastname}
                             {employee.department?.name && ` - ${employee.department.name}`}
-                          </SelectItem>
-                        ))
+                            </SelectItem>
+                          );
+                        })
                       ) : (
                         <div className="px-2 py-1.5 text-sm text-gray-500">No providers available</div>
                       )}
@@ -343,25 +329,25 @@ export default function EditAppointmentModal({
               )}
             </div>
 
-            {/* Start Time */}
+            {/* Start Time (24h) */}
             <div>
-              <label className="block text-base text-black font-normal mb-2">Start Time</label>
+              <label className="block text-base text-black font-normal mb-2">Start Time (24h)</label>
               <Controller
                 name="startTime"
                 control={form.control}
                 render={({ field }) => (
-                  <div className="relative">
-                    <input
-                      placeholder="Select start time"
-                      type="time"
-                      value={field.value || ''}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                    />
-                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                  </div>
+                  <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
+                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
+                      <SelectValue placeholder="Select start time" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white max-h-[280px]">
+                      {TIME_OPTIONS_24H.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
               {form.formState.errors.startTime && (
@@ -369,25 +355,25 @@ export default function EditAppointmentModal({
               )}
             </div>
 
-            {/* End Time */}
+            {/* End Time (24h) */}
             <div>
-              <label className="block text-base text-black font-normal mb-2">End Time</label>
+              <label className="block text-base text-black font-normal mb-2">End Time (24h)</label>
               <Controller
                 name="endTime"
                 control={form.control}
                 render={({ field }) => (
-                  <div className="relative">
-                    <input
-                      placeholder="Select end time"
-                      type="time"
-                      value={field.value || ''}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      className="w-full p-3 pl-12 border border-[#737373] h-14 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003465] focus:border-transparent"
-                    />
-                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                  </div>
+                  <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
+                    <SelectTrigger className="w-full p-3 border border-[#737373] h-14 rounded">
+                      <SelectValue placeholder="Select end time" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white max-h-[280px]">
+                      {TIME_OPTIONS_24H.map((t) => (
+                        <SelectItem key={`e-${t}`} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
               {form.formState.errors.endTime && (
