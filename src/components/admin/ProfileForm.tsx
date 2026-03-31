@@ -80,10 +80,15 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
   });
   const [isDisabled, setIsDisabled] = React.useState(true);
 
-  // Role options: include API role so selected value (e.g. "Super_Admin") is always in the list
+  // For Admin users, do not offer Super_Admin in the editable role options.
+  // Keep API role in options only when needed to preserve currently selected values.
   const roleOptions = React.useMemo(() => {
     const raw = getAdminRoleString(admin);
-    const opts = [...ROLE_OPTIONS];
+    const normalizedRaw = raw.trim().toLowerCase().replace(/\s+/g, "_");
+    const isAdminUser = normalizedRaw === "admin";
+    const opts = isAdminUser
+      ? ROLE_OPTIONS.filter((r) => r !== "Super_Admin")
+      : [...ROLE_OPTIONS];
     if (raw && !opts.includes(raw)) opts.push(raw);
     return opts;
   }, [admin]);

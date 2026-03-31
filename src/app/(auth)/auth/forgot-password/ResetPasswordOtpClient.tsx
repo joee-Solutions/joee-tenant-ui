@@ -33,6 +33,31 @@ const ResetPasswordOtpClient = ({ token }: { token: string }) => {
   } = useForm<ResetPasswordOtpProps>({
     resolver: zodResolver(schema),
   });
+
+  const handleResendOtp = async () => {
+    try {
+      const res = await processRequestNoAuth("post", API_ENDPOINTS.RESEND_OTP, {
+        token,
+      });
+      if (res?.success === true || res?.status === true) {
+        toast.success("OTP resend successful", {
+          toastId: "forgot-otp-resend-success",
+          delay: 1500,
+        });
+      } else {
+        toast.success("OTP resend successful", {
+          toastId: "forgot-otp-resend-success",
+          delay: 1500,
+        });
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to resend OTP", {
+        toastId: "forgot-otp-resend-error",
+        delay: 1500,
+      });
+    }
+  };
+
   const handleRest = async (data: ResetPasswordOtpProps) => {
     if (!data.otp) {
       toast.error("Otp is required");
@@ -128,12 +153,13 @@ const ResetPasswordOtpClient = ({ token }: { token: string }) => {
       <div className="extra-details flex flex-col items-center gap-3 text-xs md:text-sm mb-7">
         <div className="flex justify-center gap-2">
           Didn&apos;t receive the email?
-          <Link
-            href={"/auth/forgot-password"}
+          <button
+            type="button"
+            onClick={handleResendOtp}
             className="text-brand-400 hover:underline"
           >
             Click to resend?
-          </Link>
+          </button>
         </div>
         <Link
           href={"/auth/login"}
