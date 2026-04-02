@@ -40,6 +40,26 @@ import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizati
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 
+/** Next/Image throws if `src` is not a valid URL or allowed local path. */
+function tenantLogoSrc(
+  logo: unknown,
+  fallback: typeof orgPlaceholder
+): string | typeof orgPlaceholder {
+  if (logo == null) return fallback;
+  const s = String(logo).trim();
+  if (!s) return fallback;
+  if (s.startsWith("/")) return s;
+  if (s.startsWith("http://") || s.startsWith("https://")) {
+    try {
+      new URL(s);
+      return s;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 function PageContent() {
   const searchParams = useSearchParams();
   const [pageSize, setPageSize] = useState(10);
@@ -502,10 +522,7 @@ function PageContent() {
                       <div className="flex items-center gap-[10px]">
                         <span className="w-[42px] h-[42px] rounded-full overflow-hidden">
                           <Image
-                            src={
-                              data?.logo ||
-                              orgPlaceholder
-                            }
+                            src={tenantLogoSrc(data?.logo, orgPlaceholder)}
                             alt="organization image"
                             width={42}
                             height={42}

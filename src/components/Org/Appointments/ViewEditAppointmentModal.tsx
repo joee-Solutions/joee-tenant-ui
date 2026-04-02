@@ -56,6 +56,8 @@ interface ViewEditAppointmentModalProps {
   onUpdate: () => void;
   /** Close the edit modal first, then show success (parent-owned success modal) */
   onOperationSuccess?: (message: string) => void;
+  /** When set, "Edit" opens the parent's edit flow (e.g. EditAppointmentModal) instead of inline edit. */
+  onRequestExternalEdit?: () => void;
 }
 
 export default function ViewEditAppointmentModal({
@@ -66,6 +68,7 @@ export default function ViewEditAppointmentModal({
   onClose,
   onUpdate,
   onOperationSuccess,
+  onRequestExternalEdit,
 }: ViewEditAppointmentModalProps) {
   const tenantId = tenantIdForPath ?? orgId ?? null;
   const [isEditMode, setIsEditMode] = useState(openInEditMode);
@@ -225,6 +228,10 @@ export default function ViewEditAppointmentModal({
     e?.preventDefault();
     e?.stopPropagation();
     if (!appointment) return;
+    if (onRequestExternalEdit) {
+      onRequestExternalEdit();
+      return;
+    }
     form.setValue("patientId", resolvedPatientId, { shouldValidate: false, shouldDirty: false });
     form.setValue("doctorId", resolvedDoctorId, { shouldValidate: false, shouldDirty: false });
     form.setValue("date", appointment.date || "", { shouldValidate: false, shouldDirty: false });

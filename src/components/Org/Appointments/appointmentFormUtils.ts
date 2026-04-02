@@ -1,3 +1,39 @@
+/**
+ * Split a display range like "9:00 AM - 10:00 AM" or "09:30 - 11:00" into two sides.
+ * Uses the first "-" as separator so times with hyphens are unlikely.
+ */
+export function parseDisplayTimeRangeToParts(display: string): { start: string; end: string } {
+  if (display == null || typeof display !== "string") return { start: "", end: "" };
+  const trimmed = display.trim();
+  const dashIdx = trimmed.indexOf("-");
+  if (dashIdx === -1) return { start: trimmed, end: "" };
+  return {
+    start: trimmed.slice(0, dashIdx).trim(),
+    end: trimmed.slice(dashIdx + 1).trim(),
+  };
+}
+
+/**
+ * One normalized row from GET appointments: same API fields, consistent start/end/time for UI.
+ */
+export function normalizeAppointmentRecord(raw: any): any {
+  if (raw == null) return raw;
+  const start = raw.startTime ?? raw.start_time ?? "";
+  const end = raw.endTime ?? raw.end_time ?? "";
+  const time =
+    start && end
+      ? `${start} - ${end}`
+      : typeof raw.time === "string" && raw.time.trim()
+        ? raw.time.trim()
+        : "";
+  return {
+    ...raw,
+    startTime: start,
+    endTime: end,
+    time,
+  };
+}
+
 /** Normalize API list responses for patients dropdowns. */
 export function extractPatientsFromResponse(data: any): any[] {
   if (data == null) return [];
@@ -67,7 +103,16 @@ export function resolveAppointmentPatientId(appointment: any, patients: any[]): 
   const p = appointment.patient;
   if (!p) return "";
   const direct = patientRowId(p);
-  if (direct) return direct;
+  if (direct) {
+    const byRow = patients.find((x) => patientRowId(x) === direct);
+    if (byRow) return patientRowId(byRow);
+    const byUserRef = patients.find((x) => {
+      const xu = x.userId ?? x.user_id ?? x.user?.id;
+      return xu != null && String(xu) === direct;
+    });
+    if (byUserRef) return patientRowId(byUserRef);
+    return direct;
+  }
   const fn = (p.first_name ?? p.firstname ?? p.firstName ?? "").toString().trim().toLowerCase();
   const ln = (p.last_name ?? p.lastname ?? p.lastName ?? "").toString().trim().toLowerCase();
   if (!fn && !ln) return "";
@@ -136,7 +181,16 @@ export function resolveAppointmentDoctorId(appointment: any, providers: any[]): 
 
   if (typeof raw === "number" || typeof raw === "string") {
     const s = String(raw).trim();
-    if (s && /^\d+$/.test(s)) return s;
+    if (s && /^\d+$/.test(s)) {
+      const byRow = providers.find((x) => employeeRowId(x) === s);
+      if (byRow) return employeeRowId(byRow);
+      const byUserRef = providers.find((x) => {
+        const xu = x.userId ?? x.user_id ?? x.user?.id;
+        return xu != null && String(xu) === s;
+      });
+      if (byUserRef) return employeeRowId(byUserRef);
+      return s;
+    }
     return "";
   }
   const direct = employeeRowId(raw);

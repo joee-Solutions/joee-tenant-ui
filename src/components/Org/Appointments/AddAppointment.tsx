@@ -21,7 +21,6 @@ import { processRequestAuth } from "@/framework/https";
 import useSWR from "swr";
 import { authFectcher } from "@/hooks/swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
-import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 import {
   extractPatientsFromResponse,
   extractEmployeesFromResponse,
@@ -54,7 +53,6 @@ type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
 
 export default function AddAppointment({ slug }: { slug: string }) {
   const router = useRouter();
-  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,12 +122,9 @@ export default function AddAppointment({ slug }: { slug: string }) {
       );
 
       if (res && (res.status === true || res.status === 200 || res.success)) {
-        triggerSuccess({
-          message: "Appointment created successfully.",
-          onContinue: () => {
-            router.push(`/dashboard/organization/${slug}/appointments?view=calendar`);
-          },
-        });
+        router.push(
+          `/dashboard/organization/${slug}/appointments?view=calendar&success=created`
+        );
       } else {
         // Check for validation errors first
         if (res?.validationErrors && Array.isArray(res.validationErrors)) {
@@ -380,7 +375,6 @@ export default function AddAppointment({ slug }: { slug: string }) {
           </Button>
         </div>
       </form>
-      {SuccessModal}
     </div>
   );
 }

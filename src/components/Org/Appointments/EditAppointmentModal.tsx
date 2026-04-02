@@ -27,6 +27,7 @@ import {
   extractEmployeesFromResponse,
   resolveAppointmentPatientId,
   resolveAppointmentDoctorId,
+  parseDisplayTimeRangeToParts,
 } from "@/components/Org/Appointments/appointmentFormUtils";
 import {
   TIME_OPTIONS_24H,
@@ -65,6 +66,17 @@ interface EditAppointmentModalProps {
   onSuccess: () => void;
 }
 
+function unwrapAppointmentPayload(input: any): any {
+  if (!input) return null;
+  if (input.id != null || input.date || input.startTime || input.endTime) return input;
+  const d = input.data;
+  if (Array.isArray(d?.data) && d.data.length > 0) return d.data[0];
+  if (d?.data && typeof d.data === "object") return d.data;
+  if (Array.isArray(d) && d.length > 0) return d[0];
+  if (d && typeof d === "object" && (d.id != null || d.date || d.startTime || d.endTime)) return d;
+  return input;
+}
+
 export default function EditAppointmentModal({ 
   slug, 
   tenantIdForPath,
@@ -73,6 +85,10 @@ export default function EditAppointmentModal({
   onSuccess 
 }: EditAppointmentModalProps) {
   const [loading, setLoading] = useState(false);
+  const appointmentPayload = useMemo(
+    () => unwrapAppointmentPayload(appointment),
+    [appointment]
+  );
   const orgId = useMemo(() => {
     if (tenantIdForPath != null && tenantIdForPath !== "") {
       return tenantIdForPath;
@@ -120,12 +136,12 @@ export default function EditAppointmentModal({
   );
 
   const resolvedPatientId = useMemo(
-    () => resolveAppointmentPatientId(appointment, patients),
-    [appointment, patients]
+    () => resolveAppointmentPatientId(appointmentPayload, patients),
+    [appointmentPayload, patients]
   );
   const resolvedDoctorId = useMemo(
-    () => resolveAppointmentDoctorId(appointment, employees),
-    [appointment, employees]
+    () => resolveAppointmentDoctorId(appointmentPayload, employees),
+    [appointmentPayload, employees]
   );
 
   const getPatientSelectValue = (p: any): string => {
@@ -145,19 +161,46 @@ export default function EditAppointmentModal({
   };
 
   useEffect(() => {
-    if (!appointment?.id) return;
+    if (!appointmentPayload?.id) return;
+    const apiStart =
+      appointmentPayload.startTime ?? appointmentPayload.start_time ?? "";
+    const apiEnd =
+      appointmentPayload.endTime ?? appointmentPayload.end_time ?? "";
+    let startNorm = normalizeTimeForSelect(apiStart);
+    let endNorm = normalizeTimeForSelect(apiEnd);
+    if (!startNorm || !endNorm) {
+      const range =
+        typeof appointmentPayload.time === "string"
+          ? appointmentPayload.time
+          : "";
+      const { start, end } = parseDisplayTimeRangeToParts(range);
+      if (!startNorm) startNorm = normalizeTimeForSelect(start);
+      if (!endNorm) endNorm = normalizeTimeForSelect(end);
+    }
     form.reset({
       patientId: resolvedPatientId,
       doctorId: resolvedDoctorId,
-      date: appointment.date || "",
-      startTime: normalizeTimeForSelect(appointment.startTime ?? appointment.start_time ?? ""),
-      endTime: normalizeTimeForSelect(appointment.endTime ?? appointment.end_time ?? ""),
-      description: appointment.description || "",
+      date: appointmentPayload.date || "",
+      startTime: startNorm,
+      endTime: endNorm,
+      description: appointmentPayload.description || "",
     });
-  }, [appointment, resolvedPatientId, resolvedDoctorId, form]);
+  }, [
+    appointmentPayload?.id,
+    appointmentPayload?.date,
+    appointmentPayload?.time,
+    appointmentPayload?.startTime,
+    appointmentPayload?.start_time,
+    appointmentPayload?.endTime,
+    appointmentPayload?.end_time,
+    appointmentPayload?.description,
+    resolvedPatientId,
+    resolvedDoctorId,
+    form,
+  ]);
 
   const handleSubmit = async (data: AppointmentSchemaType) => {
-    if (!appointment?.id || orgId == null) return;
+    if (!appointmentPayload?.id || orgId == null) return;
     setLoading(true);
     try {
       const appointmentData = {
@@ -171,7 +214,7 @@ export default function EditAppointmentModal({
 
       await processRequestAuth(
         "patch",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointment.id}`,
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(orgId)}/${appointmentPayload.id}`,
         appointmentData
       );
 

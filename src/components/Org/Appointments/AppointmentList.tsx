@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { parseISO } from "date-fns";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -52,6 +52,8 @@ import { authFectcher } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
 import { formatDateFn } from "@/lib/utils";
 import EditAppointmentModal from "./EditAppointmentModal";
+import ViewEditAppointmentModal from "./ViewEditAppointmentModal";
+import { normalizeAppointmentRecord } from "./appointmentFormUtils";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
@@ -75,6 +77,7 @@ const imgSrc = (src: any, fallback: any) =>
 
 export default function Page({ slug }: { slug: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
@@ -98,6 +101,23 @@ export default function Page({ slug }: { slug: string }) {
     if (v === "calendar") setViewMode("calendar");
     else if (v === "list") setViewMode("list");
   }, [searchParams]);
+
+  const createSuccessHandledRef = useRef(false);
+  useEffect(() => {
+    if (searchParams.get("success") !== "created") {
+      createSuccessHandledRef.current = false;
+      return;
+    }
+    if (createSuccessHandledRef.current) return;
+    createSuccessHandledRef.current = true;
+    triggerSuccess({
+      message: "Appointment created successfully.",
+    });
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("success");
+    const qs = p.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, pathname, router, triggerSuccess]);
 
   /* ---------------- data ---------------- */
 
@@ -159,23 +179,20 @@ export default function Page({ slug }: { slug: string }) {
     console.error("orgId:", orgId);
   }
 
-  const appointments = data?.data?.data || [];
-
-  console.log("=== APPOINTMENT DATA DEBUG ===");
-  console.log("data:", data);
-  console.log("data?.data:", data?.data);
-  console.log("data?.data?.data:", data?.data?.data);
-  console.log("appointments:", appointments);
-  console.log("appointments length:", appointments.length);
+  const appointmentsPayload = data?.data?.data;
+  const appointments = useMemo(
+    () =>
+      Array.isArray(appointmentsPayload)
+        ? appointmentsPayload.map((row: any) => normalizeAppointmentRecord(row))
+        : [],
+    [appointmentsPayload]
+  );
 
   const doctors = (employeesData?.data || []).filter((e: any) =>
     `${e.designation} ${e.department?.name}`
       .toLowerCase()
       .includes("doctor")
   );
-
-  console.log("employeesData:", employeesData);
-  console.log("employeesData?.data:", employeesData?.data);
 
   /* ---------------- filtering ---------------- */
 
@@ -206,21 +223,16 @@ export default function Page({ slug }: { slug: string }) {
 
   const calendarAppointments: Appointment[] = filtered.map((a: any) => ({
     id: String(a.id),
-    patientName: `${a.patient?.first_name} ${a.patient?.last_name}`,
-    doctorName: `${a.user?.firstname} ${a.user?.lastname}`,
+    patientName: `${a.patient?.first_name ?? a.patient?.firstname ?? ""} ${a.patient?.last_name ?? a.patient?.lastname ?? ""}`.trim(),
+    doctorName: `${a.user?.firstname ?? ""} ${a.user?.lastname ?? ""}`.trim(),
     department: a.user?.department?.name ?? "",
     date: a.date,
-    time: `${a.startTime} - ${a.endTime}`,
+    time: a.time || `${a.startTime} - ${a.endTime}`,
     status: "Upcoming",
     description: a.description,
     age: a.patient?.age,
     appointmentDate: parseISO(a.date),
   }));
-
-  console.log("=== CALENDAR APPOINTMENTS DEBUG ===");
-  console.log("filtered:", filtered);
-  console.log("calendarAppointments:", calendarAppointments);
-  console.log("calendarAppointments length:", calendarAppointments.length);
 
   const paginated = filtered.slice(
     (currentPage - 1) * pageSize,
@@ -264,17 +276,19 @@ export default function Page({ slug }: { slug: string }) {
     }
   };
 
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  type AppointmentModalMode = "view" | "edit" | null;
+  const [appointmentModalMode, setAppointmentModalMode] =
+    useState<AppointmentModalMode>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
 
   const handleEditAppointment = (appointment: any) => {
     setSelectedAppointment(appointment);
-    setShowAppointmentModal(true);
+    setAppointmentModalMode("edit");
     setOpenDropdownId(null);
   };
 
   const handleCloseAppointmentModal = () => {
-    setShowAppointmentModal(false);
+    setAppointmentModalMode(null);
     setSelectedAppointment(null);
   };
 
@@ -385,7 +399,6 @@ export default function Page({ slug }: { slug: string }) {
 
       {viewMode === "calendar" && tenantIdForPath != null && tenantIdForPath !== "" && !appointmentsError && (
         <>
-          {console.log("Rendering calendar with appointments:", calendarAppointments.length)}
         <AppointmentsCalendar
           viewMode={calendarViewMode}
           setViewMode={setCalendarViewMode}
@@ -398,7 +411,7 @@ export default function Page({ slug }: { slug: string }) {
               );
               if (foundAppointment) {
                 setSelectedAppointment(foundAppointment);
-                setShowAppointmentModal(true);
+                setAppointmentModalMode("view");
                 setOpenDropdownId(null);
               }
             }}
@@ -509,17 +522,38 @@ export default function Page({ slug }: { slug: string }) {
         </>
       )}
 
-      {/* Edit Appointment Modal (calendar click or list Edit) */}
-      {showAppointmentModal && selectedAppointment && tenantIdForPath != null && tenantIdForPath !== "" && (
-        <EditAppointmentModal
-          key={selectedAppointment.id}
-          slug={slug}
-          tenantIdForPath={tenantIdForPath}
-          appointment={selectedAppointment}
-          onClose={handleCloseAppointmentModal}
-          onSuccess={() => handleAppointmentOperationSuccess("Appointment updated successfully.")}
-        />
-      )}
+      {/* Calendar: view first; list: edit directly. Same normalized row from GET list. */}
+      {appointmentModalMode === "view" &&
+        selectedAppointment &&
+        tenantIdForPath != null &&
+        tenantIdForPath !== "" && (
+          <ViewEditAppointmentModal
+            key={`view-${selectedAppointment.id}`}
+            appointment={selectedAppointment}
+            orgId={orgId ?? undefined}
+            tenantIdForPath={tenantIdForPath}
+            openInEditMode={false}
+            onClose={handleCloseAppointmentModal}
+            onUpdate={() => mutate()}
+            onRequestExternalEdit={() => setAppointmentModalMode("edit")}
+          />
+        )}
+
+      {appointmentModalMode === "edit" &&
+        selectedAppointment &&
+        tenantIdForPath != null &&
+        tenantIdForPath !== "" && (
+          <EditAppointmentModal
+            key={`edit-${selectedAppointment.id}`}
+            slug={slug}
+            tenantIdForPath={tenantIdForPath}
+            appointment={selectedAppointment}
+            onClose={handleCloseAppointmentModal}
+            onSuccess={() =>
+              handleAppointmentOperationSuccess("Appointment updated successfully.")
+            }
+          />
+        )}
 
       {/* Delete Warning Modal */}
       {showDeleteWarning && appointmentToDelete && (

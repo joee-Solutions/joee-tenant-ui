@@ -2,6 +2,71 @@ import { FormDataStepper } from "@/components/Org/Patients/PatientStepper";
 import { formatPhoneNumber } from "./phoneFormatter";
 
 /**
+ * Build diagnosis rows for the API: no empty onset/end keys, always string `comments`,
+ * only whitelisted fields (avoids `""` / undefined failing @IsISO8601 / @IsString).
+ */
+function finalizeDiagnosisHistoryForApi(items: any[] | undefined): Record<string, unknown>[] {
+  if (!Array.isArray(items)) return [];
+
+  const toIsoOrUndefined = (v: unknown): string | undefined => {
+    if (v == null) return undefined;
+    const s = String(v).trim();
+    if (!s) return undefined;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      return isNaN(dt.getTime()) ? undefined : dt.toISOString();
+    }
+    const dt = new Date(s);
+    return isNaN(dt.getTime()) ? undefined : dt.toISOString();
+  };
+
+  return items.map((item: any) => {
+    const condition =
+      item?.condition === "Other" && item?.conditionOther
+        ? String(item.conditionOther).trim()
+        : item?.condition != null
+          ? String(item.condition).trim()
+          : "";
+    const commentsRaw = item?.comments;
+    const comments =
+      typeof commentsRaw === "string"
+        ? commentsRaw
+        : commentsRaw != null
+          ? String(commentsRaw)
+          : "";
+
+    const out: Record<string, unknown> = {
+      condition,
+      comments,
+    };
+
+    if (item?.id != null && item.id !== "") out.id = item.id;
+
+    const mainDate = item?.date != null ? String(item.date).trim() : "";
+    let primaryIso: string | undefined;
+    if (mainDate) {
+      primaryIso = toIsoOrUndefined(mainDate);
+      out.date = primaryIso ?? mainDate;
+    }
+    if (!primaryIso && out.date != null) {
+      primaryIso = toIsoOrUndefined(String(out.date));
+    }
+
+    let onsetIso = toIsoOrUndefined(item?.onsetDate ?? item?.onset_date);
+    let endIso = toIsoOrUndefined(item?.endDate ?? item?.end_date);
+    // Backend often validates onset/end as required ISO; when user skips them, align with row date.
+    if (!onsetIso && primaryIso) onsetIso = primaryIso;
+    if (!endIso && primaryIso) endIso = primaryIso;
+
+    if (onsetIso) out.onsetDate = onsetIso;
+    if (endIso) out.endDate = endIso;
+
+    return out;
+  });
+}
+
+/**
  * Map form data to API DTO format
  */
 export function mapFormDataToPatientDto(formData: FormDataStepper) {
@@ -185,11 +250,7 @@ export function mapFormDataToPatientDto(formData: FormDataStepper) {
 
     // Medical data arrays
     allergies: allergies || [],
-    diagnosisHistory: (diagnosisHistory || []).map((item: any) => ({
-      ...item,
-      // Replace "Other" with the custom text if conditionOther is provided
-      condition: item.condition === "Other" && item.conditionOther ? item.conditionOther : item.condition,
-    })),
+    diagnosisHistory: finalizeDiagnosisHistoryForApi(diagnosisHistory),
     surgeries: (surgeryHistory || []).map((item: any) => ({
       ...item,
       // Replace "Other" with the custom text if surgeryTypeOther is provided
@@ -410,6 +471,10 @@ export function normalizePatientData(mappedData: ReturnType<typeof mapFormDataTo
   mappedData.visits = Array.isArray(mappedData.visits) ? mappedData.visits : [];
   mappedData.medicalHistory = Array.isArray(mappedData.medicalHistory) ? mappedData.medicalHistory : [];
   mappedData.prescriptions = Array.isArray(mappedData.prescriptions) ? mappedData.prescriptions : [];
+
+  mappedData.diagnosisHistory = finalizeDiagnosisHistoryForApi(
+    mappedData.diagnosisHistory
+  );
   
   // Ensure objects are objects (not undefined or null)
   mappedData.socailHistory = mappedData.socailHistory && typeof mappedData.socailHistory === 'object' ? mappedData.socailHistory : {};
@@ -457,6 +522,12 @@ export function stripInvalidOptionalContactFields(
     if (!ecEmail || !EMAIL_REGEX.test(ecEmail)) {
       delete ei.emergency_contact_email;
     }
+  }
+
+  if (Array.isArray(payload.diagnosisHistory)) {
+    payload.diagnosisHistory = finalizeDiagnosisHistoryForApi(
+      payload.diagnosisHistory
+    );
   }
 }
 

@@ -566,15 +566,22 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
 
   const handlePatientSaveSuccess = useCallback(
     (ctx: { mode: "create" | "update" }) => {
+      if (ctx.mode === "create") {
+        onSaveComplete?.();
+        router.push(
+          `/dashboard/organization/${slug}/patients?success=created`
+        );
+        return;
+      }
       triggerSuccess({
-        message:
-          ctx.mode === "update"
-            ? "Patient updated successfully."
-            : "Patient created successfully.",
+        message: "Patient updated successfully.",
+        onContinue: () => {
+          onSaveComplete?.();
+          router.push(`/dashboard/organization/${slug}/patients`);
+        },
       });
-      onSaveComplete?.();
     },
-    [triggerSuccess, onSaveComplete]
+    [triggerSuccess, onSaveComplete, router, slug]
   );
 
   // Use the patient form hook for save and auto-save logic

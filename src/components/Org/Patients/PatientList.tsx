@@ -5,7 +5,8 @@ import { PatientData } from "@/components/shared/table/data";
 import DataTable from "@/components/shared/table/DataTable";
 import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { MoreVertical, Edit, Trash2, X } from "lucide-react";
 import {
@@ -69,7 +70,27 @@ function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): s
 }
 
 export default function PatientList({ org }: { org: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
+  const createSuccessHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (searchParams.get("success") !== "created") {
+      createSuccessHandledRef.current = false;
+      return;
+    }
+    if (createSuccessHandledRef.current) return;
+    createSuccessHandledRef.current = true;
+    triggerSuccess({
+      message: "Patient created successfully.",
+    });
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("success");
+    const qs = p.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, pathname, router, triggerSuccess]);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOrg, setIsAddOrg] = useState<"add" | "none" | "edit">("none");

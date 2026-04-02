@@ -53,8 +53,6 @@ export default function DiagnosisHistoryForm() {
       date: formatDateLocal(new Date()),
       condition: "",
       conditionOther: "",
-      onsetDate: "",
-      endDate: "",
       comments: "",
     });
     setEditingIndex(fields.length);
