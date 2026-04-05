@@ -51,7 +51,6 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
 import { formatDateFn } from "@/lib/utils";
-import EditAppointmentModal from "./EditAppointmentModal";
 import ViewEditAppointmentModal from "./ViewEditAppointmentModal";
 import { normalizeAppointmentRecord } from "./appointmentFormUtils";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
@@ -276,19 +275,17 @@ export default function Page({ slug }: { slug: string }) {
     }
   };
 
-  type AppointmentModalMode = "view" | "edit" | null;
-  const [appointmentModalMode, setAppointmentModalMode] =
-    useState<AppointmentModalMode>(null);
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
 
-  const handleEditAppointment = (appointment: any) => {
+  const handleOpenAppointmentModal = (appointment: any) => {
     setSelectedAppointment(appointment);
-    setAppointmentModalMode("edit");
+    setAppointmentModalOpen(true);
     setOpenDropdownId(null);
   };
 
   const handleCloseAppointmentModal = () => {
-    setAppointmentModalMode(null);
+    setAppointmentModalOpen(false);
     setSelectedAppointment(null);
   };
 
@@ -411,7 +408,7 @@ export default function Page({ slug }: { slug: string }) {
               );
               if (foundAppointment) {
                 setSelectedAppointment(foundAppointment);
-                setAppointmentModalMode("view");
+                setAppointmentModalOpen(true);
                 setOpenDropdownId(null);
               }
             }}
@@ -491,7 +488,7 @@ export default function Page({ slug }: { slug: string }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg z-[100]">
                       <DropdownMenuItem
-                        onClick={() => handleEditAppointment(a)}
+                        onClick={() => handleOpenAppointmentModal(a)}
                         className="cursor-pointer flex items-center gap-2"
                       >
                         <Edit className="size-4" />
@@ -522,36 +519,19 @@ export default function Page({ slug }: { slug: string }) {
         </>
       )}
 
-      {/* Calendar: view first; list: edit directly. Same normalized row from GET list. */}
-      {appointmentModalMode === "view" &&
+      {/* Calendar and list: same modal, view first then inline Edit. */}
+      {appointmentModalOpen &&
         selectedAppointment &&
         tenantIdForPath != null &&
         tenantIdForPath !== "" && (
           <ViewEditAppointmentModal
-            key={`view-${selectedAppointment.id}`}
+            key={`apt-${selectedAppointment.id}`}
             appointment={selectedAppointment}
             orgId={orgId ?? undefined}
             tenantIdForPath={tenantIdForPath}
-            openInEditMode={false}
             onClose={handleCloseAppointmentModal}
             onUpdate={() => mutate()}
-            onRequestExternalEdit={() => setAppointmentModalMode("edit")}
-          />
-        )}
-
-      {appointmentModalMode === "edit" &&
-        selectedAppointment &&
-        tenantIdForPath != null &&
-        tenantIdForPath !== "" && (
-          <EditAppointmentModal
-            key={`edit-${selectedAppointment.id}`}
-            slug={slug}
-            tenantIdForPath={tenantIdForPath}
-            appointment={selectedAppointment}
-            onClose={handleCloseAppointmentModal}
-            onSuccess={() =>
-              handleAppointmentOperationSuccess("Appointment updated successfully.")
-            }
+            onOperationSuccess={handleAppointmentOperationSuccess}
           />
         )}
 

@@ -309,15 +309,15 @@ export default function PatientInfoForm() {
             >
               Upload Patient Image
             </label>
-            <div className="flex">
+            <div className="flex w-full overflow-hidden">
               <label
                 htmlFor="file-upload"
-                className="flex-grow flex items-center px-4 py-3 border border-gray-300 rounded-l-md bg-white text-gray-400 cursor-pointer"
+                className="min-w-0 flex-1 flex items-center px-4 py-3 border border-gray-300 rounded-l-md bg-white text-gray-400 cursor-pointer"
               >
                 <span className="mr-2">
                   <Paperclip className="h-5 w-5" />
                 </span>
-                <span className="truncate">{fileName || "Choose File"}</span>
+                <span className="min-w-0 flex-1 truncate">{fileName || "Choose File"}</span>
                 <input
                   id="file-upload"
                   type="file"
@@ -327,7 +327,7 @@ export default function PatientInfoForm() {
               </label>
               <Button
                 type="button"
-                className="w-24 bg-[#003465] hover:bg-[#0d2337] h-14 text-white py-3 px-4 rounded-r-md"
+                className="shrink-0 w-24 bg-[#003465] hover:bg-[#0d2337] h-14 text-white py-3 px-4 rounded-r-md"
                 onClick={() => document.getElementById("file-upload")?.click()}
               >
                 Browse

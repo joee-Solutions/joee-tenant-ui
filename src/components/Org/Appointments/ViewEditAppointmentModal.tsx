@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateLocal, parseISOStringToLocalDate } from "@/lib/utils";
@@ -27,22 +26,48 @@ import {
   extractEmployeesFromResponse,
   resolveAppointmentPatientId,
   resolveAppointmentDoctorId,
+  resolvedAppointmentTimeSlots,
 } from "@/components/Org/Appointments/appointmentFormUtils";
-import {
-  TIME_OPTIONS_24H,
-  normalizeTimeForSelect,
-} from "@/components/Org/Schedule/scheduleFormUtils";
+import { TIME_OPTIONS_24H } from "@/components/Org/Schedule/scheduleFormUtils";
 
-const AppointmentSchema = z.object({
-  patientId: z.string().min(1, "Patient is required"),
-  doctorId: z.string().min(1, "Provider is required"),
-  date: z.string().min(1, "Appointment date is required"),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-  description: z.string().optional(),
-});
+const AppointmentSchema = z
+  .object({
+    patientId: z.string().min(1, "Patient is required"),
+    doctorId: z.string().min(1, "Provider is required"),
+    date: z.string().min(1, "Appointment date is required"),
+    startTime: z.string().min(1, "Start time is required"),
+    endTime: z.string().min(1, "End time is required"),
+    description: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.startTime && data.endTime) {
+        const [startHour, startMin] = data.startTime.split(":").map(Number);
+        const [endHour, endMin] = data.endTime.split(":").map(Number);
+        const startMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+        return startMinutes < endMinutes;
+      }
+      return true;
+    },
+    {
+      message: "Start time must be earlier than end time",
+      path: ["endTime"],
+    }
+  );
 
 type AppointmentSchemaType = z.infer<typeof AppointmentSchema>;
+
+function unwrapAppointmentPayload(input: any): any {
+  if (!input) return null;
+  if (input.id != null || input.date || input.startTime || input.endTime) return input;
+  const d = input.data;
+  if (Array.isArray(d?.data) && d.data.length > 0) return d.data[0];
+  if (d?.data && typeof d.data === "object") return d.data;
+  if (Array.isArray(d) && d.length > 0) return d[0];
+  if (d && typeof d === "object" && (d.id != null || d.date || d.startTime || d.endTime)) return d;
+  return input;
+}
 
 interface ViewEditAppointmentModalProps {
   appointment: any;
@@ -56,8 +81,6 @@ interface ViewEditAppointmentModalProps {
   onUpdate: () => void;
   /** Close the edit modal first, then show success (parent-owned success modal) */
   onOperationSuccess?: (message: string) => void;
-  /** When set, "Edit" opens the parent's edit flow (e.g. EditAppointmentModal) instead of inline edit. */
-  onRequestExternalEdit?: () => void;
 }
 
 export default function ViewEditAppointmentModal({
@@ -68,11 +91,12 @@ export default function ViewEditAppointmentModal({
   onClose,
   onUpdate,
   onOperationSuccess,
-  onRequestExternalEdit,
 }: ViewEditAppointmentModalProps) {
   const tenantId = tenantIdForPath ?? orgId ?? null;
   const [isEditMode, setIsEditMode] = useState(openInEditMode);
   const [loading, setLoading] = useState(false);
+
+  const appointmentPayload = useMemo(() => unwrapAppointmentPayload(appointment), [appointment]);
 
   // Normalize time to HH:mm for API (backend rejects HH:mm:ss)
   const toHHmm = (time: string) => {
@@ -104,13 +128,13 @@ export default function ViewEditAppointmentModal({
   );
 
   const resolvedPatientId = useMemo(
-    () => resolveAppointmentPatientId(appointment, patients),
-    [appointment, patients]
+    () => resolveAppointmentPatientId(appointmentPayload, patients),
+    [appointmentPayload, patients]
   );
 
   const resolvedDoctorId = useMemo(
-    () => resolveAppointmentDoctorId(appointment, providers),
-    [appointment, providers]
+    () => resolveAppointmentDoctorId(appointmentPayload, providers),
+    [appointmentPayload, providers]
   );
 
   // Format time for display (HH:mm to HH:MM AM/PM)
@@ -192,27 +216,26 @@ export default function ViewEditAppointmentModal({
 
   // Reset form when appointment or resolved dropdown ids change (SWR may load after open).
   useEffect(() => {
-    if (!appointment?.id) return;
+    if (!appointmentPayload?.id) return;
+    const { start: startNorm, end: endNorm } =
+      resolvedAppointmentTimeSlots(appointmentPayload);
     reset({
       patientId: resolvedPatientId,
       doctorId: resolvedDoctorId,
-      date: appointment.date || "",
-      startTime: normalizeTimeForSelect(
-        appointment.startTime ?? appointment.start_time ?? ""
-      ),
-      endTime: normalizeTimeForSelect(
-        appointment.endTime ?? appointment.end_time ?? ""
-      ),
-      description: appointment.description || "",
+      date: appointmentPayload.date || "",
+      startTime: startNorm,
+      endTime: endNorm,
+      description: appointmentPayload.description || "",
     });
   }, [
-    appointment?.id,
-    appointment?.date,
-    appointment?.description,
-    appointment?.startTime,
-    appointment?.endTime,
-    appointment?.start_time,
-    appointment?.end_time,
+    appointmentPayload?.id,
+    appointmentPayload?.date,
+    appointmentPayload?.time,
+    appointmentPayload?.description,
+    appointmentPayload?.startTime,
+    appointmentPayload?.endTime,
+    appointmentPayload?.start_time,
+    appointmentPayload?.end_time,
     resolvedPatientId,
     resolvedDoctorId,
     reset,
@@ -220,70 +243,34 @@ export default function ViewEditAppointmentModal({
 
   // Only sync edit vs view when opening a different appointment or explicit openInEditMode — not when SWR fills ids.
   useEffect(() => {
-    if (!appointment?.id) return;
+    if (!appointmentPayload?.id) return;
     setIsEditMode(!!openInEditMode);
-  }, [appointment?.id, openInEditMode]);
+  }, [appointmentPayload?.id, openInEditMode]);
 
   const handleEdit = (e?: MouseEvent<HTMLButtonElement>) => {
     e?.preventDefault();
     e?.stopPropagation();
-    if (!appointment) return;
-    if (onRequestExternalEdit) {
-      onRequestExternalEdit();
-      return;
-    }
+    if (!appointmentPayload) return;
+    const { start: startNorm, end: endNorm } =
+      resolvedAppointmentTimeSlots(appointmentPayload);
     form.setValue("patientId", resolvedPatientId, { shouldValidate: false, shouldDirty: false });
     form.setValue("doctorId", resolvedDoctorId, { shouldValidate: false, shouldDirty: false });
-    form.setValue("date", appointment.date || "", { shouldValidate: false, shouldDirty: false });
-    form.setValue(
-      "startTime",
-      normalizeTimeForSelect(appointment.startTime ?? appointment.start_time ?? ""),
-      { shouldValidate: false, shouldDirty: false }
-    );
-    form.setValue(
-      "endTime",
-      normalizeTimeForSelect(appointment.endTime ?? appointment.end_time ?? ""),
-      { shouldValidate: false, shouldDirty: false }
-    );
-    form.setValue("description", appointment.description || "", { shouldValidate: false, shouldDirty: false });
+    form.setValue("date", appointmentPayload.date || "", { shouldValidate: false, shouldDirty: false });
+    form.setValue("startTime", startNorm, { shouldValidate: false, shouldDirty: false });
+    form.setValue("endTime", endNorm, { shouldValidate: false, shouldDirty: false });
+    form.setValue("description", appointmentPayload.description || "", { shouldValidate: false, shouldDirty: false });
 
     setIsEditMode(true);
   };
 
-  const handleCancel = () => {
-    if (openInEditMode) {
-      onClose();
-      return;
-    }
-    if (isEditMode) {
-      setIsEditMode(false);
-      if (appointment) {
-        form.reset({
-          patientId: resolvedPatientId,
-          doctorId: resolvedDoctorId,
-          date: appointment.date || "",
-          startTime: normalizeTimeForSelect(
-            appointment.startTime ?? appointment.start_time ?? ""
-          ),
-          endTime: normalizeTimeForSelect(
-            appointment.endTime ?? appointment.end_time ?? ""
-          ),
-          description: appointment.description || "",
-        });
-      }
-      return;
-    }
-    onClose();
-  };
-
   const handleSave = async (data: AppointmentSchemaType) => {
-    if (!appointment?.id || tenantId == null) return;
+    if (!appointmentPayload?.id || tenantId == null) return;
 
     setLoading(true);
     try {
       await processRequestAuth(
         "patch",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointment.id}`,
+        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointmentPayload.id}`,
         {
           patientId: Number(data.patientId),
           doctorId: Number(data.doctorId),
@@ -307,31 +294,7 @@ export default function ViewEditAppointmentModal({
     }
   };
 
-  const handleDelete = async () => {
-    if (!appointment?.id || tenantId == null) return;
-    if (!confirm("Are you sure you want to cancel this appointment?")) return;
-
-    setLoading(true);
-    try {
-      await processRequestAuth(
-        "delete",
-        `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointment.id}`
-      );
-      setLoading(false);
-      if (onOperationSuccess) {
-        onOperationSuccess("Appointment canceled successfully.");
-      } else {
-        onUpdate();
-        onClose();
-        toast.success("Appointment canceled successfully");
-      }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to cancel appointment");
-      setLoading(false);
-    }
-  };
-
-  if (!appointment) return null;
+  if (!appointmentPayload?.id) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
@@ -342,6 +305,7 @@ export default function ViewEditAppointmentModal({
             {openInEditMode || isEditMode ? "Edit Appointment" : "View Appointment"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
           >
@@ -402,7 +366,8 @@ export default function ViewEditAppointmentModal({
               />
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {appointment.patient?.first_name || appointment.patient?.firstname} {appointment.patient?.last_name || appointment.patient?.lastname}
+                {appointmentPayload.patient?.first_name || appointmentPayload.patient?.firstname}{" "}
+                {appointmentPayload.patient?.last_name || appointmentPayload.patient?.lastname}
               </div>
             )}
             {form.formState.errors.patientId && (
@@ -459,7 +424,8 @@ export default function ViewEditAppointmentModal({
               />
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {appointment.user?.firstname || appointment.user?.first_name} {appointment.user?.lastname || appointment.user?.last_name}
+                {appointmentPayload.user?.firstname || appointmentPayload.user?.first_name}{" "}
+                {appointmentPayload.user?.lastname || appointmentPayload.user?.last_name}
               </div>
             )}
             {form.formState.errors.doctorId && (
@@ -515,7 +481,7 @@ export default function ViewEditAppointmentModal({
               />
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {formatDateForDisplay(appointment.date)}
+                {formatDateForDisplay(appointmentPayload.date)}
               </div>
             )}
             {form.formState.errors.date && (
@@ -591,10 +557,17 @@ export default function ViewEditAppointmentModal({
               </div>
             ) : (
               <div className="w-full h-12 px-3 py-2 border border-gray-300 rounded flex items-center">
-                {formatTimeRange(
-                  appointment.startTime ?? appointment.start_time ?? "",
-                  appointment.endTime ?? appointment.end_time ?? ""
-                )}
+                {(() => {
+                  const s =
+                    appointmentPayload.startTime ?? appointmentPayload.start_time ?? "";
+                  const e = appointmentPayload.endTime ?? appointmentPayload.end_time ?? "";
+                  if (s && e) return formatTimeRange(s, e);
+                  const t =
+                    typeof appointmentPayload.time === "string"
+                      ? appointmentPayload.time.trim()
+                      : "";
+                  return t || "—";
+                })()}
               </div>
             )}
           </div>
@@ -619,34 +592,21 @@ export default function ViewEditAppointmentModal({
               />
             ) : (
               <div className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded">
-                {appointment.description || "No description provided"}
+                {appointmentPayload.description || "No description provided"}
               </div>
             )}
           </div>
-
-          {isEditMode && (
-            <div className="flex justify-end -mt-2">
-              <button
-                type="button"
-                className="text-sm text-red-600 hover:underline disabled:opacity-50"
-                disabled={loading}
-                onClick={() => void handleDelete()}
-              >
-                Cancel this appointment
-              </button>
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4 border-t">
             <Button
               type="button"
-              onClick={isEditMode ? handleCancel : handleDelete}
+              onClick={onClose}
               className="flex-1 bg-red-600 hover:bg-red-700 text-white h-12"
               disabled={loading}
             >
               <X className="w-4 h-4 mr-2" />
-              {isEditMode ? "Cancel" : "Cancel Appointment"}
+              Cancel
             </Button>
             {isEditMode ? (
               <Button

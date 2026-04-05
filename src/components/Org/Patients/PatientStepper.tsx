@@ -289,32 +289,66 @@ const mapPatientDataToForm = (patientData: any): Partial<FormDataStepper> => {
     famhistory: data.famhistory || data.familyHistory || data.family_history || [],
     visits: data.visits || [],
     prescriptions: data.prescriptions || [],
-    // Transform vitals object back to vitalSigns array
+    // Transform backend vitals payload(s) to the form's vitalSigns[] shape
     vitalSigns: (() => {
-      if (data.vitalSigns && Array.isArray(data.vitalSigns)) {
-        return data.vitalSigns;
+      const normalizeVitalRow = (vital: any) => ({
+        id: vital?.id || undefined,
+        date: vital?.date
+          ? formatDateLocal(new Date(vital.date))
+          : formatDateLocal(new Date()),
+        temperature:
+          vital?.temperature != null ? String(vital.temperature) : "",
+        systolic:
+          vital?.systolic != null
+            ? String(vital.systolic)
+            : vital?.blood_pressure_systolic != null
+              ? String(vital.blood_pressure_systolic)
+              : "",
+        diastolic:
+          vital?.diastolic != null
+            ? String(vital.diastolic)
+            : vital?.blood_pressure_diastolic != null
+              ? String(vital.blood_pressure_diastolic)
+              : "",
+        heartRate:
+          vital?.heartRate != null
+            ? String(vital.heartRate)
+            : vital?.heart_rate != null
+              ? String(vital.heart_rate)
+              : "",
+        respiratoryRate:
+          vital?.respiratoryRate != null
+            ? String(vital.respiratoryRate)
+            : vital?.respiratory_rate != null
+              ? String(vital.respiratory_rate)
+              : "",
+        oxygenSaturation:
+          vital?.oxygenSaturation != null
+            ? String(vital.oxygenSaturation)
+            : vital?.oxygen_saturation != null
+              ? String(vital.oxygen_saturation)
+              : "",
+        glucose: vital?.glucose != null ? String(vital.glucose) : "",
+        height: vital?.height != null ? String(vital.height) : "",
+        weight: vital?.weight != null ? String(vital.weight) : "",
+        bmi: vital?.bmi != null ? String(vital.bmi) : "",
+        painScore:
+          vital?.painScore != null
+            ? String(vital.painScore)
+            : vital?.pain_score != null
+              ? String(vital.pain_score)
+              : "",
+      });
+
+      if (Array.isArray(data.vitalSigns)) {
+        return data.vitalSigns.map(normalizeVitalRow);
       }
-      if (data.vital_signs && Array.isArray(data.vital_signs)) {
-        return data.vital_signs;
+      if (Array.isArray(data.vital_signs)) {
+        return data.vital_signs.map(normalizeVitalRow);
       }
-      // Backend returns vitals as object, transform to array
+      // Backend may also return a single vitals object
       if (data.vitals && typeof data.vitals === 'object') {
-        const vitals = data.vitals;
-        return [{
-          id: vitals.id || undefined,
-          date: vitals.date || formatDateLocal(new Date()),
-          temperature: vitals.temperature || "",
-          systolic: vitals.blood_pressure_systolic || "",
-          diastolic: vitals.blood_pressure_diastolic || "",
-          heartRate: vitals.heart_rate || "",
-          respiratoryRate: vitals.respiratory_rate || "",
-          oxygenSaturation: vitals.oxygen_saturation || "",
-          glucose: vitals.glucose || "",
-          height: vitals.height ? String(vitals.height) : "",
-          weight: vitals.weight ? String(vitals.weight) : "",
-          bmi: vitals.bmi ? String(vitals.bmi) : "",
-          painScore: vitals.pain_score ? String(vitals.pain_score) : "",
-        }];
+        return [normalizeVitalRow(data.vitals)];
       }
       return [];
     })(),

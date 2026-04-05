@@ -1,3 +1,5 @@
+import { normalizeTimeForSelect } from "@/components/Org/Schedule/scheduleFormUtils";
+
 /**
  * Split a display range like "9:00 AM - 10:00 AM" or "09:30 - 11:00" into two sides.
  * Uses the first "-" as separator so times with hyphens are unlikely.
@@ -11,6 +13,27 @@ export function parseDisplayTimeRangeToParts(display: string): { start: string; 
     start: trimmed.slice(0, dashIdx).trim(),
     end: trimmed.slice(dashIdx + 1).trim(),
   };
+}
+
+/**
+ * 24h select values for edit forms: prefer API startTime/endTime, else parse display `time` (e.g. "9:00 AM - 10:00 AM").
+ */
+export function resolvedAppointmentTimeSlots(appointment: any): {
+  start: string;
+  end: string;
+} {
+  if (appointment == null) return { start: "", end: "" };
+  const apiStart = appointment.startTime ?? appointment.start_time ?? "";
+  const apiEnd = appointment.endTime ?? appointment.end_time ?? "";
+  let start = normalizeTimeForSelect(apiStart);
+  let end = normalizeTimeForSelect(apiEnd);
+  if (!start || !end) {
+    const range = typeof appointment.time === "string" ? appointment.time : "";
+    const parts = parseDisplayTimeRangeToParts(range);
+    if (!start) start = normalizeTimeForSelect(parts.start);
+    if (!end) end = normalizeTimeForSelect(parts.end);
+  }
+  return { start, end };
 }
 
 /**
