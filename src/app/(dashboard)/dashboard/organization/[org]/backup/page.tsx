@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import ConfirmationModal from "@/components/shared/modals/ConfirmationModal";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 type BackupTab = "departments" | "employees" | "patients" | "appointments" | "schedule" | "medical_records";
 
@@ -61,6 +62,7 @@ export default function BackupPage() {
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<BackupEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
   // Fetch backups
   const { data: backupsData, isLoading, error, mutate } = useSWR(
@@ -128,7 +130,10 @@ export default function BackupPage() {
         "post",
         API_ENDPOINTS.RESTORE_TENANT_BACKUP(orgIdNumber, backupId)
       );
-      toast.success("Backup restored successfully");
+      triggerSuccess({
+        title: "Success",
+        message: "Operation completed successfully.",
+      });
       mutate();
       setRestoreModalOpen(false);
       setSelectedBackup(null);
@@ -346,6 +351,7 @@ export default function BackupPage() {
           confirmVariant="default"
         />
       )}
+      {SuccessModal}
     </div>
   );
 }

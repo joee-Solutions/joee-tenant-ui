@@ -23,6 +23,7 @@ import {
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const links = [
   { href: "departments", label: "Departments", Icon: Building2 },
@@ -48,6 +49,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
   const tenantId = typeof data === "object" && data && (data as any)?.id != null ? (data as any).id : (orgSlug && /^\d+$/.test(orgSlug) ? parseInt(orgSlug, 10) : null);
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
   const handleCreateBackup = async () => {
     if (!tenantId || typeof tenantId !== "number") {
@@ -58,7 +60,10 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
     setBackupModalOpen(false);
     try {
       await processRequestAuth("post", API_ENDPOINTS.CREATE_TENANT_BACKUP(tenantId), { tenantId: Number(tenantId) });
-      toast.success("Backup created successfully");
+      triggerSuccess({
+        title: "Success",
+        message: "Operation completed successfully.",
+      });
     } catch (err: any) {
       console.error("Backup creation error:", err);
       const data = err?.response?.data;
@@ -102,7 +107,12 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
 
   // On /backup route, render only the backup page content (it has its own full UI)
   if (isBackupPage) {
-    return <div className="px-4 pb-20">{children}</div>;
+    return (
+      <div className="px-4 pb-20">
+        {children}
+        {SuccessModal}
+      </div>
+    );
   }
 
   return (
@@ -141,7 +151,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
                       e.preventDefault();
                       handleCreateBackup();
                     }}
-                    className="bg-[#003465] hover:bg-[#003465]/90"
+                    className="bg-[#003465] text-white hover:bg-[#003465]/90"
                   >
                     {creatingBackup ? "Creating..." : "Confirm"}
                   </AlertDialogAction>
@@ -191,6 +201,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
           ))}
         </div>
       </Tabs>
+      {SuccessModal}
     </div>
   );
 };

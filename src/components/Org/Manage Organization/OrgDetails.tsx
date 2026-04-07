@@ -207,10 +207,10 @@ export default function OrgDetails({ slug }: { slug: string }) {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5 text-[#003465]" />
-                    Organization Admin
+                    Organization User
                   </CardTitle>
                   <CardDescription>
-                    Manage Admin and their role assignments within this organization
+                    Manage user and their role assignments within this organization
                   </CardDescription>
                 </div>
               </div>

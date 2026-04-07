@@ -31,6 +31,27 @@ import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
 
+function resolveOrgLogoSrc(logo: unknown): string | typeof orgPlaceholder {
+  if (typeof logo !== "string") return orgPlaceholder;
+  const value = logo.trim();
+  if (!value) return orgPlaceholder;
+
+  // Accept data URLs and app-relative asset paths.
+  if (value.startsWith("data:image/") || value.startsWith("/")) return value;
+
+  // Accept only valid absolute http(s) URLs.
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return value;
+    }
+  } catch {
+    // Fall back to placeholder for malformed URL values.
+  }
+
+  return orgPlaceholder;
+}
+
 function PageContent() {
   const searchParams = useSearchParams();
   const { mutate: globalMutate } = useSWRConfig();
@@ -375,8 +396,7 @@ function PageContent() {
                     <span className="w-[42px] h-[42px] rounded-full overflow-hidden">
                       <Image
                             src={
-                              data?.logo ||
-                              orgPlaceholder
+                              resolveOrgLogoSrc(data?.logo)
                             }
                         alt="organization image"
                         width={42}
