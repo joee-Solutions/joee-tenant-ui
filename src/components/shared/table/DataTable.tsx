@@ -18,6 +18,10 @@ const getColumnHeaders = function (data: Record<string, any>) {
       if (data.patient || data.email || data.gender || data.date_of_birth) {
         return "S/N";
       }
+      // Organizations table: show serial number column title
+      if (data.organization || data.created_at || data.location || data.status) {
+        return "S/N";
+      }
       return "ID";
     } else if (key === "S/N") {
       return "S/N";

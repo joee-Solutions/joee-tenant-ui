@@ -48,6 +48,7 @@ function tenantLogoSrc(
   if (logo == null) return fallback;
   const s = String(logo).trim();
   if (!s) return fallback;
+  if (s.startsWith("data:image/")) return s;
   if (s.startsWith("/")) return s;
   if (s.startsWith("http://") || s.startsWith("https://")) {
     try {

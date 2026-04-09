@@ -10,6 +10,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import React from "react";
 import { generateRandomPassword } from "@/lib/utils";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const changePasswordSchema = zod.object({
   oldPassword: zod.string().min(1, "This field is required"),
@@ -34,6 +35,7 @@ export default function ChnagePasswordComponent() {
   const [loading, setLoading] = React.useState(false);
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   const form = useForm<ChangePasswordSchemaType>({
     resolver: zodResolver(changePasswordSchema),
     mode: "onChange",
@@ -67,7 +69,10 @@ export default function ChnagePasswordComponent() {
         }
       );
       if (res?.success) {
-        toast.success(res.message || "Password changed successfully");
+        triggerSuccess({
+          title: "Success",
+          message: res.message || "Password changed successfully.",
+        });
         form.reset();
       } else {
         toast.error(res?.message || "Failed to change password");
@@ -154,6 +159,7 @@ export default function ChnagePasswordComponent() {
           </div>
         </div>
       </FormComposer>
+      {SuccessModal}
     </>
   );
 }

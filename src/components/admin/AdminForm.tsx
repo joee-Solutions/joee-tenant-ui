@@ -44,7 +44,7 @@ const AdminFormSchema = z.object({
 
   role: z.string().min(1, "This field is required"),
   phone_number: z.string().min(1, "This field is required"),
-  company: z.string().min(1, "This field is required"),
+  company: z.string().optional(),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters long")
@@ -101,7 +101,7 @@ export default function AdminForm() {
         last_name: payload.last_name,
         email: payload.email,
         password: payload.password,
-        phone_number: payload.phone_number,
+        phone_number: payload.phone_number ?? "",
         address: payload.address ?? "",
         role: payload.role,
       };

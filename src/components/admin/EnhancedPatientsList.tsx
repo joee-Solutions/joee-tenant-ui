@@ -595,7 +595,12 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
               filteredPatients
                 .slice((currentPage - 1) * pageSize, currentPage * pageSize)
                 .map((patient) => {
-                  const age = new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear();
+                  const birthYear = patient?.date_of_birth
+                    ? new Date(patient.date_of_birth).getFullYear()
+                    : NaN;
+                  const age = Number.isFinite(birthYear)
+                    ? new Date().getFullYear() - birthYear
+                    : "—";
                   return (
                     <TableRow key={patient.id}>
                       <TableCell className="font-medium">{patient.id}</TableCell>
@@ -609,16 +614,16 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{patient.contact_info.address}</TableCell>
+                      <TableCell>{patient?.contact_info?.address || patient?.address || "—"}</TableCell>
                       <TableCell>{age}</TableCell>
                       <TableCell>
                         <Badge variant={patient.sex === 'Male' ? "default" : "secondary"}>
                           {patient.sex}
                         </Badge>
                       </TableCell>
-                      <TableCell>{patient.tenant.name}</TableCell>
-                      <TableCell>{patient.contact_info.phone_number_home}</TableCell>
-                      <TableCell>{patient.contact_info.email}</TableCell>
+                      <TableCell>{patient?.tenant?.name || "—"}</TableCell>
+                      <TableCell>{patient?.contact_info?.phone_number_home || patient?.phone || "—"}</TableCell>
+                      <TableCell>{patient?.contact_info?.email || patient?.email || "—"}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline">

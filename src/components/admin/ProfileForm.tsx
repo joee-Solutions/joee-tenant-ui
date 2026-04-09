@@ -13,6 +13,7 @@ import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { mutate } from "swr";
 import { Spinner } from "../icons/Spinner";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 
 const EditOrganizationSchema = z.object({
   firstName: z.string().min(1, "This field is required"),
@@ -72,6 +73,7 @@ function getDefaultValues(admin?: AdminUser | null) {
 
 export default function ProfileForm({ admin }: { admin?: AdminUser }) {
   const [isLoading, setIsLoading] = React.useState(false);
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
   const form = useForm<EditOrganizationSchemaType>({
     resolver: zodResolver(EditOrganizationSchema),
@@ -149,7 +151,10 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
       }
 
       // Success - show notification and re-enable disabled state
-      toast.success("Admin profile updated successfully!");
+      triggerSuccess({
+        title: "Success",
+        message: "Admin profile updated successfully.",
+      });
       setIsDisabled(true);
       
       // Refresh the profile data
@@ -320,6 +325,7 @@ export default function ProfileForm({ admin }: { admin?: AdminUser }) {
           </div>
         </div>
       </FormComposer>
+      {SuccessModal}
     </>
   );
 }

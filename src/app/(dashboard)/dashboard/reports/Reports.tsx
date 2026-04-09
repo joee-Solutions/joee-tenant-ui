@@ -33,6 +33,7 @@ export default function ReportsPage() {
   const tabFromUrl = searchParams.get("tab");
   
   const [activeTab, setActiveTab] = useState(tabFromUrl || "overview");
+  const [lastUpdatedText, setLastUpdatedText] = useState("—");
 
   // Update active tab when URL changes
   useEffect(() => {
@@ -40,6 +41,11 @@ export default function ReportsPage() {
       setActiveTab(tabFromUrl);
     }
   }, [tabFromUrl]);
+
+  useEffect(() => {
+    // Avoid SSR/client timestamp drift by computing this only on the client.
+    setLastUpdatedText(new Date().toLocaleString());
+  }, []);
   const { activityLogs: recentActivity, isLoading: activityLoading } = useRecentActivity({ limit: 5 });
   const { stats: activityStats, isLoading: statsLoading } = useActivityStats();
   const activityTopAction = (activityStats as any)?.topActions?.[0] ?? null;
@@ -465,7 +471,7 @@ export default function ReportsPage() {
             <div className="text-center text-sm text-gray-500">
               <p>Reports are generated in real-time and reflect the current state of the system.</p>
               <p className="mt-1">
-                Last updated: {new Date().toLocaleString()} | 
+                Last updated: {lastUpdatedText} | 
                 Data refresh: Every 5 minutes
               </p>
             </div>

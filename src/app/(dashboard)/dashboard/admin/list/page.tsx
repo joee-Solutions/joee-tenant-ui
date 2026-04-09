@@ -354,6 +354,10 @@ export default function AdminListPage() {
               (key) =>
                 typeof key === "string" && key.includes(API_ENDPOINTS.GET_SUPER_ADMIN)
             );
+            triggerSuccess({
+              title: "Success",
+              message: "Admin updated successfully.",
+            });
           }}
         />
       )}

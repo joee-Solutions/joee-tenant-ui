@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
@@ -20,61 +20,64 @@ import { Country, State, City } from "country-state-city";
 import { cityOverrides } from "@/lib/geo/cityOverrides";
 import { LocationSearchableSelect } from "@/components/shared/form/LocationSearchableSelect";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
+import ProfileImageUploader from "@/components/ui/ImageUploader";
+import {
+  ORGANIZATION_TYPE_OPTIONS,
+  resolveOrganizationTypeForApi,
+  splitOrganizationTypeForForm,
+} from "@/lib/organizationOrgType";
 
-const EditOrganizationSchema = z.object({
-  name: z.string().min(1, "This field is required"),
-  status: z.string().min(1, "This field is required"),
-  address: z.string().min(1, "This field is required"),
-  city: z.string().min(1, "This field is required"),
-  state: z.string().min(1, "This field is required"),
-  zip: z.string().optional(),
-  country: z.string().min(1, "This field is required"),
-  phone_number: z.string().min(1, "This field is required"),
-  fax: z.string().optional(),
-  email: z
-    .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
-  website: z.string().optional(),
-  adminFirstname: z.string().optional(),
-  adminLastname: z.string().optional(),
-  adminPhoneNumber: z.string().optional(),
-  org_type: z.string().min(1, "This field is required"),
-  domain: z.string().min(1, "This field is required"),
-});
+function resolveOrgLogoSrc(logo: unknown): string | typeof orgPlaceholder {
+  if (typeof logo !== "string") return orgPlaceholder;
+  const value = logo.trim();
+  if (!value) return orgPlaceholder;
+  if (value.startsWith("data:image/") || value.startsWith("/")) return value;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return value;
+  } catch {
+    // fallback to placeholder for malformed URLs
+  }
+  return orgPlaceholder;
+}
+
+const EditOrganizationSchema = z
+  .object({
+    name: z.string().min(1, "This field is required"),
+    status: z.string().min(1, "This field is required"),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+    country: z.string().optional(),
+    phone_number: z.string().min(1, "This field is required"),
+    fax: z.string().optional(),
+    email: z
+      .string()
+      .email("Invalid email address")
+      .min(1, "This field is required"),
+    website: z.string().optional(),
+    org_type: z.string().min(1, "Organization type is required"),
+    org_type_other: z.string().optional(),
+    logo: z.string().optional(),
+    domain: z.string().min(1, "This field is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.org_type === "Other") {
+      const v = (data.org_type_other ?? "").trim();
+      if (!v) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please specify your organization type",
+          path: ["org_type_other"],
+        });
+      }
+    }
+  });
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
-const EDIT_REQUIRED_FIELD_LABELS: Record<string, string> = {
-  name: "Organization name",
-  status: "Status",
-  address: "Address",
-  city: "City",
-  state: "State",
-  country: "Country",
-  phone_number: "Organization Phone number",
-  email: "Organization Email",
-  org_type: "Organization type",
-  domain: "Domain",
-};
-
 const orgStatus = ["active", "inactive"];
-const orgTypes = [
-  "Hospital",
-  "Clinic",
-  "Medical Center",
-  "Pharmacy",
-  "Laboratory",
-  "Diagnostic Center",
-  "Rehabilitation Center",
-  "Nursing Home",
-  "Urgent Care",
-  "Specialty Clinic",
-  "Dental Clinic",
-  "Eye Clinic",
-  "Mental Health Center",
-  "Other"
-];
 
 interface EditOrganizationModalProps {
   organization: any;
@@ -106,10 +109,9 @@ export default function EditOrganizationModal({
       fax: "",
       email: "",
       website: "",
-      adminFirstname: "",
-      adminLastname: "",
-      adminPhoneNumber: "",
       org_type: "",
+      org_type_other: "",
+      logo: "",
       domain: "",
     },
   });
@@ -117,6 +119,8 @@ export default function EditOrganizationModal({
   // Get selected country and state from form (stored as country/state names)
   const selectedCountryName = form.watch("country");
   const selectedStateName = form.watch("state");
+  const selectedOrgType = form.watch("org_type");
+  const selectedLogo = form.watch("logo");
 
   // Get country code from country name
   const selectedCountryCode = useMemo(() => {
@@ -225,37 +229,18 @@ export default function EditOrganizationModal({
       // Extract address metadata
       const addressMetadata = organization?.address_metadata || {};
       
-      // Try multiple paths for admin info
-      const adminInfo = organization?.admin_info || 
-                       organization?.profile || 
-                       organization?.adminInfo ||
-                       organization?.admin ||
-                       {};
-
-      // Admin info: firstname, lastname, phone_number
-      const adminFirstName = adminInfo?.first_name || 
-                             adminInfo?.firstname || 
-                             adminInfo?.firstName ||
-                             "";
-      const adminLastName = adminInfo?.last_name || 
-                           adminInfo?.lastname || 
-                           adminInfo?.lastName ||
-                           "";
-
-      const adminPhone = adminInfo?.phone_number || 
-                        adminInfo?.phoneNumber || 
-                        adminInfo?.phone ||
-                        organization?.admin_phone_number ||
-                        "";
-
       const countryValue = String(addressMetadata?.country || "");
       const stateValue = String(addressMetadata?.state || "");
       const cityValue = String(addressMetadata?.city || "");
       
-      const orgTypeValue = String(organization?.organization_type || 
-                                  organization?.org_type || 
-                                  organization?.organizationType ||
-                                  "");
+      const orgTypeStored = String(
+        organization?.organization_type ||
+          organization?.org_type ||
+          organization?.organizationType ||
+          ""
+      );
+      const { org_type: orgTypeSelect, org_type_other: orgTypeOtherField } =
+        splitOrganizationTypeForForm(orgTypeStored);
 
       const formData = {
         name: String(organization?.name || ""),
@@ -269,20 +254,15 @@ export default function EditOrganizationModal({
         fax: String(organization?.fax || organization?.fax_number || organization?.organizationFax || ""),
         email: String(organization?.email || ""),
         website: String(organization?.website || ""),
-        adminFirstname: adminFirstName || "",
-        adminLastname: adminLastName || "",
-        adminPhoneNumber: String(adminPhone || ""),
-        org_type: orgTypeValue,
+        org_type: orgTypeSelect,
+        org_type_other: orgTypeOtherField,
+        logo: String(organization?.logo || ""),
         domain: String(organization?.domain || ""),
       };
       
       console.log("EditOrganizationModal - Organization data:", {
         organization,
-        adminInfo,
-        adminFirstName,
-        adminLastName,
-        adminPhone,
-        orgTypeValue,
+        orgTypeStored,
         formData
       });
       
@@ -305,37 +285,16 @@ export default function EditOrganizationModal({
           }, 50);
         }
         
-        // Set org_type select - needs delay to ensure options are loaded
-        if (orgTypeValue) {
-          setTimeout(() => {
-            // Check if orgTypeValue exists in the orgTypes array
-            const validOrgTypes = [
-              "Hospital", "Clinic", "Medical Center", "Pharmacy", "Laboratory",
-              "Diagnostic Center", "Rehabilitation Center", "Nursing Home",
-              "Urgent Care", "Specialty Clinic", "Dental Clinic", "Eye Clinic",
-              "Mental Health Center", "Other"
-            ];
-            if (validOrgTypes.includes(orgTypeValue)) {
-              form.setValue("org_type", orgTypeValue, { shouldValidate: false, shouldDirty: false });
-            }
-          }, 150);
-        }
-        
-        // Re-set admin fields to ensure they're properly set (form.reset might not work for all field types)
         setTimeout(() => {
-          if (adminFirstName) {
-            form.setValue("adminFirstname", adminFirstName, { shouldValidate: false, shouldDirty: false });
-          }
-          if (adminLastName) {
-            form.setValue("adminLastname", adminLastName, { shouldValidate: false, shouldDirty: false });
-          }
-          if (adminPhone) {
-            form.setValue("adminPhoneNumber", String(adminPhone), { shouldValidate: false, shouldDirty: false });
-          }
-          
-          setTimeout(() => {
-            form.trigger(["adminFirstname", "adminLastname", "adminPhoneNumber", "org_type", "status"]);
-          }, 200);
+          form.setValue("org_type", orgTypeSelect, { shouldValidate: false, shouldDirty: false });
+          form.setValue("org_type_other", orgTypeOtherField, {
+            shouldValidate: false,
+            shouldDirty: false,
+          });
+        }, 150);
+        
+        setTimeout(() => {
+          form.trigger(["org_type", "status"]);
         }, 100);
         
         // Set country first if value exists in options
@@ -417,19 +376,28 @@ export default function EditOrganizationModal({
         state,
         zip,
         country,
-        adminFirstname,
-        adminLastname,
-        adminPhoneNumber,
         status,
-        org_type, // Exclude org_type from update - backend validation expects status values, not org types
+        org_type,
+        org_type_other,
         fax,
         ...rest
       } = changedFields;
 
-      // Build update payload
+      // Build update payload (omit form-only org type fields; send resolved API string)
       const updatePayload: any = { ...rest };
-      // Always send organization_type (backend expects this key; use null when empty)
-      updatePayload.organization_type = org_type ?? defaults?.org_type ?? null;
+
+      const defaultResolved = resolveOrganizationTypeForApi(
+        defaults?.org_type ?? "",
+        defaults?.org_type_other
+      );
+      const payloadResolved = resolveOrganizationTypeForApi(
+        payload.org_type,
+        payload.org_type_other
+      );
+      if (payloadResolved !== defaultResolved) {
+        updatePayload.organization_type = payloadResolved;
+        updatePayload.org_type = payloadResolved;
+      }
 
       // Handle status
       if (status) {
@@ -453,25 +421,51 @@ export default function EditOrganizationModal({
         };
       }
 
-      // Handle admin info if any admin fields changed
-      if (adminFirstname !== undefined || adminLastname !== undefined || adminPhoneNumber !== undefined) {
-        updatePayload.admin_info = {
-          firstname: adminFirstname ?? defaults?.adminFirstname ?? "",
-          lastname: adminLastname ?? defaults?.adminLastname ?? "",
-          phone_number: adminPhoneNumber ?? defaults?.adminPhoneNumber ?? "",
-        };
+      // Fax / logo / website: merge from full payload vs defaults so we always hit backend keys
+      // even if change detection on nested/spread fields misses an edge case.
+      const faxPayload = String(payload.fax ?? "").trim();
+      const faxDefault = String(defaults?.fax ?? "").trim();
+      if (faxPayload !== faxDefault || fax !== undefined) {
+        updatePayload.fax_number = faxPayload || null;
+        updatePayload.fax = faxPayload || null;
+        updatePayload.faxNumber = faxPayload || null;
+        updatePayload.organization_fax = faxPayload || null;
       }
 
-      // Map fax to fax_number when changed
-      if (fax !== undefined) {
-        const faxValue = String(fax ?? "").trim();
-        updatePayload.fax_number = faxValue;
+      const logoPayload = typeof payload.logo === "string" ? payload.logo.trim() : "";
+      const logoDefault = typeof defaults?.logo === "string" ? defaults.logo.trim() : "";
+      if (logoPayload !== logoDefault) {
+        if (logoPayload) {
+          updatePayload.logo = logoPayload;
+          updatePayload.organization_logo = logoPayload;
+          updatePayload.organizationLogo = logoPayload;
+        } else {
+          updatePayload.logo = null;
+          updatePayload.organization_logo = null;
+          updatePayload.organizationLogo = null;
+        }
       }
 
+      const webPayload = String(payload.website ?? "").trim();
+      const webDefault = String(defaults?.website ?? "").trim();
+      if (webPayload !== webDefault) {
+        if (webPayload) {
+          updatePayload.website = /^https?:\/\//i.test(webPayload)
+            ? webPayload
+            : `https://${webPayload}`;
+        } else {
+          updatePayload.website = "";
+        }
+      }
+
+      let putError: any = null;
       const response = await processRequestAuth(
         "put",
         API_ENDPOINTS.EDIT_ORGANIZATION(String(organization.id)),
-        updatePayload
+        updatePayload,
+        (_path, _data, error) => {
+          putError = error;
+        }
       );
       
       // The backend response may not include all fields we sent (like organization_type and admin_info)
@@ -482,11 +476,23 @@ export default function EditOrganizationModal({
       const mergedData = {
         ...responseData,
         // Preserve fax field (backend returns fax_number)
-        fax: updatePayload.fax || responseData?.fax || responseData?.fax_number || organization?.fax || "",
+        fax:
+          updatePayload.fax_number ??
+          updatePayload.fax ??
+          responseData?.fax ??
+          responseData?.fax_number ??
+          organization?.fax ??
+          "",
+        // Preserve logo
+        logo:
+          updatePayload.logo ??
+          updatePayload.organizationLogo ??
+          responseData?.logo ??
+          organization?.logo ??
+          "",
+        website: updatePayload.website ?? responseData?.website ?? organization?.website ?? "",
         // Preserve organization_type if we sent it (backend doesn't return it)
         organization_type: updatePayload.organization_type || organization?.organization_type || organization?.org_type || "",
-        // Preserve admin_info if we sent it (backend doesn't return it)
-        admin_info: updatePayload.admin_info || organization?.admin_info || {},
         // Ensure address_metadata has all fields
         address_metadata: {
           ...(responseData?.address_metadata || {}),
@@ -535,22 +541,10 @@ export default function EditOrganizationModal({
 
         <FormComposer form={form} onSubmit={handleSubmit}>
           <div className="flex flex-col gap-[30px]">
-            {form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0 && (
-              <div className="flex items-start gap-2 p-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Please fill in the required fields:</p>
-                  <ul className="list-disc list-inside mt-1 text-sm">
-                    {Object.keys(form.formState.errors).map((key) => (
-                      <li key={key}>{EDIT_REQUIRED_FIELD_LABELS[key] ?? key}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
+            <ProfileImageUploader title="Organization Logo" name="logo" />
             <div className="flex items-center gap-3 mb-4 pb-4 border-b">
               <Image
-                src={organization?.logo || orgPlaceholder}
+                src={resolveOrgLogoSrc(selectedLogo || organization?.logo)}
                 alt={organization?.name}
                 width={60}
                 height={60}
@@ -616,28 +610,14 @@ export default function EditOrganizationModal({
 
             <div className="flex items-center gap-[30px]">
               <div className="w-full">
-                {cityOptions.length > 0 ? (
-                  <LocationSearchableSelect
-                    control={form.control}
-                    name="city"
-                    label="City"
-                    options={cityOptions}
-                    placeholder={
-                      selectedStateName ? "Select City" : "Select State first"
-                    }
-                    searchPlaceholder="Search city..."
-                    disabled={!selectedStateName}
-                  />
-                ) : (
-                  <FieldBox
-                    bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                    name="city"
-                    control={form.control}
-                    labelText="City"
-                    type="text"
-                    placeholder="Enter city"
-                  />
-                )}
+                <FieldBox
+                  bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                  name="city"
+                  control={form.control}
+                  labelText="City"
+                  type="text"
+                  placeholder="Enter city"
+                />
               </div>
               <FieldBox
                 bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -687,41 +667,32 @@ export default function EditOrganizationModal({
               />
             </div>
 
-            <div className="flex items-center gap-[30px]">
-              <FieldSelect
-                bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                name="org_type"
-                control={form.control}
-                options={orgTypes}
-                labelText="Organization Type"
-                placeholder="Select"
-              />
-              <FieldBox
-                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                type="text"
-                name="adminFirstname"
-                control={form.control}
-                labelText="Admin first name"
-                placeholder="e.g. John"
-              />
-              <FieldBox
-                bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-                type="text"
-                name="adminLastname"
-                control={form.control}
-                labelText="Admin last name"
-                placeholder="e.g. Doe"
-              />
+            <div className="flex flex-col gap-[30px]">
+              <div className="flex items-center gap-[30px] flex-wrap">
+                <div className="w-full min-w-[200px] max-w-md">
+                  <FieldSelect
+                    bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                    name="org_type"
+                    control={form.control}
+                    options={[...ORGANIZATION_TYPE_OPTIONS]}
+                    labelText="Organization Type"
+                    placeholder="Select"
+                  />
+                </div>
+                {selectedOrgType === "Other" && (
+                  <div className="w-full min-w-[200px] max-w-md">
+                    <FieldBox
+                      bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+                      type="text"
+                      name="org_type_other"
+                      control={form.control}
+                      labelText="Specify organization type"
+                      placeholder="Enter your organization type"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-
-            <FieldBox
-              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
-              type="text"
-              name="adminPhoneNumber"
-              control={form.control}
-              labelText="Admin Phone number"
-              placeholder="Enter here"
-            />
 
             <FieldBox
               bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
@@ -743,19 +714,19 @@ export default function EditOrganizationModal({
 
             <div className="flex items-center gap-4 pt-4">
               <Button
-                type="submit"
-                disabled={updatingId === organization?.id}
-                className="h-[60px] bg-[#003465] text-base font-medium text-white rounded flex-1"
-              >
-                {updatingId === organization?.id ? "Updating..." : "Update Organization"}
-              </Button>
-              <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
                 className="h-[60px] text-base font-medium rounded flex-1"
               >
                 Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updatingId === organization?.id}
+                className="h-[60px] bg-[#003465] text-base font-medium text-white rounded flex-1"
+              >
+                {updatingId === organization?.id ? "Updating..." : "Update Organization"}
               </Button>
             </div>
           </div>

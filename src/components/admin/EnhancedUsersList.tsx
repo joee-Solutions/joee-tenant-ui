@@ -59,45 +59,6 @@ interface EnhancedUsersListProps {
   organizationId?: string;
 }
 
-const DUMMY_USERS: OrganizationUser[] = [
-  {
-    id: 1001,
-    firstname: "Adebayo",
-    lastname: "Johnson",
-    email: "adebayo.johnson@example.com",
-    is_active: true,
-    createdAt: new Date().toISOString(),
-    tenant: { id: 1, name: "City Health Clinic" } as any,
-  } as OrganizationUser,
-  {
-    id: 1002,
-    firstname: "Miriam",
-    lastname: "Okafor",
-    email: "miriam.okafor@example.com",
-    is_active: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
-    tenant: { id: 2, name: "Wellness Care Center" } as any,
-  } as OrganizationUser,
-  {
-    id: 1003,
-    firstname: "Daniel",
-    lastname: "Akin",
-    email: "daniel.akin@example.com",
-    is_active: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 32).toISOString(),
-    tenant: { id: 1, name: "City Health Clinic" } as any,
-  } as OrganizationUser,
-  {
-    id: 1004,
-    firstname: "Halima",
-    lastname: "Bello",
-    email: "halima.bello@example.com",
-    is_active: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 67).toISOString(),
-    tenant: { id: 3, name: "Prime Family Hospital" } as any,
-  } as OrganizationUser,
-];
-
 export default function EnhancedUsersList({ organizationId }: EnhancedUsersListProps = {}) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,14 +93,9 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
   const usersData = isAllOrganizations ? allUsersData : tenantUsersData;
   const isLoading = isAllOrganizations ? allLoading : tenantLoading;
   const error = isAllOrganizations ? allError : tenantError;
-  const hasApiError = Boolean(error);
 
   // Ensure usersData is always an array
-  const users = hasApiError
-    ? DUMMY_USERS
-    : Array.isArray(usersData)
-      ? usersData
-      : [];
+  const users = Array.isArray(usersData) ? usersData : [];
 
   // Calculate stats based on filtered data
   useEffect(() => {
@@ -273,11 +229,11 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
 
   return (
     <div className="px-10 pt-[32px] pb-[56px] space-y-6">
-      {hasApiError && (
+      {error && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="pt-6">
             <p className="text-sm text-yellow-800 font-medium">
-              Users API is unavailable right now. Showing demo data for preview.
+              Failed to load users. Please try again.
             </p>
           </CardContent>
         </Card>

@@ -55,7 +55,8 @@ export function getChangedFields(original: any, updated: any) {
         result[key] = updated[key];
       }
     } else {
-      if (updated[key] !== original[key]) {
+      // Normalize null/undefined vs "" so form + API defaults still detect real edits.
+      if (String(original[key] ?? "") !== String(updated[key] ?? "")) {
         result[key] = updated[key];
       }
     }

@@ -249,7 +249,7 @@ export default function SystemSettings() {
                     className="h-[60px] w-[291px] bg-[#3FA907] text-white font-medium text-base"
                     onClick={() => {
                       setShowSuccessDialog(false);
-                      router.push("/dashboard/admin/list");
+                      router.push("/dashboard/settings");
                     }}
                   >
                     Continue

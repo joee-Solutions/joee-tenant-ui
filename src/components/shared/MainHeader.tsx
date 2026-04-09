@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense, useSyncExternalStore } from "react";
 import { IoSettingsSharp } from "react-icons/io5";
 import { SearchIcon, Menu, X } from "lucide-react";
 import { BellIcon } from "../icons/icon";
@@ -30,8 +30,18 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [markingAsRead, setMarkingAsRead] = useState<number | null>(null); 
-  
+  const [markingAsRead, setMarkingAsRead] = useState<number | null>(null);
+  /**
+   * Radix Popover wires aria-controls from useId(); SSR vs client can disagree if we render Popover on both.
+   * useSyncExternalStore matches server + hydration (getServerSnapshot false), then client-only (true).
+   * @see https://react.dev/reference/react/useSyncExternalStore#adding-server-rendering-support
+   */
+  const popoversReady = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
   // Sync search query with URL params if on organization page
   useEffect(() => {
     if (pathname?.includes("/organization")) {
@@ -286,60 +296,64 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
       </div>
       
       <div className="flex items-center gap-2 md:gap-3">
-        {/* Notifications */}
-        <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
-          <PopoverTrigger asChild>
-            <span className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors">
-              <BellIcon className="h-6 w-6" />
-        </span>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold text-lg">Notifications</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  No notifications
-                </div>
-              ) : (
-                notifications.map((notification) => {
-                  return (
-                  <div
-                    key={notification.id}
-                    className="p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => handleNotificationClick(notification)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm text-[#003465]">
-                          {notification.title}
-                        </p>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                            {notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : ""}
-                        </p>
+        {/* Notifications — Popover deferred until mount to avoid Radix aria-controls hydration mismatch */}
+        {popoversReady ? (
+          <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+            <PopoverTrigger asChild>
+              <span className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors">
+                <BellIcon className="h-6 w-6" />
+              </span>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="p-4 border-b">
+                <h3 className="font-semibold text-lg">Notifications</h3>
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">No notifications</div>
+                ) : (
+                  notifications.map((notification) => {
+                    return (
+                      <div
+                        key={notification.id}
+                        className="p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-[#003465]">{notification.title}</p>
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : ""}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            {notifications.length > 0 && (
-              <div className="p-3 border-t text-center">
-                <button
-                  className="text-sm text-[#003465] hover:underline"
-                  onClick={handleViewAllNotifications}
-                >
-                  View all notification
-                </button>
+                    );
+                  })
+                )}
               </div>
-            )}
-          </PopoverContent>
-        </Popover>
+              {notifications.length > 0 && (
+                <div className="p-3 border-t text-center">
+                  <button
+                    type="button"
+                    className="text-sm text-[#003465] hover:underline"
+                    onClick={handleViewAllNotifications}
+                  >
+                    View all notification
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <span
+            className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors"
+            aria-hidden
+          >
+            <BellIcon className="h-6 w-6" />
+          </span>
+        )}
 
         {/* Notification View Modal */}
         {showNotificationModal && selectedNotification && (
@@ -419,51 +433,77 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
           <IoSettingsSharp className="w-[24px] h-[24px] text-[#EC0909]" />
         </span>
 
-        {/* Profile */}
-        <Popover open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-          <PopoverTrigger asChild>
-            <div className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity">
-          <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
-            <Image
-              src={profileImage}
-              alt="profile image"
-                  width={40}
-                  height={40}
-              className="aspect-square w-full h-full object-cover"
-            />
-          </span>
-          <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-[#003465] mb-1">
-              {isLoading ? "Loading..." : fullName || "-"}
-            </p>
-            <p className="text-xs font-medium text-[#595959]">{role}</p>
-          </div>
-        </div>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-48 p-0">
-            <div className="p-2">
-              <button
-                onClick={handleViewProfile}
-                className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 transition-colors"
-              >
-                View Profile
-              </button>
-              <button
-                onClick={handleSettings}
-                className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 transition-colors"
-              >
-                Settings
-              </button>
-              <div className="border-t my-1"></div>
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-3 py-2 text-sm text-red-600 rounded hover:bg-red-50 transition-colors"
-              >
-                Logout
-              </button>
+        {/* Profile — same Popover deferral as notifications */}
+        {popoversReady ? (
+          <Popover open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+            <PopoverTrigger asChild>
+              <div className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity">
+                <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
+                  <Image
+                    src={profileImage}
+                    alt="profile image"
+                    width={40}
+                    height={40}
+                    className="aspect-square w-full h-full object-cover"
+                  />
+                </span>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-semibold text-[#003465] mb-1">
+                    {isLoading ? "Loading..." : fullName || "-"}
+                  </p>
+                  <p className="text-xs font-medium text-[#595959]">{role}</p>
+                </div>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-0">
+              <div className="p-2">
+                <button
+                  type="button"
+                  onClick={handleViewProfile}
+                  className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 transition-colors"
+                >
+                  View Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSettings}
+                  className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 transition-colors"
+                >
+                  Settings
+                </button>
+                <div className="border-t my-1"></div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 text-sm text-red-600 rounded hover:bg-red-50 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div
+            className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity"
+            aria-hidden
+          >
+            <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
+              <Image
+                src={profileImage}
+                alt="profile image"
+                width={40}
+                height={40}
+                className="aspect-square w-full h-full object-cover"
+              />
+            </span>
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold text-[#003465] mb-1">
+                {isLoading ? "Loading..." : fullName || "-"}
+              </p>
+              <p className="text-xs font-medium text-[#595959]">{role}</p>
             </div>
-          </PopoverContent>
-        </Popover>
+          </div>
+        )}
       </div>
     </header>
   );

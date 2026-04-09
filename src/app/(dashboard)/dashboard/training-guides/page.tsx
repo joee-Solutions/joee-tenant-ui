@@ -6,25 +6,40 @@ import {
   Upload, 
   FileText, 
   Download, 
-  Eye, 
   Trash2,
-  Plus
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTrainingGuidesData } from "@/hooks/swr";
 import { toast } from "react-toastify";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import ConfirmationModal from "@/components/shared/modals/ConfirmationModal";
+import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+
+function isTrainingGuideMutationSuccess(res: any, kind: "create" | "delete"): boolean {
+  if (kind === "delete" && (res == null || res === "")) {
+    return true;
+  }
+  if (res == null || res === "") return false;
+  if (res.error || res.validationErrors) return false;
+  if (typeof res.statusCode === "number" && res.statusCode >= 400) return false;
+  if (res.success === false) return false;
+  if (res.success === true) return true;
+  if (res.status === true || res.status === 200 || res.status === 201) return true;
+  if (typeof res.status === "string" && /^(ok|success|created)$/i.test(String(res.status).trim())) {
+    return true;
+  }
+  return false;
+}
 
 export default function TrainingGuidesPage() {
-  const router = useRouter();
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deletingGuide, setDeletingGuide] = useState<any | null>(null);
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
   
-  const { data: guidesData, isLoading, mutate } = useTrainingGuidesData({
-    status: "active"
-  });
+  const { data: guidesData, isLoading, mutate } = useTrainingGuidesData();
   
   const guides = guidesData?.guides || [];
 
@@ -70,12 +85,21 @@ export default function TrainingGuidesPage() {
       formData.append('description', 'Uploaded via drag and drop');
 
       const response = await processRequestAuth("post", API_ENDPOINTS.CREATE_TRAINING_GUIDE, formData);
-      
-      if (response.status) {
-        toast.success("Training guide uploaded successfully");
-        mutate(); // Refresh the data
+
+      if (isTrainingGuideMutationSuccess(response, "create")) {
+        await mutate();
+        triggerSuccess({
+          title: "Success",
+          message: "Training guide created successfully.",
+          continueLabel: "Continue",
+        });
       } else {
-        toast.error(response.message || "Failed to upload training guide");
+        toast.error(
+          response?.message ||
+            response?.error ||
+            response?.validationErrors ||
+            "Failed to upload training guide"
+        );
       }
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -111,15 +135,14 @@ export default function TrainingGuidesPage() {
 
   const handleDownload = async (guide: any) => {
     try {
-      const response = await fetch(guide.file_url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = guide.file_name;
+      // Prefer direct navigation to preserve auth/cookies for protected file URLs.
+      const a = document.createElement("a");
+      a.href = guide.file_url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.download = guide.file_name || "";
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast.success("Download started");
     } catch (error) {
@@ -128,24 +151,34 @@ export default function TrainingGuidesPage() {
     }
   };
 
-  const handleView = (guide: any) => {
-    window.open(guide.file_url, '_blank');
-  };
-
   const handleDelete = async (guide: any) => {
-    if (confirm(`Are you sure you want to delete "${guide.title}"?`)) {
-      try {
-        const response = await processRequestAuth("delete", API_ENDPOINTS.DELETE_TRAINING_GUIDE(guide.id));
-        if (response.status) {
-          toast.success("Training guide deleted successfully");
-          mutate(); // Refresh the data
-        } else {
-          toast.error(response.message || "Failed to delete training guide");
-        }
-      } catch (error) {
-        console.error("Error deleting file:", error);
-        toast.error("Failed to delete file");
+    setDeleteProcessing(true);
+    try {
+      const response = await processRequestAuth(
+        "delete",
+        API_ENDPOINTS.DELETE_TRAINING_GUIDE(guide.id)
+      );
+      if (isTrainingGuideMutationSuccess(response, "delete")) {
+        await mutate();
+        setDeletingGuide(null);
+        triggerSuccess({
+          title: "Success",
+          message: "Training guide deleted successfully.",
+          continueLabel: "Continue",
+        });
+      } else {
+        toast.error(
+          response?.message ||
+            response?.error ||
+            response?.validationErrors ||
+            "Failed to delete training guide"
+        );
       }
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      toast.error("Failed to delete file");
+    } finally {
+      setDeleteProcessing(false);
     }
   };
 
@@ -240,12 +273,6 @@ export default function TrainingGuidesPage() {
             </CardContent>
           </Card>
         ) : (
-          <>
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-700 font-medium">
-                ✓ Training guides have been uploaded successfully
-              </p>
-            </div>
           <div className="space-y-4">
             {guides.map((guide: any) => (
               <Card key={guide.id} className="hover:shadow-md transition-shadow">
@@ -280,15 +307,7 @@ export default function TrainingGuidesPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleView(guide)}
-                      className="w-10 h-10 p-0"
-                    >
-                      <Eye className="w-4 h-4 text-blue-600" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(guide)}
+                      onClick={() => setDeletingGuide(guide)}
                       className="w-10 h-10 p-0"
                     >
                       <Trash2 className="w-4 h-4 text-red-600" />
@@ -298,9 +317,21 @@ export default function TrainingGuidesPage() {
               </Card>
             ))}
           </div>
-          </>
         )}
       </div>
+      {deletingGuide && (
+        <ConfirmationModal
+          title="Delete Training Guide"
+          message="Are you sure you want to delete"
+          itemName={deletingGuide.title}
+          onConfirm={() => void handleDelete(deletingGuide)}
+          onCancel={() => setDeletingGuide(null)}
+          isProcessing={deleteProcessing}
+          confirmText="Delete"
+          confirmVariant="destructive"
+        />
+      )}
+      {SuccessModal}
     </div>
   );
 } 

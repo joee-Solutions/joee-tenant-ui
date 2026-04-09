@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import { useFormContext } from "react-hook-form";
+import { toast } from "react-toastify";
 
 interface ProfileImageUploaderProps {
   title?: string;
@@ -12,6 +13,10 @@ export default function ProfileImageUploader({
   title = "Upload Profile Image",
   name = "profileImage"
 }: ProfileImageUploaderProps) {
+  const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB (raw selected file guard)
+  const MAX_BASE64_BYTES = 220 * 1024; // Strict cap for low backend body limits
+  const MAX_DIMENSION = 720; // Stronger downscale to keep payload tiny
+
   const { watch, setValue } = useFormContext();
   const formImageValue = watch(name);
   
@@ -20,11 +25,29 @@ export default function ProfileImageUploader({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const getSafeImageSrc = (value: string | null): string | null => {
+    if (!value || typeof value !== "string") return null;
+    const v = value.trim();
+    if (!v) return null;
+    if (v.startsWith("data:image/") || v.startsWith("/")) return v;
+    try {
+      const parsed = new URL(v);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") return v;
+    } catch {
+      // Ignore malformed URLs from backend/form state
+    }
+    return null;
+  };
 
   // Initialize and sync local state with form value when form value changes (e.g., from API)
   useEffect(() => {
     // Update image when form value changes (from API load or user selection)
-    if (formImageValue && formImageValue.trim() !== "") {
+    if (typeof formImageValue === "string" && formImageValue.trim() !== "") {
+      const safeFormImage = getSafeImageSrc(formImageValue);
+      if (!safeFormImage) {
+        setImage(null);
+        return;
+      }
       setImage(formImageValue);
     } else if (!formImageValue || formImageValue === "" || formImageValue === null) {
       // Only clear if current image is not a newly selected base64 image
@@ -55,18 +78,71 @@ export default function ProfileImageUploader({
   const validateFile = (file) => {
     // Check file type
     if (!file.type.match("image/jpeg") && !file.type.match("image/png")) {
-      setError("Only JPEG and PNG files are accepted");
+      const message = "Only JPEG and PNG files are accepted";
+      setError(message);
+      toast.error(message, { toastId: `image-type-${name}` });
       return false;
     }
 
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError("File size should be less than 5MB");
+    // Check file size (max 10MB)
+    if (file.size > MAX_UPLOAD_BYTES) {
+      const message = "Image is too large. Please upload an image smaller than 10MB.";
+      setError(message);
+      toast.error(message, { toastId: `image-size-${name}` });
       return false;
     }
 
     setError("");
     return true;
+  };
+
+  const dataUrlSizeBytes = (dataUrl: string): number => {
+    const payload = dataUrl.split(",")[1] || "";
+    const padding = payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0;
+    return (payload.length * 3) / 4 - padding;
+  };
+
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = document.createElement("img");
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = src;
+    });
+
+  const toDataUrl = (canvas: HTMLCanvasElement, mime: string, quality?: number): string =>
+    canvas.toDataURL(mime, quality);
+
+  const compressForPayload = async (originalDataUrl: string): Promise<string> => {
+    const img = await loadImage(originalDataUrl);
+    const canvas = document.createElement("canvas");
+    const ratio = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+    canvas.width = Math.max(1, Math.round(img.width * ratio));
+    canvas.height = Math.max(1, Math.round(img.height * ratio));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return originalDataUrl;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Prefer JPEG for much smaller payloads; progressively reduce quality.
+    const qualitySteps = [0.7, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2];
+    for (const q of qualitySteps) {
+      const jpeg = toDataUrl(canvas, "image/jpeg", q);
+      if (dataUrlSizeBytes(jpeg) <= MAX_BASE64_BYTES) return jpeg;
+    }
+
+    // As a last attempt, downscale more and encode with low jpeg quality.
+    const tinyCanvas = document.createElement("canvas");
+    tinyCanvas.width = Math.max(1, Math.round(canvas.width * 0.7));
+    tinyCanvas.height = Math.max(1, Math.round(canvas.height * 0.7));
+    const tinyCtx = tinyCanvas.getContext("2d");
+    if (tinyCtx) {
+      tinyCtx.drawImage(canvas, 0, 0, tinyCanvas.width, tinyCanvas.height);
+      const tiny = toDataUrl(tinyCanvas, "image/jpeg", 0.2);
+      if (dataUrlSizeBytes(tiny) <= MAX_BASE64_BYTES) return tiny;
+      return tiny;
+    }
+
+    return originalDataUrl;
   };
 
   const handleDrop = (e) => {
@@ -94,13 +170,26 @@ export default function ProfileImageUploader({
 
       // Convert file to base64 data URL
       const reader = new FileReader();
-      reader.onload = () => {
-        const base64Image = reader.result as string;
-        setImage(base64Image);
-        // Update form field with base64 image
-        setValue(name, base64Image, { shouldValidate: false });
-        setUploading(false);
-        console.log("Image uploaded and set to form field:", name);
+      reader.onload = async () => {
+        try {
+          const base64Image = reader.result as string;
+          const optimizedImage = await compressForPayload(base64Image);
+          if (dataUrlSizeBytes(optimizedImage) > MAX_BASE64_BYTES) {
+            const message =
+              "Image is still too large after compression. Please use a smaller image (max 220KB).";
+            setError(message);
+            toast.error(message, { toastId: `image-still-large-${name}` });
+            setUploading(false);
+            return;
+          }
+          setImage(optimizedImage);
+          // Update form field with optimized base64 image
+          setValue(name, optimizedImage, { shouldValidate: false });
+          setUploading(false);
+        } catch {
+          setError("Failed to process image");
+          setUploading(false);
+        }
       };
       reader.onerror = () => {
         setError("Failed to read file");
@@ -148,15 +237,15 @@ export default function ProfileImageUploader({
           role="button"
           tabIndex={0}
         >
-          {image ? (
+          {getSafeImageSrc(image) ? (
             <div className="relative w-full h-full flex items-center justify-center">
               <Image
-                src={image}
+                src={getSafeImageSrc(image) as string}
                 alt="Profile preview"
                 className="max-w-full max-h-full object-contain rounded"
                 width={300}
                 height={300}
-                unoptimized={image.startsWith('data:')} // Allow base64 images
+                unoptimized={(getSafeImageSrc(image) as string).startsWith('data:')} // Allow base64 images
               />
               <button
                 className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
@@ -210,7 +299,7 @@ export default function ProfileImageUploader({
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
       <p className="mt-2 text-xs text-gray-500">
-        Maximum file size: 5MB. For best results, use an image at least 300x300
+        Maximum file size: 10MB. For best results, use an image at least 300x300
         pixels.
       </p>
     </div>

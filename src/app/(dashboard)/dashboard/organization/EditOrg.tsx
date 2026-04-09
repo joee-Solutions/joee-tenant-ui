@@ -1,3 +1,5 @@
+"use client";
+
 import FieldBox from "@/components/shared/form/FieldBox";
 import FieldSelect from "@/components/shared/form/FieldSelect";
 import FormComposer from "@/components/shared/form/FormComposer";
@@ -21,44 +23,49 @@ import React, { useState } from "react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import {
+  ORGANIZATION_TYPE_OPTIONS,
+  resolveOrganizationTypeForApi,
+  splitOrganizationTypeForForm,
+} from "@/lib/organizationOrgType";
+import ProfileImageUploader from "@/components/ui/ImageUploader";
 
-const EditOrganizationSchema = z.object({
-  name: z.string().min(1, "This field is required"),
-  status: z.string().min(1, "This field is required"),
-  phoneNumber: z.string().min(1, "This field is required"),
-  organizationEmail: z
-    .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
-  organization_type: z.string().optional(),
-  adminFirstname: z.string().optional(),
-  adminLastname: z.string().optional(),
-  adminPhoneNumber: z.string().optional(),
-  adminEmail: z
-    .string()
-    .email("Invalid email address")
-    .min(1, "This field is required"),
-});
+const EditOrganizationSchema = z
+  .object({
+    name: z.string().min(1, "This field is required"),
+    status: z.string().min(1, "This field is required"),
+    phoneNumber: z.string().min(1, "This field is required"),
+    organizationEmail: z
+      .string()
+      .email("Invalid email address")
+      .min(1, "This field is required"),
+    organization_type: z.string().min(1, "Organization type is required"),
+    organization_type_other: z.string().optional(),
+    logo: z.string().optional(),
+    adminFirstname: z.string().optional(),
+    adminLastname: z.string().optional(),
+    adminPhoneNumber: z.string().optional(),
+    adminEmail: z
+      .string()
+      .email("Invalid email address")
+      .min(1, "This field is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.organization_type === "Other") {
+      const v = (data.organization_type_other ?? "").trim();
+      if (!v) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please specify your organization type",
+          path: ["organization_type_other"],
+        });
+      }
+    }
+  });
 
 type EditOrganizationSchemaType = z.infer<typeof EditOrganizationSchema>;
 
 const orgStatus = ["active", "inactive", "deactivated"];
-const orgTypes = [
-  "Hospital",
-  "Clinic",
-  "Medical Center",
-  "Pharmacy",
-  "Laboratory",
-  "Diagnostic Center",
-  "Rehabilitation Center",
-  "Nursing Home",
-  "Urgent Care",
-  "Specialty Clinic",
-  "Dental Clinic",
-  "Eye Clinic",
-  "Mental Health Center",
-  "Other",
-];
 
 export default function EditOrg({ data, slug }: { data: any; slug: string }) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
@@ -75,19 +82,27 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
       adminPhoneNumber: "",
       organizationEmail: "",
       organization_type: "",
+      organization_type_other: "",
+      logo: "",
       phoneNumber: "",
       status: "",
     },
   });
+  const selectedOrgType = form.watch("organization_type");
   useEffect(() => {
     const adminInfo = data?.admin_info || data?.profile || {};
+    const storedType = String(data?.organization_type ?? data?.org_type ?? "");
+    const { org_type: typeSelect, org_type_other: typeOther } =
+      splitOrganizationTypeForForm(storedType);
     const datas = {
       name: data?.name || "",
       adminEmail: adminInfo?.email ?? data?.profile?.admin_email ?? "",
       phoneNumber: data?.phone_number || "",
       adminPhoneNumber: adminInfo?.phone_number ?? data?.profile?.phone_number ?? "",
       organizationEmail: data?.email || "",
-      organization_type: data?.organization_type ?? data?.org_type ?? "",
+      logo: data?.logo || "",
+      organization_type: typeSelect,
+      organization_type_other: typeOther,
       status: (data?.status || "inactive").toLowerCase() === "active" ? "active" : "inactive",
       adminFirstname: adminInfo?.firstname ?? adminInfo?.first_name ?? "",
       adminLastname: adminInfo?.lastname ?? adminInfo?.last_name ?? "",
@@ -105,7 +120,19 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
       if (changedFields.name !== undefined) updatePayload.name = changedFields.name;
       if (changedFields.organizationEmail !== undefined) updatePayload.email = changedFields.organizationEmail;
       if (changedFields.phoneNumber !== undefined) updatePayload.phone_number = changedFields.phoneNumber;
-      if (changedFields.organization_type !== undefined) updatePayload.organization_type = changedFields.organization_type || null;
+      if (changedFields.logo !== undefined) updatePayload.logo = changedFields.logo || "";
+      const defaultResolved = resolveOrganizationTypeForApi(
+        defaults?.organization_type ?? "",
+        defaults?.organization_type_other
+      );
+      const payloadResolved = resolveOrganizationTypeForApi(
+        payload.organization_type,
+        payload.organization_type_other
+      );
+      if (payloadResolved !== defaultResolved) {
+        updatePayload.organization_type = payloadResolved;
+        updatePayload.org_type = payloadResolved;
+      }
       if (changedFields.status !== undefined) {
         const v = String(changedFields.status).toLowerCase();
         updatePayload.status = v === "active" ? "active" : "deactivated";
@@ -139,6 +166,7 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
       </h2>
       <FormComposer form={form} onSubmit={onSubmit}>
         <div className="flex flex-col gap-[30px]">
+          <ProfileImageUploader title="Organization Logo" name="logo" />
           <FieldBox
             bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
             name="name"
@@ -222,10 +250,20 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
             bgSelectClass="bg-[#D9EDFF] border-[#D9EDFF]"
             name="organization_type"
             control={form.control}
-            options={orgTypes}
+            options={[...ORGANIZATION_TYPE_OPTIONS]}
             labelText="Organization type"
             placeholder="Select"
           />
+          {selectedOrgType === "Other" && (
+            <FieldBox
+              bgInputClass="bg-[#D9EDFF] border-[#D9EDFF]"
+              type="text"
+              name="organization_type_other"
+              control={form.control}
+              labelText="Specify organization type"
+              placeholder="Enter your organization type"
+            />
+          )}
 
           <div className="flex items-center gap-7">
             <AlertDialog open={isOpen} onOpenChange={(open) => open && isOpen}>

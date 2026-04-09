@@ -47,8 +47,9 @@ export default function OrganizationSuccessModal({
           <AlertDialogAction
             className="h-[60px] w-full max-w-[291px] bg-[#3FA907] text-white font-medium text-base"
             onClick={() => {
-              onOpenChange(false);
+              // Run onContinue before closing so hooks that clear callbacks on close still see them.
               onContinue?.();
+              onOpenChange(false);
             }}
           >
             {continueLabel}

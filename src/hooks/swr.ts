@@ -62,6 +62,8 @@ export interface OrganizationUser {
   };
 }
 
+const EMPTY_ORGANIZATION_USERS: OrganizationUser[] = [];
+
 export const authFectcher = async (url: string) => {
   try {
     return await processRequestAuth("get", url);
@@ -625,7 +627,7 @@ export const useDashboardEmployees = () => {
 // Custom hook for all users across all organizations
 export const useAllUsersData = () => {
   const { data, isLoading, error } = useSWR(
-    API_ENDPOINTS.GET_ALL_USERS,
+    API_ENDPOINTS.GET_DASHBOARD_USERS,
     authFectcher,
     {
       onError: (error) => {
@@ -635,8 +637,15 @@ export const useAllUsersData = () => {
       revalidateOnReconnect: true,
     }
   );
+  let users: OrganizationUser[] = EMPTY_ORGANIZATION_USERS;
+  const raw = data?.data?.data ?? data?.data ?? data;
+  if (Array.isArray(raw)) {
+    users = raw as OrganizationUser[];
+  } else if (Array.isArray(raw?.latestUsers)) {
+    users = raw.latestUsers as OrganizationUser[];
+  }
   return {
-    data: extractData<OrganizationUser[]>(data?.data.data),
+    data: users,
     isLoading,
     error,
   };

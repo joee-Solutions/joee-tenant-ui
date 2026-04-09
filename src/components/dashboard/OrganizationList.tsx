@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import orgPlaceholder from "@public/assets/orgPlaceholder.png";
 
 interface Organization {
   id: number;
@@ -12,6 +13,20 @@ interface Organization {
 
 interface OrganizationListProps {
   organizations: Organization[];
+}
+
+function resolveOrgImageSrc(image: unknown): string | typeof orgPlaceholder {
+  if (typeof image !== "string") return orgPlaceholder;
+  const value = image.trim();
+  if (!value) return orgPlaceholder;
+  if (value.startsWith("data:image/") || value.startsWith("/")) return value;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return value;
+  } catch {
+    // Ignore invalid URL and fallback.
+  }
+  return orgPlaceholder;
 }
 
 const OrganizationList: FC<OrganizationListProps> = ({ organizations }) => {
@@ -59,7 +74,7 @@ const OrganizationList: FC<OrganizationListProps> = ({ organizations }) => {
             <div className="flex items-center">
               <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 ${getBorderColor(org.status)} mr-3`}>
                 <Image
-                  src={org.image}
+                  src={resolveOrgImageSrc(org.image)}
                   alt={org.name}
                   layout="fill"
                   objectFit="cover"

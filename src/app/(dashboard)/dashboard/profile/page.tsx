@@ -112,7 +112,9 @@ const ProfilePage = () => {
         {tab === "Change Password" ? (
           <ChangePasswordComponent />
         ) : isLoading ? (
-          <div>Loading...</div>
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-t-[#003465] border-blue-200" />
+          </div>
         ) : error && !adminData ? (
           <div className="text-red-500">Failed to load profile</div>
         ) : (
