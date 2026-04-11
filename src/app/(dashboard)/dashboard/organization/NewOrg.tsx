@@ -153,17 +153,24 @@ const handleOrganizationError = (
     });
     return;
   }
-  
-  // Domain duplicate constraint: UQ_97b9c4dae58b30f5bd875f241ab
-  if (errorString.includes("uq_97b9c4dae58b30f5bd875f241ab")) {
-  // Backend can return 500 with "request entity too large" for oversized base64 image payloads.
-  if (errorString.includes("request entity too large")) {
+
+  // Oversized body (common with base64 logo on create/update)
+  if (
+    errorString.includes("request entity too large") ||
+    errorString.includes("payload too large")
+  ) {
+    form.setError("logo", {
+      type: "manual",
+      message: "Image is too large. Please use a smaller file.",
+    });
     toast.error("Image upload is too large. Please use a smaller image and try again.", {
       toastId: "org-create-image-too-large",
     });
     return;
   }
-
+  
+  // Domain duplicate constraint: UQ_97b9c4dae58b30f5bd875f241ab
+  if (errorString.includes("uq_97b9c4dae58b30f5bd875f241ab")) {
     form.setError("domain", {
       type: "manual",
       message: "This domain is already taken. Please use a different domain.",
@@ -456,12 +463,17 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
               }
             );
             const logoErrData = (logoPutError as any)?.response?.data;
+            const logoErrStatus = (logoPutError as any)?.response?.status;
             const logoErrMsg = String(
               logoErrData?.error || logoErrData?.message || (logoPutError as any)?.message || ""
             ).toLowerCase();
-            if (logoPutError && logoErrMsg.includes("request entity too large")) {
-              toast.warning(
-                "Organization created, but the logo was not saved (payload too large). Add the logo from Edit organization.",
+            const logoTooLarge =
+              logoErrStatus === 413 ||
+              logoErrMsg.includes("request entity too large") ||
+              logoErrMsg.includes("payload too large");
+            if (logoPutError && logoTooLarge) {
+              toast.error(
+                "Organization created, but the logo was not saved — image too large. Use a smaller image in Edit organization.",
                 { toastId: "org-create-logo-too-large" }
               );
             } else if (logoPutError) {

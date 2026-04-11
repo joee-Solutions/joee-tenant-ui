@@ -467,6 +467,39 @@ export default function EditOrganizationModal({
           putError = error;
         }
       );
+
+      if (putError) {
+        const errData = putError?.response?.data;
+        const errLower = String(
+          errData?.error ?? errData?.message ?? putError?.message ?? ""
+        ).toLowerCase();
+        const status = putError?.response?.status;
+        const isPayloadTooLarge =
+          status === 413 ||
+          errLower.includes("request entity too large") ||
+          errLower.includes("payload too large");
+        if (isPayloadTooLarge) {
+          form.setError("logo", {
+            type: "manual",
+            message: "Image is too large. Please use a smaller file.",
+          });
+          toast.error("Image upload is too large. Please use a smaller image and try again.", {
+            toastId: "org-edit-image-too-large",
+          });
+          return;
+        }
+        toast.error("Failed to update organization", {
+          toastId: "org-edit-failed",
+        });
+        return;
+      }
+
+      if (response == null) {
+        toast.error("Failed to update organization", {
+          toastId: "org-edit-failed",
+        });
+        return;
+      }
       
       // The backend response may not include all fields we sent (like organization_type and admin_info)
       // So we merge the response with the data we sent to preserve all fields

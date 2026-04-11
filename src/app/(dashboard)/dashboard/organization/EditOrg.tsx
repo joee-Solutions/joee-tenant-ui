@@ -29,6 +29,7 @@ import {
   splitOrganizationTypeForForm,
 } from "@/lib/organizationOrgType";
 import ProfileImageUploader from "@/components/ui/ImageUploader";
+import { toast } from "react-toastify";
 
 const EditOrganizationSchema = z
   .object({
@@ -154,8 +155,28 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
         updatePayload
       );
       setIsOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error);
+      const errData = error?.response?.data;
+      const errLower = String(
+        errData?.error ?? errData?.message ?? error?.message ?? ""
+      ).toLowerCase();
+      const status = error?.response?.status;
+      const isPayloadTooLarge =
+        status === 413 ||
+        errLower.includes("request entity too large") ||
+        errLower.includes("payload too large");
+      if (isPayloadTooLarge) {
+        form.setError("logo", {
+          type: "manual",
+          message: "Image is too large. Please use a smaller file.",
+        });
+        toast.error("Image upload is too large. Please use a smaller image and try again.", {
+          toastId: "org-profile-edit-image-too-large",
+        });
+        return;
+      }
+      toast.error("Failed to update organization", { toastId: "org-profile-edit-failed" });
     }
   };
 
