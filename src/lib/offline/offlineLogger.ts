@@ -48,9 +48,19 @@ class OfflineLogger {
       let logData: any = '';
       if (data) {
         if (typeof data === 'object' && !Array.isArray(data)) {
+          const normalize = (value: unknown): unknown => {
+            if (value instanceof Error) return value.message || value.name || String(value);
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+              const keys = Object.keys(value as object);
+              if (keys.length === 0) return '(empty object)';
+            }
+            return value;
+          };
           // Filter out undefined/null values from object, but keep empty strings and false values
           const filtered = Object.fromEntries(
-            Object.entries(data).filter(([_, value]) => value !== undefined && value !== null)
+            Object.entries(data)
+              .filter(([_, value]) => value !== undefined && value !== null)
+              .map(([k, v]) => [k, normalize(v)])
           );
           // Only use filtered object if it has keys
           logData = Object.keys(filtered).length > 0 ? filtered : '';

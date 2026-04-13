@@ -50,6 +50,7 @@ import AppointmentsCalendar, {
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { processRequestAuth } from "@/framework/https";
+import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
 import { formatDateFn } from "@/lib/utils";
 import ViewEditAppointmentModal from "./ViewEditAppointmentModal";
 import { normalizeAppointmentRecord } from "./appointmentFormUtils";
@@ -259,12 +260,12 @@ export default function Page({ slug }: { slug: string }) {
     }
     setDeletingId(appointmentToDelete.id);
     try {
-    await processRequestAuth(
+    const res = await processRequestAuth(
       "delete",
         `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantIdForPath)}/${appointmentToDelete.id}`
     );
       triggerSuccess({ message: "Appointment deleted successfully." });
-    mutate();
+    revalidateListAfterMutation(res, () => mutate());
       setShowDeleteWarning(false);
       setAppointmentToDelete(null);
     } catch (error) {
@@ -289,9 +290,9 @@ export default function Page({ slug }: { slug: string }) {
     setSelectedAppointment(null);
   };
 
-  const handleAppointmentOperationSuccess = (message: string) => {
+  const handleAppointmentOperationSuccess = (message: string, mutationResult?: unknown) => {
     handleCloseAppointmentModal();
-    mutate();
+    revalidateListAfterMutation(mutationResult, () => mutate());
     triggerSuccess({ message });
   };
 

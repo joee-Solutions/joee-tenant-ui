@@ -1,5 +1,6 @@
 import { db, SyncQueueItem } from './database';
 import { offlineLogger } from './offlineLogger';
+import { swrMutateForOffline } from './swrMutateBridge';
 
 export class OfflineService {
   private static instance: OfflineService;
@@ -80,11 +81,8 @@ export class OfflineService {
         offlineLogger.info(`Queuing ${method.toUpperCase()} action for sync when online`, { endpoint });
         const queueId = await this.queueAction(method, endpoint, data);
         
-        // Apply optimistic update to cache FIRST
-        const optimisticResponse = await this.applyOptimisticUpdate(method, endpoint, data);
-        
-        // Update SWR cache with optimistic data to trigger immediate UI update
-        await this.updateSWRCacheWithOptimisticData(endpoint, method, data);
+        // Merge IndexedDB + in-memory SWR data, update both so tables refresh without reload
+        const optimisticResponse = await this.applyOfflineOptimisticUI(method, endpoint, data);
         
         offlineLogger.info(`Optimistic update applied for ${method.toUpperCase()} ${endpoint}`);
         
@@ -177,10 +175,41 @@ export class OfflineService {
       offlineLogger.info(`API Request SUCCESS: ${method.toUpperCase()} ${endpoint}`);
       return responseData;
     } catch (error: any) {
-      offlineLogger.error(`API Request FAILED: ${method.toUpperCase()} ${endpoint}`, {
-        error: error?.message || error,
-        status: error?.response?.status,
-      });
+      const status = error?.response?.status;
+      const body = error?.response?.data;
+      const fromBody =
+        body &&
+        typeof body === "object" &&
+        (typeof (body as { message?: unknown }).message === "string"
+          ? (body as { message: string }).message
+          : typeof (body as { error?: unknown }).error === "string"
+            ? (body as { error: string }).error
+            : null);
+      const detail = String(
+        fromBody ||
+          (typeof body === "string" ? body : "") ||
+          error?.message ||
+          (typeof error?.toString === "function" ? error.toString() : "") ||
+          "Request failed"
+      );
+      const logPayload: Record<string, unknown> = { detail };
+      if (typeof status === "number") logPayload.status = status;
+      if (error?.response?.statusText) logPayload.statusText = error.response.statusText;
+
+      // DELETE + 404/410: resource already gone (common after offline queue replay). Not a failure.
+      const deleteAlreadyGone =
+        method === "delete" && (status === 404 || status === 410);
+      if (deleteAlreadyGone) {
+        offlineLogger.info(
+          `API DELETE skipped (already removed): ${method.toUpperCase()} ${endpoint}`,
+          logPayload
+        );
+      } else {
+        offlineLogger.error(
+          `API Request FAILED: ${method.toUpperCase()} ${endpoint}`,
+          logPayload
+        );
+      }
       
       // If request fails and we're online, check if we went offline during the request
       if (typeof window !== 'undefined') {
@@ -524,6 +553,25 @@ export class OfflineService {
           
           offlineLogger.info(`Successfully synced action: ${item.action} ${item.entity}`, { itemId: item.id });
         } catch (error: any) {
+          const status = error?.response?.status;
+          // DELETE: 404/410 means resource is already gone — treat sync as successful
+          if (
+            item.action === "delete" &&
+            (status === 404 || status === 410)
+          ) {
+            offlineLogger.debug(
+              `Sync queue: delete treated as done (already removed)`,
+              { itemId: item.id, endpoint: item.endpoint, status }
+            );
+            await db.syncQueue.update(item.id!, {
+              status: "completed",
+              retries: item.retries + 1,
+              nextAttemptAt: undefined,
+              error: undefined,
+            });
+            continue;
+          }
+
           // Extract error message more robustly
           const errorMessage = error?.message || 
                               error?.toString() || 
@@ -589,164 +637,230 @@ export class OfflineService {
     return { pending, syncing, failed };
   }
 
-  // Apply optimistic update to cache
-  private async applyOptimisticUpdate(
+  /**
+   * Build updated list + API-shaped response for offline writes (single source of truth).
+   */
+  private computeOptimisticListAndResponse(
     method: 'post' | 'put' | 'patch' | 'delete',
     endpoint: string,
-    data?: any
-  ): Promise<any> {
-    try {
-      // Get the list endpoint (e.g., /tenants/1/employees from /tenants/1/employees/5)
-      const listEndpoint = this.getListEndpoint(endpoint);
-      
-      // Get current cached data for the list
-      const cachedList = await this.getCachedResponse(listEndpoint);
-      
-      if (!cachedList) {
-        offlineLogger.debug(`No cached list found for optimistic update: ${listEndpoint}`);
+    data: any | undefined,
+    cachedList: any
+  ): { updatedList: any; apiResponse: any } | null {
+    const listEndpoint = this.getListEndpoint(endpoint);
+
+    if (method === 'post') {
+      const newItem = {
+        ...data,
+        id: `temp_${Date.now()}`,
+        _offline: true,
+        _pending: true,
+      };
+
+      let updatedData: any;
+      if (Array.isArray(cachedList)) {
+        updatedData = [newItem, ...cachedList];
+      } else if (cachedList.data && Array.isArray(cachedList.data)) {
+        updatedData = { ...cachedList, data: [newItem, ...cachedList.data] };
+      } else if (cachedList.results && Array.isArray(cachedList.results)) {
+        updatedData = { ...cachedList, results: [newItem, ...cachedList.results] };
+      } else {
+        offlineLogger.debug(`Unknown list structure for ${listEndpoint}`);
         return null;
       }
 
-      let updatedData: any;
-
-      if (method === 'post') {
-        // CREATE: Add new item to list
-        const newItem = {
-          ...data,
-          id: `temp_${Date.now()}`, // Temporary ID until synced
-          _offline: true,
-          _pending: true,
-        };
-        
-        // Handle different response structures
-        if (Array.isArray(cachedList)) {
-          updatedData = [newItem, ...cachedList];
-        } else if (cachedList.data && Array.isArray(cachedList.data)) {
-          updatedData = { ...cachedList, data: [newItem, ...cachedList.data] };
-        } else if (cachedList.results && Array.isArray(cachedList.results)) {
-          updatedData = { ...cachedList, results: [newItem, ...cachedList.results] };
-        } else {
-          offlineLogger.debug(`Unknown list structure for ${listEndpoint}`);
-          return null;
-        }
-        
-        // Cache the updated list
-        await this.cacheResponse(listEndpoint, updatedData);
-        offlineLogger.info(`Optimistically added item to ${listEndpoint}`);
-        
-        // Return response format that components expect
-        return { 
+      return {
+        updatedList: updatedData,
+        apiResponse: {
           status: true,
-          success: true, 
-          data: newItem, 
-          message: 'Created successfully (offline - will sync when online)' 
-        };
-        
-      } else if (method === 'put' || method === 'patch') {
-        // UPDATE: Update item in list
-        const itemId = this.extractIdFromEndpoint(endpoint);
-        
-        if (Array.isArray(cachedList)) {
-          updatedData = cachedList.map((item: any) => 
+          success: true,
+          data: newItem,
+          message: 'Created successfully (offline - will sync when online)',
+        },
+      };
+    }
+
+    if (method === 'put' || method === 'patch') {
+      const itemId = this.extractIdFromEndpoint(endpoint);
+
+      let updatedData: any;
+      if (Array.isArray(cachedList)) {
+        updatedData = cachedList.map((item: any) =>
+          item.id === itemId || item.id?.toString() === itemId?.toString()
+            ? { ...item, ...data, _offline: true, _pending: true }
+            : item
+        );
+      } else if (cachedList.data && Array.isArray(cachedList.data)) {
+        updatedData = {
+          ...cachedList,
+          data: cachedList.data.map((item: any) =>
             item.id === itemId || item.id?.toString() === itemId?.toString()
               ? { ...item, ...data, _offline: true, _pending: true }
               : item
-          );
-        } else if (cachedList.data && Array.isArray(cachedList.data)) {
-          updatedData = {
-            ...cachedList,
-            data: cachedList.data.map((item: any) =>
-              item.id === itemId || item.id?.toString() === itemId?.toString()
-                ? { ...item, ...data, _offline: true, _pending: true }
-                : item
-            ),
-          };
-        } else if (cachedList.results && Array.isArray(cachedList.results)) {
-          updatedData = {
-            ...cachedList,
-            results: cachedList.results.map((item: any) =>
-              item.id === itemId || item.id?.toString() === itemId?.toString()
-                ? { ...item, ...data, _offline: true, _pending: true }
-                : item
-            ),
-          };
-        } else {
-          offlineLogger.debug(`Unknown list structure for update: ${listEndpoint}`);
-          return null;
-        }
-        
-        // Cache the updated list
-        await this.cacheResponse(listEndpoint, updatedData);
-        
-        // Also update the individual item cache if it exists
-        const itemCache = await this.getCachedResponse(endpoint);
-        if (itemCache) {
-          await this.cacheResponse(endpoint, { ...itemCache, ...data, _offline: true, _pending: true });
-        }
-        
-        offlineLogger.info(`Optimistically updated item in ${listEndpoint}`);
-        
-        // Return response format that components expect
-        return { 
-          status: true,
-          success: true, 
-          data: { ...data, id: itemId }, 
-          message: 'Updated successfully (offline - will sync when online)' 
+          ),
         };
-        
-      } else if (method === 'delete') {
-        // DELETE: Remove item from list
-        const itemId = this.extractIdFromEndpoint(endpoint);
-        
-        if (Array.isArray(cachedList)) {
-          updatedData = cachedList.filter((item: any) => 
-            item.id !== itemId && item.id?.toString() !== itemId?.toString()
-          );
-        } else if (cachedList.data && Array.isArray(cachedList.data)) {
-          updatedData = {
-            ...cachedList,
-            data: cachedList.data.filter((item: any) =>
-              item.id !== itemId && item.id?.toString() !== itemId?.toString()
-            ),
-          };
-        } else if (cachedList.results && Array.isArray(cachedList.results)) {
-          updatedData = {
-            ...cachedList,
-            results: cachedList.results.filter((item: any) =>
-              item.id !== itemId && item.id?.toString() !== itemId?.toString()
-            ),
-          };
-        } else {
-          offlineLogger.debug(`Unknown list structure for delete: ${listEndpoint}`);
-          return null;
-        }
-        
-        // Cache the updated list
-        await this.cacheResponse(listEndpoint, updatedData);
-        
-        // Also remove the individual item cache if it exists
-        try {
-          const cachedItem = await db.apiCache.where('endpoint').equals(endpoint).first();
-          if (cachedItem) {
-            await db.apiCache.delete(cachedItem.id!);
-          }
-        } catch (error) {
-          // Ignore errors when deleting item cache
-        }
-        
-        offlineLogger.info(`Optimistically removed item from ${listEndpoint}`);
-        
-        // Return response format that components expect
-        return { 
-          status: true,
-          success: true, 
-          message: 'Deleted successfully (offline - will sync when online)' 
+      } else if (cachedList.results && Array.isArray(cachedList.results)) {
+        updatedData = {
+          ...cachedList,
+          results: cachedList.results.map((item: any) =>
+            item.id === itemId || item.id?.toString() === itemId?.toString()
+              ? { ...item, ...data, _offline: true, _pending: true }
+              : item
+          ),
         };
+      } else {
+        offlineLogger.debug(`Unknown list structure for update: ${listEndpoint}`);
+        return null;
       }
-      
-      return null;
+
+      return {
+        updatedList: updatedData,
+        apiResponse: {
+          status: true,
+          success: true,
+          data: { ...data, id: itemId },
+          message: 'Updated successfully (offline - will sync when online)',
+        },
+      };
+    }
+
+    if (method === 'delete') {
+      const itemId = this.extractIdFromEndpoint(endpoint);
+
+      let updatedData: any;
+      if (Array.isArray(cachedList)) {
+        updatedData = cachedList.filter(
+          (item: any) => item.id !== itemId && item.id?.toString() !== itemId?.toString()
+        );
+      } else if (cachedList.data && Array.isArray(cachedList.data)) {
+        updatedData = {
+          ...cachedList,
+          data: cachedList.data.filter(
+            (item: any) => item.id !== itemId && item.id?.toString() !== itemId?.toString()
+          ),
+        };
+      } else if (cachedList.results && Array.isArray(cachedList.results)) {
+        updatedData = {
+          ...cachedList,
+          results: cachedList.results.filter(
+            (item: any) => item.id !== itemId && item.id?.toString() !== itemId?.toString()
+          ),
+        };
+      } else {
+        offlineLogger.debug(`Unknown list structure for delete: ${listEndpoint}`);
+        return null;
+      }
+
+      return {
+        updatedList: updatedData,
+        apiResponse: {
+          status: true,
+          success: true,
+          message: 'Deleted successfully (offline - will sync when online)',
+        },
+      };
+    }
+
+    return null;
+  }
+
+  private async applyDetailCacheSideEffects(
+    method: 'post' | 'put' | 'patch' | 'delete',
+    endpoint: string,
+    data?: any
+  ): Promise<void> {
+    if (method === 'put' || method === 'patch') {
+      const itemCache = await this.getCachedResponse(endpoint);
+      if (itemCache) {
+        await this.cacheResponse(endpoint, {
+          ...itemCache,
+          ...data,
+          _offline: true,
+          _pending: true,
+        });
+      }
+      return;
+    }
+
+    if (method === 'delete') {
+      try {
+        const cachedItem = await db.apiCache.where('endpoint').equals(endpoint).first();
+        if (cachedItem) {
+          await db.apiCache.delete(cachedItem.id!);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  /**
+   * Offline write: merge IndexedDB list cache with current SWR data, persist, and mutate SWR so tables update immediately.
+   */
+  private async applyOfflineOptimisticUI(
+    method: 'post' | 'put' | 'patch' | 'delete',
+    endpoint: string,
+    data?: any
+  ): Promise<any | null> {
+    try {
+      if (typeof window === 'undefined') return null;
+
+      const listEndpoint = this.getListEndpoint(endpoint);
+      if (!listEndpoint) return null;
+
+      const normalizePath = (p: string) => {
+        const base = p.split('?')[0];
+        return base.endsWith('/') && base.length > 1 ? base.slice(0, -1) : base;
+      };
+      const listNorm = normalizePath(listEndpoint);
+
+      let apiResponseOut: any | null = null;
+      let updatedListResult: any = null;
+
+      const updater = async (current: any) => {
+        const fromDb = await this.getCachedResponse(listEndpoint);
+        // Prefer SWR (what the table is showing), then IndexedDB for offline-first pages
+        const base = current ?? fromDb ?? null;
+        if (!base) {
+          offlineLogger.debug(
+            `No list in IndexedDB or SWR for optimistic UI: ${listEndpoint}`
+          );
+          return current;
+        }
+
+        const computed = this.computeOptimisticListAndResponse(
+          method,
+          endpoint,
+          data,
+          base
+        );
+        if (!computed) {
+          return current;
+        }
+
+        apiResponseOut = computed.apiResponse;
+        updatedListResult = computed.updatedList;
+        await this.cacheResponse(listEndpoint, updatedListResult);
+        await this.applyDetailCacheSideEffects(method, endpoint, data);
+        offlineLogger.info(`Optimistic list + SWR update for ${listEndpoint}`);
+        return updatedListResult;
+      };
+
+      await swrMutateForOffline(listEndpoint, updater, { revalidate: false });
+
+      if (updatedListResult != null) {
+        await swrMutateForOffline(
+          (key: unknown) =>
+            typeof key === 'string' &&
+            key !== listEndpoint &&
+            normalizePath(key) === listNorm,
+          updatedListResult,
+          { revalidate: false }
+        );
+      }
+
+      return apiResponseOut;
     } catch (error: any) {
-      offlineLogger.error(`Error applying optimistic update for ${endpoint}`, {
+      offlineLogger.error(`Error applying offline optimistic UI for ${endpoint}`, {
         error: error?.message,
       });
       return null;
@@ -809,62 +923,6 @@ export class OfflineService {
     }
     
     return null;
-  }
-
-  // Update SWR cache with optimistic data for immediate UI updates
-  private async updateSWRCacheWithOptimisticData(
-    endpoint: string,
-    method: 'post' | 'put' | 'patch' | 'delete',
-    data?: any
-  ): Promise<void> {
-    try {
-      // Only update in browser environment
-      if (typeof window === 'undefined') return;
-      
-      // Import mutate from SWR dynamically
-      const { mutate } = await import('swr');
-      
-      // Get the list endpoint
-      const listEndpoint = this.getListEndpoint(endpoint);
-      
-      if (!listEndpoint) {
-        // If no list endpoint, just invalidate the detail endpoint
-        mutate(endpoint, undefined, { revalidate: false });
-        return;
-      }
-      
-      // Get the updated cached list data (after optimistic update)
-      const updatedCachedList = await this.getCachedResponse(listEndpoint);
-      
-      if (updatedCachedList) {
-        // Update SWR cache with the optimistic data
-        mutate(
-          listEndpoint,
-          updatedCachedList,
-          false // Don't revalidate - we're using cached/optimistic data
-        );
-        
-        // Also update any query parameter variations
-        mutate(
-          (key: string) => {
-            if (typeof key !== 'string') return false;
-            const keyWithoutQuery = key.split('?')[0];
-            return keyWithoutQuery === listEndpoint;
-          },
-          updatedCachedList,
-          false
-        );
-        
-        offlineLogger.debug(`Updated SWR cache with optimistic data for ${listEndpoint}`);
-      } else {
-        // Fallback: just invalidate to trigger re-render
-        mutate(listEndpoint, undefined, { revalidate: false });
-      }
-    } catch (error: any) {
-      offlineLogger.error(`Error updating SWR cache for ${endpoint}`, {
-        error: error?.message,
-      });
-    }
   }
 
   // Cleanup expired cache entries

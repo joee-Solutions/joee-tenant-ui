@@ -80,7 +80,7 @@ interface ViewEditAppointmentModalProps {
   onClose: () => void;
   onUpdate: () => void;
   /** Close the edit modal first, then show success (parent-owned success modal) */
-  onOperationSuccess?: (message: string) => void;
+  onOperationSuccess?: (message: string, mutationResult?: unknown) => void;
 }
 
 export default function ViewEditAppointmentModal({
@@ -268,7 +268,7 @@ export default function ViewEditAppointmentModal({
 
     setLoading(true);
     try {
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "patch",
         `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantId)}/${appointmentPayload.id}`,
         {
@@ -282,7 +282,7 @@ export default function ViewEditAppointmentModal({
       );
       setLoading(false);
       if (onOperationSuccess) {
-        onOperationSuccess("Appointment updated successfully.");
+        onOperationSuccess("Appointment updated successfully.", res);
       } else {
         onUpdate();
         onClose();

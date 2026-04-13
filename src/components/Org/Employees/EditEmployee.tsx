@@ -42,7 +42,7 @@ type EmployeeSchemaType = z.infer<typeof EmployeeSchema>;
 interface EditEmployeeProps {
   slug: string;
   employeeId: number;
-  onDone?: (opts?: { updated?: boolean }) => void;
+  onDone?: (opts?: { updated?: boolean; mutationResult?: unknown }) => void;
 }
 
 export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeProps) {
@@ -330,7 +330,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
       
       if (res?.status || res?.success) {
         if (onDone) {
-          if (!Number.isNaN(orgId)) {
+          if (!Number.isNaN(orgId) && !(res as { _offline?: boolean })?._offline) {
             const employeesKey = API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId);
             void globalMutate(
               (key) =>
@@ -340,7 +340,7 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
               { revalidate: true }
             );
           }
-          onDone({ updated: true });
+          onDone({ updated: true, mutationResult: res });
           return;
         }
 

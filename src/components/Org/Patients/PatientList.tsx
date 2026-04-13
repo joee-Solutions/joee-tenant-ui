@@ -24,6 +24,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { formatDateFn } from "@/lib/utils";
 import { processRequestAuth } from "@/framework/https";
+import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
@@ -150,12 +151,12 @@ export default function PatientList({ org }: { org: string }) {
     if (!patientToDelete) return;
     setDeletingId(patientToDelete.id);
     try {
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "delete",
         API_ENDPOINTS.DELETE_PATIENT(parseInt(org), patientToDelete.id)
       );
       triggerSuccess({ message: "Patient deleted successfully." });
-      mutate();
+      revalidateListAfterMutation(res, () => mutate());
       setOpenDropdownId(null);
     } catch (error) {
       console.error(error);

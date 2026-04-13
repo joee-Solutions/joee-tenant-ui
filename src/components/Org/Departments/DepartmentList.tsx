@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
 
 // Define Department type
 interface Department {
@@ -59,7 +60,7 @@ function EditDepartmentModal({
   slug: string; 
   department: Department; 
   onClose: () => void; 
-  onSuccess: () => void;
+  onSuccess: (mutationResult: unknown) => void;
 }) {
   const editForm = useForm<DepartmentSchemaType>({
     resolver: zodResolver(DepartmentSchema),
@@ -77,12 +78,12 @@ function EditDepartmentModal({
         description: data.description,
         status: data.status ? "active" : "inactive",
       };
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "patch",
         `${API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug))}/${department.id}`,
         payload
       );
-      onSuccess();
+      onSuccess(res);
     } catch (error) {
       console.error(error);
       toast.error("Failed to update department");
@@ -258,11 +259,11 @@ export default function Page({ slug }: { slug: string }) {
     if (!deptToDelete) return;
     setDeletingId(deptToDelete.id);
     try {
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "delete",
         `${API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug))}/${deptToDelete.id}`
       );
-      mutate();
+      revalidateListAfterMutation(res, () => mutate());
       setShowDeleteWarning(false);
       setDeptToDelete(null);
       triggerSuccess({
@@ -427,10 +428,10 @@ export default function Page({ slug }: { slug: string }) {
             setEditModalOpen(false);
             setSelectedDept(null);
           }}
-          onSuccess={() => {
+          onSuccess={(res) => {
             setEditModalOpen(false);
             setSelectedDept(null);
-            mutate();
+            revalidateListAfterMutation(res, () => mutate());
             triggerSuccess({
               message: "Department updated successfully.",
             });

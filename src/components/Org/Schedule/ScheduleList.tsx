@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
 import {
   WEEK_DAYS,
   TIME_OPTIONS_24H,
@@ -52,7 +53,7 @@ const normalizeDayLabel = (day?: string) => {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 };
 
-function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: string; schedule: any; onClose: () => void; onSuccess: (message: string) => void }) {
+function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: string; schedule: any; onClose: () => void; onSuccess: (message: string, mutationResult?: unknown) => void }) {
   const [loading, setLoading] = useState(false);
 
   const mappedDays = mapScheduleAvailableDays(schedule);
@@ -102,12 +103,12 @@ function EditScheduleModal({ slug, schedule, onClose, onSuccess }: { slug: strin
         return;
       }
       
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "patch",
         `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`,
         scheduleData
       );
-      onSuccess("Schedule updated successfully.");
+      onSuccess("Schedule updated successfully.", res);
     } catch (error) {
       console.error(error);
       toast.error("Failed to update schedule");
@@ -391,12 +392,12 @@ export default function Page({ slug }: { slug: string }) {
         return;
       }
       
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "delete",
         `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`
       );
       triggerSuccess({ message: "Schedule deleted successfully." });
-      mutate();
+      revalidateListAfterMutation(res, () => mutate());
       setShowDeleteWarning(false);
       setScheduleToDelete(null);
     } catch (error) {
@@ -411,12 +412,6 @@ export default function Page({ slug }: { slug: string }) {
     setSelectedSchedule(schedule);
     setEditModalOpen(true);
     setOpenDropdownId(null);
-  };
-
-  const handleEditDone = () => {
-    setEditModalOpen(false);
-    setSelectedSchedule(null);
-    mutate();
   };
 
   return (
@@ -566,10 +561,10 @@ export default function Page({ slug }: { slug: string }) {
             setEditModalOpen(false);
             setSelectedSchedule(null);
           }}
-          onSuccess={(message) => {
+          onSuccess={(message, res) => {
             setEditModalOpen(false);
             setSelectedSchedule(null);
-            mutate();
+            revalidateListAfterMutation(res, () => mutate());
             triggerSuccess({ message });
           }}
         />

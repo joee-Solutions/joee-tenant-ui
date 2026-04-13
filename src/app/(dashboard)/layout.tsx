@@ -2,6 +2,7 @@
 import MainHeader from "@/components/shared/MainHeader";
 import SideNavigation from "@/components/shared/SideNavigation";
 import OfflineIndicator from "@/components/shared/OfflineIndicator";
+import OfflineSWRBridge from "@/components/shared/OfflineSWRBridge";
 import React, { useState, useEffect } from "react";
 import { preCacheService } from "@/lib/offline/preCacheService";
 import { offlineService } from "@/lib/offline/offlineService";
@@ -51,6 +52,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Main Content */}
       <div className="flex flex-col gap-[49px] lg:pl-72 w-full">
         <OfflineIndicator />
+        <OfflineSWRBridge />
         <MainHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
         {children}
         <OfflineDebugPanel />

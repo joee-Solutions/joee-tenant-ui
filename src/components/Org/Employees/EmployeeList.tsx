@@ -26,6 +26,7 @@ import { toast } from "react-toastify";
 import EditEmployee from "./EditEmployee";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
 
 // Define Employee type
 interface Employee {
@@ -135,11 +136,11 @@ export default function Page({ slug }: { slug: string }) {
     if (!employeeToDelete) return;
     setDeletingId(employeeToDelete.id);
     try {
-      await processRequestAuth(
+      const res = await processRequestAuth(
         "delete",
         API_ENDPOINTS.UPDATE_TENANT_EMPLOYEE(parseInt(slug), employeeToDelete.id)
       );
-      mutate();
+      revalidateListAfterMutation(res, () => mutate());
       setShowDeleteWarning(false);
       setEmployeeToDelete(null);
       triggerSuccess({
@@ -159,10 +160,10 @@ export default function Page({ slug }: { slug: string }) {
     setOpenDropdownId(null);
   };
 
-  const handleEditDone = (opts?: { updated?: boolean }) => {
+  const handleEditDone = (opts?: { updated?: boolean; mutationResult?: unknown }) => {
     setEditModalOpen(false);
     setSelectedEmployeeId(null);
-    mutate();
+    revalidateListAfterMutation(opts?.mutationResult, () => mutate());
     if (opts?.updated) {
       triggerSuccess({
         message: "Employee updated successfully.",
