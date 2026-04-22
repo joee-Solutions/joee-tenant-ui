@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { FormDataStepper } from "@/components/Org/Patients/PatientStepper";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { offlineService } from "@/lib/offline/offlineService";
 import { mapFormDataToPatientDto, normalizePatientData, stripInvalidOptionalContactFields } from "@/utils/patientDataMapper";
 import { validateRequiredFields, getFirstStepWithMissingData } from "@/utils/patientValidation";
 
@@ -39,17 +40,89 @@ export function usePatientForm({
   setCurrentStep,
   onSaveSuccess,
 }: UsePatientFormOptions) {
-  
+  /** Dexie id of the single queued POST when the patient was first saved offline (merge later saves into it). */
+  const offlinePatientCreateQueueIdRef = useRef<number | null>(null);
+
+  const clearOfflinePatientCreateMeta = useCallback(() => {
+    offlinePatientCreateQueueIdRef.current = null;
+    try {
+      const savedData = localStorage.getItem(`patient-${slug}`);
+      if (!savedData) return;
+      const parsed = JSON.parse(savedData);
+      if (parsed.offlinePatientCreateQueueId != null) {
+        delete parsed.offlinePatientCreateQueueId;
+        localStorage.setItem(`patient-${slug}`, JSON.stringify(parsed));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [slug]);
+
+  const pruneOfflinePatientCreateIfSynced = useCallback(async () => {
+    const qid = offlinePatientCreateQueueIdRef.current;
+    if (qid == null || typeof navigator === "undefined" || !navigator.onLine) return;
+    const done = await offlineService.isSyncQueueItemCompleted(qid);
+    if (done) clearOfflinePatientCreateMeta();
+  }, [clearOfflinePatientCreateMeta]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`patient-${slug}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed.offlinePatientCreateQueueId === "number") {
+        offlinePatientCreateQueueIdRef.current = parsed.offlinePatientCreateQueueId;
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    const onSync = () => void pruneOfflinePatientCreateIfSynced();
+    window.addEventListener("offline-sync-complete", onSync);
+    return () => window.removeEventListener("offline-sync-complete", onSync);
+  }, [pruneOfflinePatientCreateIfSynced]);
+
+  useEffect(() => {
+    const onOnline = () => void pruneOfflinePatientCreateIfSynced();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [pruneOfflinePatientCreateIfSynced]);
+
   // Save function - saves to localStorage and optionally to API
   const saveToLocalStorage = useCallback(async (showNotification = false, saveToAPI = false) => {
     const formData = methods.getValues();
     try {
-      localStorage.setItem(`patient-${slug}`, JSON.stringify({
-        currentStep,
-        completedSteps: Array.from(completedSteps),
-        data: formData,
-        patientId: patientId // Store patient ID in localStorage
-      }));
+      let offlineQueueMeta: number | undefined;
+      if (offlinePatientCreateQueueIdRef.current != null) {
+        offlineQueueMeta = offlinePatientCreateQueueIdRef.current;
+      } else {
+        try {
+          const existingRaw = localStorage.getItem(`patient-${slug}`);
+          if (existingRaw) {
+            const ex = JSON.parse(existingRaw);
+            if (typeof ex.offlinePatientCreateQueueId === "number") {
+              offlineQueueMeta = ex.offlinePatientCreateQueueId;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      localStorage.setItem(
+        `patient-${slug}`,
+        JSON.stringify({
+          currentStep,
+          completedSteps: Array.from(completedSteps),
+          data: formData,
+          patientId: patientId,
+          ...(offlineQueueMeta != null
+            ? { offlinePatientCreateQueueId: offlineQueueMeta }
+            : {}),
+        })
+      );
       
       if (saveToAPI) {
         // Validate required fields before saving to API
@@ -127,7 +200,11 @@ export function usePatientForm({
           } else {
             // Check if patient with this email already exists before creating
             const patientEmail = formData.addDemographic?.email;
-            if (patientEmail) {
+            const skipDupCheck =
+              typeof navigator !== "undefined" &&
+              !navigator.onLine &&
+              offlinePatientCreateQueueIdRef.current != null;
+            if (patientEmail && !skipDupCheck) {
               try {
                 // Fetch all patients to check for duplicate email
                 const allPatientsResponse = await processRequestAuth(
@@ -158,6 +235,31 @@ export function usePatientForm({
                 console.warn("Could not check for duplicate email:", checkError);
               }
             }
+
+            const isOffline =
+              typeof navigator !== "undefined" && !navigator.onLine;
+            if (isOffline && offlinePatientCreateQueueIdRef.current != null) {
+              const updated = await offlineService.updatePendingPatientCreatePayload(
+                offlinePatientCreateQueueIdRef.current,
+                mappedData
+              );
+              if (updated) {
+                setHasUnsavedChanges(false);
+                setIsSavedToAPI(true);
+                setError(null);
+                toast.success(
+                  "Patient draft updated. It will sync when you're back online.",
+                  {
+                    toastId: "offline-patient-draft-updated",
+                    autoClose: 4000,
+                    position: "top-right",
+                  }
+                );
+                return;
+              }
+              offlinePatientCreateQueueIdRef.current = null;
+              clearOfflinePatientCreateMeta();
+            }
             
             // Create new patient
             response = await processRequestAuth(
@@ -166,14 +268,32 @@ export function usePatientForm({
               mappedData
             );
             
-            // Store the created patient ID
-            if (response?.data?.id) {
-              setPatientId(response.data.id);
-              // Update localStorage with patient ID
+            if (response?._offline && response._queueId != null) {
+              offlinePatientCreateQueueIdRef.current = response._queueId;
               const savedData = localStorage.getItem(`patient-${slug}`);
               if (savedData) {
                 const parsed = JSON.parse(savedData);
-                parsed.patientId = response.data.id;
+                parsed.offlinePatientCreateQueueId = response._queueId;
+                localStorage.setItem(`patient-${slug}`, JSON.stringify(parsed));
+              }
+            }
+
+            const rawId = response?.data?.id;
+            const numericId =
+              rawId != null && Number.isFinite(Number(rawId))
+                ? Number(rawId)
+                : null;
+            if (
+              numericId != null &&
+              rawId != null &&
+              !String(rawId).startsWith("temp_")
+            ) {
+              setPatientId(numericId);
+              clearOfflinePatientCreateMeta();
+              const savedData = localStorage.getItem(`patient-${slug}`);
+              if (savedData) {
+                const parsed = JSON.parse(savedData);
+                parsed.patientId = numericId;
                 localStorage.setItem(`patient-${slug}`, JSON.stringify(parsed));
               }
             }
@@ -224,7 +344,7 @@ export function usePatientForm({
         position: "top-right"
       });
     }
-  }, [methods, currentStep, completedSteps, slug, patientId, setPatientId, setLoading, setError, setHasUnsavedChanges, setIsSavedToAPI, setCurrentStep, onSaveSuccess]);
+  }, [methods, currentStep, completedSteps, slug, patientId, setPatientId, setLoading, setError, setHasUnsavedChanges, setIsSavedToAPI, setCurrentStep, onSaveSuccess, clearOfflinePatientCreateMeta]);
 
   // Track if save is in progress to prevent multiple simultaneous saves
   const isSavingRef = useRef(false);

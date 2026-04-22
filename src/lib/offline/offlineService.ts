@@ -82,7 +82,7 @@ export class OfflineService {
         const queueId = await this.queueAction(method, endpoint, data);
         
         // Merge IndexedDB + in-memory SWR data, update both so tables refresh without reload
-        const optimisticResponse = await this.applyOfflineOptimisticUI(method, endpoint, data);
+        const optimisticResponse = await this.applyOfflineOptimisticUI(method, endpoint, data, queueId);
         
         offlineLogger.info(`Optimistic update applied for ${method.toUpperCase()} ${endpoint}`);
         
@@ -552,6 +552,11 @@ export class OfflineService {
           });
           
           offlineLogger.info(`Successfully synced action: ${item.action} ${item.entity}`, { itemId: item.id });
+
+          if (item.entity === 'patient' && item.action === 'create' && method === 'post') {
+            await this.reconcilePatientListAfterCreateSynced(item.endpoint);
+          }
+          await this.invalidateRelatedCache(item.endpoint);
         } catch (error: any) {
           const status = error?.response?.status;
           // DELETE: 404/410 means resource is already gone — treat sync as successful
@@ -569,6 +574,7 @@ export class OfflineService {
               nextAttemptAt: undefined,
               error: undefined,
             });
+            await this.invalidateRelatedCache(item.endpoint);
             continue;
           }
 
@@ -620,6 +626,99 @@ export class OfflineService {
       offlineLogger.error('Error syncing pending actions', errorInfo);
     } finally {
       this.syncInProgress = false;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('offline-sync-complete'));
+      }
+    }
+  }
+
+  /**
+   * Merge the latest mapped payload into an existing queued offline patient POST
+   * (avoids duplicate creates and duplicate optimistic rows).
+   */
+  async updatePendingPatientCreatePayload(queueId: number, mappedData: any): Promise<boolean> {
+    try {
+      if (!db.isOpen()) {
+        await db.open();
+      }
+      const item = await db.syncQueue.get(queueId);
+      if (
+        !item ||
+        item.status !== 'pending' ||
+        item.entity !== 'patient' ||
+        item.action !== 'create' ||
+        (item.method != null && item.method !== 'post')
+      ) {
+        return false;
+      }
+
+      await db.syncQueue.update(queueId, { data: mappedData });
+
+      const listEndpoint = this.getListEndpoint(item.endpoint);
+      const normalizePath = (p: string) => {
+        const base = p.split('?')[0];
+        return base.endsWith('/') && base.length > 1 ? base.slice(0, -1) : base;
+      };
+      const listNorm = normalizePath(listEndpoint);
+
+      const mergeRow = (rows: any[]) =>
+        rows.map((row: any) =>
+          row._queueId === queueId
+            ? {
+                ...row,
+                ...mappedData,
+                id: row.id,
+                _offline: true,
+                _pending: true,
+                _queueId: queueId,
+              }
+            : row
+        );
+
+      const cached = await this.getCachedResponse(listEndpoint);
+      if (!cached) {
+        return true;
+      }
+
+      let updatedList: any;
+      if (Array.isArray(cached)) {
+        updatedList = mergeRow(cached);
+      } else if (cached.data && Array.isArray(cached.data)) {
+        updatedList = { ...cached, data: mergeRow(cached.data) };
+      } else if (cached.results && Array.isArray(cached.results)) {
+        updatedList = { ...cached, results: mergeRow(cached.results) };
+      } else {
+        return true;
+      }
+
+      await this.cacheResponse(listEndpoint, updatedList);
+      await swrMutateForOffline(listEndpoint, updatedList, { revalidate: false });
+      await swrMutateForOffline(
+        (key: unknown) =>
+          typeof key === 'string' &&
+          key !== listEndpoint &&
+          normalizePath(key) === listNorm,
+        updatedList,
+        { revalidate: false }
+      );
+
+      offlineLogger.info('Merged payload into pending offline patient create', { queueId });
+      return true;
+    } catch (e: any) {
+      offlineLogger.error('updatePendingPatientCreatePayload failed', { error: e?.message, queueId });
+      return false;
+    }
+  }
+
+  async isSyncQueueItemCompleted(queueId: number): Promise<boolean> {
+    try {
+      if (!db.isOpen()) {
+        await db.open();
+      }
+      const item = await db.syncQueue.get(queueId);
+      return item?.status === 'completed';
+    } catch {
+      return false;
     }
   }
 
@@ -644,7 +743,8 @@ export class OfflineService {
     method: 'post' | 'put' | 'patch' | 'delete',
     endpoint: string,
     data: any | undefined,
-    cachedList: any
+    cachedList: any,
+    queueId?: number
   ): { updatedList: any; apiResponse: any } | null {
     const listEndpoint = this.getListEndpoint(endpoint);
 
@@ -654,6 +754,7 @@ export class OfflineService {
         id: `temp_${Date.now()}`,
         _offline: true,
         _pending: true,
+        ...(queueId != null ? { _queueId: queueId } : {}),
       };
 
       let updatedData: any;
@@ -763,6 +864,54 @@ export class OfflineService {
     return null;
   }
 
+  private stripClientTempRowsFromListCache(cached: any): any {
+    const keep = (item: any) => !String(item?.id ?? '').startsWith('temp_');
+    if (Array.isArray(cached)) {
+      return cached.filter(keep);
+    }
+    if (cached?.data && Array.isArray(cached.data)) {
+      return { ...cached, data: cached.data.filter(keep) };
+    }
+    if (cached?.results && Array.isArray(cached.results)) {
+      return { ...cached, results: cached.results.filter(keep) };
+    }
+    return cached;
+  }
+
+  /** Drop optimistic `temp_*` rows from the patients list so they are not duplicated after sync. */
+  private async reconcilePatientListAfterCreateSynced(endpoint: string): Promise<void> {
+    try {
+      if (!endpoint.includes('/patients')) return;
+      const eq = endpoint.split('?')[0];
+      if (/\/patients\/\d+/.test(eq)) return;
+
+      const listEndpoint = this.getListEndpoint(endpoint);
+      const normalizePath = (p: string) => {
+        const base = p.split('?')[0];
+        return base.endsWith('/') && base.length > 1 ? base.slice(0, -1) : base;
+      };
+      const listNorm = normalizePath(listEndpoint);
+
+      const cached = await this.getCachedResponse(listEndpoint);
+      if (!cached) return;
+
+      const cleaned = this.stripClientTempRowsFromListCache(cached);
+      await this.cacheResponse(listEndpoint, cleaned);
+      await swrMutateForOffline(listEndpoint, cleaned, { revalidate: false });
+      await swrMutateForOffline(
+        (key: unknown) =>
+          typeof key === 'string' &&
+          key !== listEndpoint &&
+          normalizePath(key) === listNorm,
+        cleaned,
+        { revalidate: false }
+      );
+      offlineLogger.debug('Reconciled patient list after offline create synced', { listEndpoint });
+    } catch (e: any) {
+      offlineLogger.error('reconcilePatientListAfterCreateSynced failed', { error: e?.message });
+    }
+  }
+
   private async applyDetailCacheSideEffects(
     method: 'post' | 'put' | 'patch' | 'delete',
     endpoint: string,
@@ -799,7 +948,8 @@ export class OfflineService {
   private async applyOfflineOptimisticUI(
     method: 'post' | 'put' | 'patch' | 'delete',
     endpoint: string,
-    data?: any
+    data?: any,
+    queueId?: number
   ): Promise<any | null> {
     try {
       if (typeof window === 'undefined') return null;
@@ -831,7 +981,8 @@ export class OfflineService {
           method,
           endpoint,
           data,
-          base
+          base,
+          queueId
         );
         if (!computed) {
           return current;

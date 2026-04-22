@@ -448,11 +448,8 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
         if (deferLogoUpload) {
           const newId = extractCreatedTenantId(res);
           if (newId != null) {
-            const logoBody = {
-              logo: logoStr,
-              organization_logo: logoStr,
-              organizationLogo: logoStr,
-            };
+            // Single field: tripling the same base64 in JSON often exceeds proxy/API body limits.
+            const logoBody = { logo: logoStr };
             let logoPutError: unknown = null;
             await processRequestAuth(
               "put",

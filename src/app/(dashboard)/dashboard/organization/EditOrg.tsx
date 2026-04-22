@@ -132,11 +132,11 @@ export default function EditOrg({ data, slug }: { data: any; slug: string }) {
       );
       if (payloadResolved !== defaultResolved) {
         updatePayload.organization_type = payloadResolved;
-        updatePayload.org_type = payloadResolved;
       }
       if (changedFields.status !== undefined) {
         const v = String(changedFields.status).toLowerCase();
         updatePayload.status = v === "active" ? "active" : "deactivated";
+        updatePayload.org_type = v === "active" ? "active" : "deactivated";
       }
       if (
         changedFields.adminFirstname !== undefined ||

@@ -1,5 +1,13 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { EyeOffIcon, EyeClosedIcon } from "lucide-react";
 import Image from "next/image";
@@ -10,6 +18,7 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { processRequestNoAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { siteConfig } from "@/framework/site-config";
 import { Spinner } from "@/components/icons/Spinner";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
@@ -47,6 +56,7 @@ const TenantLoginPage = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errMessage, setErrMessage] = useState<string>("");
   const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const {
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -306,7 +316,8 @@ const TenantLoginPage = () => {
         <div className="line border-2 border-white w-32 md:w-40"></div>
         <div className="line border-3 border-white"></div>
         <span className="welcom md:w-3/4 text-base md:text-lg leading-7 md:leading-8">
-          Empowering Missions. Strengthening Communities. Together, we connect people, data, and care driving innovation...
+        Empowering Missions. Strengthening Communities.
+        Together, we connect people, data, and care—driving innovation, compassion, and operational excellence to advance community well-being.
         </span>
       </div>
       <div className="col-span-1 shadow-lg rounded-2xl  border border-blue-500 text-white z-40 w-full max-w-[350px] md:max-w-[550px] md:px-8 px-8 py-20 [linear-gradient:rgb()] bg-[#5882C147]">
@@ -370,7 +381,7 @@ const TenantLoginPage = () => {
                 className="text-gray-700"
               />
             </div>
-            <div className="extra-details flex justify-between text-xs md:text-sm mb-7">
+            <div className="extra-details flex justify-start text-xs md:text-sm mb-7">
               <Link
                 href={"/auth/forgot-password"}
                 className="text-[#FAD900] hover:underline"
@@ -393,7 +404,77 @@ const TenantLoginPage = () => {
             >
               {isSubmitting ? <Spinner /> : isOffline ? "Login Offline" : "Login"}
             </Button>
+            <p className="text-center text-[11px] md:text-xs leading-relaxed text-white/90 px-1 -mt-1 mb-0">
+              By logging into LociCare, you confirm the statements in{" "}
+              <button
+                type="button"
+                onClick={() => setPrivacyModalOpen(true)}
+                className="font-medium text-[#FAD900] underline underline-offset-2 hover:text-[#ffe433]"
+              >
+                Privacy and security
+              </button>.
+            </p>
           </form>
+          <AlertDialog open={privacyModalOpen} onOpenChange={setPrivacyModalOpen}>
+            <AlertDialogContent
+              overlayClassName="z-[150]"
+              className="z-[200] flex max-h-[min(32rem,88vh)] max-w-lg flex-col gap-0 overflow-hidden border border-gray-200 bg-white p-0 text-gray-900 shadow-xl sm:rounded-lg"
+            >
+              <AlertDialogHeader className="shrink-0 border-b border-gray-100 px-6 py-4 text-left">
+                <AlertDialogTitle className="text-lg font-semibold text-[#003465]">
+                  Privacy and security
+                </AlertDialogTitle>
+              </AlertDialogHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 text-sm leading-relaxed text-gray-700">
+                <p className="mb-3 font-medium text-gray-900">
+                  LociCare by JOEE stores sensitive health data, and it is our shared duty to protect
+                  it.
+                </p>
+                <p className="mb-2">By logging into LociCare, I confirm that:</p>
+                <ul className="mb-3 list-disc space-y-2 pl-5 marker:text-gray-500">
+                  <li>
+                    I have been granted authorized access to LociCare for my work-related tasks.
+                  </li>
+                  <li>
+                    I am signing in with my own email address and credentials, not using someone
+                    else&apos;s.
+                  </li>
+                  <li>
+                    I will not use the software for any actions that are infringing, or unlawful.
+                  </li>
+                  <li>
+                    My access is for a lawful purpose in accordance with data privacy, security,
+                    confidentiality regulations and all other relevant laws.
+                  </li>
+                  <li>
+                    I will only retrieve the minimum necessary information required for my duties.
+                  </li>
+                </ul>
+                <p className="mb-3">
+                  Any unauthorized use of this system is strictly forbidden and may result in
+                  criminal or civil penalties.
+                </p>
+                <p>
+                  Please{" "}
+                  <a
+                    href={siteConfig.supportFormUrl}
+                    {...(siteConfig.supportFormUrl.startsWith("http")
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
+                    className="font-medium text-[#003465] underline underline-offset-2 hover:text-[#00254a]"
+                  >
+                    contact us here
+                  </a>{" "}
+                  for support.
+                </p>
+              </div>
+              <AlertDialogFooter className="shrink-0 border-t border-gray-100 bg-gray-50 px-6 py-3 sm:justify-end">
+                <AlertDialogCancel className="border-[#003465] text-[#003465] hover:bg-[#003465]/10">
+                  Close
+                </AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

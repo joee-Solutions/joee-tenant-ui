@@ -395,11 +395,11 @@ export default function EditOrganizationModal({
         payload.org_type_other
       );
       if (payloadResolved !== defaultResolved) {
+        // Business category (Hospital, Clinic, …) — backend expects organization_type, not org_type
         updatePayload.organization_type = payloadResolved;
-        updatePayload.org_type = payloadResolved;
       }
 
-      // Handle status
+      // Handle status — backend validates org_type as active | deactivated (tenant lifecycle)
       if (status) {
         const statusValue = status.toLowerCase();
         if (statusValue === "inactive") {
@@ -408,6 +408,7 @@ export default function EditOrganizationModal({
           updatePayload.status = "active";
         }
         updatePayload.is_active = statusValue === "active";
+        updatePayload.org_type = statusValue === "active" ? "active" : "deactivated";
       }
 
       // Handle address metadata if any address fields changed
@@ -435,14 +436,11 @@ export default function EditOrganizationModal({
       const logoPayload = typeof payload.logo === "string" ? payload.logo.trim() : "";
       const logoDefault = typeof defaults?.logo === "string" ? defaults.logo.trim() : "";
       if (logoPayload !== logoDefault) {
+        // Send logo once — duplicate keys triple base64 size and trigger 413 on small files.
         if (logoPayload) {
           updatePayload.logo = logoPayload;
-          updatePayload.organization_logo = logoPayload;
-          updatePayload.organizationLogo = logoPayload;
         } else {
           updatePayload.logo = null;
-          updatePayload.organization_logo = null;
-          updatePayload.organizationLogo = null;
         }
       }
 
@@ -519,7 +517,6 @@ export default function EditOrganizationModal({
         // Preserve logo
         logo:
           updatePayload.logo ??
-          updatePayload.organizationLogo ??
           responseData?.logo ??
           organization?.logo ??
           "",
