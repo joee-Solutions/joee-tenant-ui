@@ -18,6 +18,7 @@ import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
 
 const EmployeeSchema = z.object({
   firstname: z.string().min(1, "First name is required"),
@@ -348,14 +349,16 @@ export default function EditEmployee({ slug, employeeId, onDone }: EditEmployeeP
           message: "Employee updated successfully.",
           onContinue: () => {
             if (!Number.isNaN(orgId)) {
-              const employeesKey = API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId);
-              void globalMutate(
-                (key) =>
-                  typeof key === "string" &&
-                  (key === employeesKey || key.includes(employeesKey)),
-                undefined,
-                { revalidate: true }
-              );
+              revalidateListAfterMutation(res, () => {
+                const employeesKey = API_ENDPOINTS.GET_TENANTS_EMPLOYEES(orgId);
+                return globalMutate(
+                  (key) =>
+                    typeof key === "string" &&
+                    (key === employeesKey || key.includes(employeesKey)),
+                  undefined,
+                  { revalidate: true }
+                );
+              });
             }
             router.push(`/dashboard/organization/${slug}/employees`);
           },

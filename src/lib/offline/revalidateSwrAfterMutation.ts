@@ -4,18 +4,17 @@
  * refetches and can overwrite the optimistic list with stale cache or fail the fetch.
  */
 export function isOfflineQueuedResponse(res: unknown): boolean {
-  return Boolean(
-    res &&
-      typeof res === "object" &&
-      "_offline" in res &&
-      (res as { _offline?: boolean })._offline === true
-  );
+  if (!res || typeof res !== "object") return false;
+  const root = res as { _offline?: boolean; data?: { _offline?: boolean } };
+  return root._offline === true || root.data?._offline === true;
 }
 
 export function revalidateListAfterMutation(
   res: unknown,
   revalidate: () => void | Promise<unknown>
 ): void {
+  // Never force SWR network revalidation while offline.
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
   if (isOfflineQueuedResponse(res)) return;
   void revalidate();
 }
