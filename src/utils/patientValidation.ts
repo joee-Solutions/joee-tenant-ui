@@ -6,10 +6,8 @@ const E164_REGEX = /^\+\d{10,15}$/;
 
 /**
  * Validate required fields before saving to API.
- * Backend expects:
- * - `date_of_birth` to be a valid ISO 8601 date string
- * - `contact_info.email` to be a valid email (if present)
- * - `contact_info.phone_number_mobile` to be a valid phone in E.164 (if present)
+ * Product rule: only first name, last name, and date of birth are required to save.
+ * When email or mobile are provided, they must still be well-formed (backend rejects invalid values).
  */
 export function validateRequiredFields(formData: FormDataStepper): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -37,21 +35,18 @@ export function validateRequiredFields(formData: FormDataStepper): { isValid: bo
     }
   }
 
-  // Email is required by backend
   const email = (formData.addDemographic?.email || "").trim();
-  if (!email) {
-    errors.push("Email is required");
-  } else if (!EMAIL_REGEX.test(email)) {
+  if (email && !EMAIL_REGEX.test(email)) {
     errors.push("Email must be a valid email address");
   }
 
-  // Mobile phone is required by backend
   const mobileRaw = formData.addDemographic?.mobilePhone;
-  const mobileFormatted = formatPhoneNumber(mobileRaw);
-  if (!mobileRaw || mobileRaw.toString().trim() === "") {
-    errors.push("Mobile phone is required");
-  } else if (!mobileFormatted || !E164_REGEX.test(mobileFormatted)) {
-    errors.push("Mobile phone must be a valid phone number");
+  const mobileTrimmed = mobileRaw != null ? String(mobileRaw).trim() : "";
+  if (mobileTrimmed) {
+    const mobileFormatted = formatPhoneNumber(mobileRaw);
+    if (!mobileFormatted || !E164_REGEX.test(mobileFormatted)) {
+      errors.push("Mobile phone must be a valid phone number");
+    }
   }
 
   return {
@@ -77,13 +72,16 @@ export function getFirstStepWithMissingData(formData: FormDataStepper): number {
     if (!date || isNaN(date.getTime())) return 0;
   }
 
-  // Step 1: additional demographics (email + mobile)
+  // Optional contact fields: if present but invalid, send user to additional demographics step
   const email = (formData.addDemographic?.email || "").trim();
-  const mobileRaw = formData.addDemographic?.mobilePhone;
-  const mobileFormatted = formatPhoneNumber(mobileRaw);
+  if (email && !EMAIL_REGEX.test(email)) return 1;
 
-  if (!email || !EMAIL_REGEX.test(email)) return 1;
-  if (!mobileRaw || mobileRaw.toString().trim() === "" || !mobileFormatted || !E164_REGEX.test(mobileFormatted)) return 1;
+  const mobileRaw = formData.addDemographic?.mobilePhone;
+  const mobileTrimmed = mobileRaw != null ? String(mobileRaw).trim() : "";
+  if (mobileTrimmed) {
+    const mobileFormatted = formatPhoneNumber(mobileRaw);
+    if (!mobileFormatted || !E164_REGEX.test(mobileFormatted)) return 1;
+  }
 
   return 0;
 }

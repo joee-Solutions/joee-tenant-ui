@@ -1115,8 +1115,6 @@ export default function PatientStepper({ slug, patientId: propPatientId, onSaveC
                       <li>First Name</li>
                       <li>Last Name</li>
                       <li>Date of Birth</li>
-                      <li>Email</li>
-                      <li>Mobile Phone</li>
                     </ul>
                   </div>
                 </AlertDialogDescription>
