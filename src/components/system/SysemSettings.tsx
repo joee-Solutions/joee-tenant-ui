@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
+import { mutate } from "swr";
 
 const SystemSettingsSchema = z.object({
   name: z.string().min(1, "This field is required"),
@@ -120,6 +121,22 @@ export default function SystemSettings() {
       if (response.status || response.success) {
         setShowSuccessDialog(true);
         toast.success("System settings updated successfully");
+        const updatedSystemSettings = response.data ? { ...response.data } : { ...payload };
+        if (!updatedSystemSettings.profileImage && payload.profileImage) {
+          updatedSystemSettings.profileImage = payload.profileImage;
+        }
+        if (!updatedSystemSettings.logo && payload.profileImage) {
+          updatedSystemSettings.logo = payload.profileImage;
+        }
+        // Keep shared SWR cache in sync so MainHeader updates immediately.
+        void mutate(
+          API_ENDPOINTS.GET_SYSTEM_SETTINGS,
+          {
+            success: true,
+            data: updatedSystemSettings,
+          },
+          false
+        );
         
         // If update was successful and response includes updated data, refresh form
         if (response.data) {

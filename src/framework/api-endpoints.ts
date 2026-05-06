@@ -13,6 +13,9 @@ export const API_ENDPOINTS = {
   GET_DASHBOARD_APPOINTMENTS: "/super/tenants/dashboard/appointments",
   GET_DASHBOARD_USERS: "/super/tenants/dashboard/users",
   GET_DASHBOARD_PATIENTS: "/super/tenants/dashboard/patients",
+  GET_PATIENT_AGE_DISTRIBUTION: "/super/tenants/patient-age-distribution",
+  GET_VISIT_REPORT: "/super/tenants/visit-report",
+  GET_PATIENTS_PRESCRIPTION_REPORT: "/super/tenants/patients-prescription-report",
   CREATE_TENANTs: "/super/tenants",
   GET_ALL_TENANTS: "/super/tenants/all",
   GET_ALL_TENANTS_ACTIVE: "/super/tenants/all/active",
@@ -35,6 +38,7 @@ export const API_ENDPOINTS = {
    UPDATE_TENANT_EMPLOYEE: (tenantId: number, employeeId: number) =>
      `/super/tenants/${tenantId}/employees/${employeeId}`,
   GET_ALL_USERS: "/super/tenants/employees",
+  GET_TENANTS_USERS_REPORT: "/super/tenants/tenants-users-report",
 
   //  super admin
   GET_SUPER_ADMIN: "/management/super/admin/all",
@@ -98,7 +102,7 @@ export const API_ENDPOINTS = {
   // Backup & Restore
   GET_TENANT_BACKUPS: (tenantId: number | string) => `/super/tenants/${tenantId}/backups`,
   CREATE_TENANT_BACKUP: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
-  GET_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  GET_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backups/${backupId}`,
   RESTORE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/restore/${backupId}`,
-  DELETE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backup/${backupId}`,
+  DELETE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backups/${backupId}`,
 };

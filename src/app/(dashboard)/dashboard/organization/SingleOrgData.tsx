@@ -21,6 +21,19 @@ const SingleOrgData = ({ slug }: { slug: string }) => {
   const data = profiledata?.data;
   const tenantId = data?.id ?? (slug && /^\d+$/.test(String(slug)) ? parseInt(String(slug), 10) : null);
   const [creatingBackup, setCreatingBackup] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
 
   const handleCreateBackup = async () => {
     if (!tenantId || typeof tenantId !== "number") {
@@ -102,7 +115,7 @@ const SingleOrgData = ({ slug }: { slug: string }) => {
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <Button
                 onClick={handleCreateBackup}
-                disabled={creatingBackup}
+                disabled={creatingBackup || !isOnline}
                 className="bg-[#003465] text-white hover:bg-[#003465]/90 h-11 px-5"
               >
                 <Cloud className="w-4 h-4 mr-2" />
@@ -111,6 +124,7 @@ const SingleOrgData = ({ slug }: { slug: string }) => {
               <Link href={`/dashboard/organization/${slug}/backup`}>
                 <Button
                   variant="outline"
+                  disabled={!isOnline}
                   className="h-11 px-5 border-[#003465] text-[#003465] hover:bg-[#D9EDFF]"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />

@@ -3,39 +3,22 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/Checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { 
-  Search, 
-  Filter, 
   Download, 
   Printer, 
   Users, 
   UserX, 
   Calendar,
   BarChart3,
-  Eye,
-  Edit,
-  User
 } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
-import { DatePickerWrapper } from "@/components/ui/date-picker-wrapper";
-import DataTable from "@/components/shared/table/DataTable";
-import { ListView } from "@/components/shared/table/DataTableFilter";
-import Pagination from "@/components/shared/table/pagination";
-import { SkeletonBox } from "@/components/shared/loader/skeleton";
-import { useAllUsersData, useTenantsData, useTenantUsersData } from "@/hooks/swr";
-import { Tenant } from "@/lib/types";
+import { useAllUsersData, useTenantsData, useTenantUsersData, useTenantsUsersReport } from "@/hooks/swr";
 import { OrganizationUser } from "@/hooks/swr";
 import { toast } from "react-toastify";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { ChartWrapper } from "@/components/ui/chart-wrapper";
-import ActivityLogDisplay from "@/components/shared/ActivityLogDisplay";
-import { useRecentActivity } from "@/hooks/useActivityLogs";
 
 interface UserStats {
   totalUsers: number;
@@ -52,8 +35,6 @@ interface FilterState {
   includeInactive: boolean;
   searchTerm: string;
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 interface EnhancedUsersListProps {
   organizationId?: string;
@@ -81,13 +62,9 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
   const isAllOrganizations = !organizationId || organizationId === "all";
   const { data: allUsersData, isLoading: allLoading, error: allError } = useAllUsersData();
   const { data: tenantUsersData, isLoading: tenantLoading, error: tenantError } = useTenantUsersData(organizationId || '');
-  const { data: tenantsData } = useTenantsData({ limit: 100 });
+  useTenantsData({ limit: 100 });
+  const { data: usersReportData, isLoading: usersReportLoading } = useTenantsUsersReport();
   console.log(tenantUsersData, "tenantUsersData", allUsersData, "allUsersData", tenantLoading, "tenantLoading", allLoading, "allLoading");
-  // Fetch user-related activity logs
-  const { activityLogs: userActivities, isLoading: activityLoading } = useRecentActivity({
-    resource: 'user',
-    limit: 5
-  });
 
   // Use the appropriate data based on whether organizationId is provided
   const usersData = isAllOrganizations ? allUsersData : tenantUsersData;
@@ -226,6 +203,13 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
   };
 
   const filteredUsers = users ? filterUsers(users as any[]) : [];
+  const summaryTotalUsers = usersReportData?.totalUsers ?? stats.totalUsers;
+  const summaryActiveUsers = usersReportData?.activeCount ?? stats.activeUsers;
+  const summaryInactiveUsers = usersReportData?.inactiveCount ?? stats.inactiveUsers;
+  const summaryNewUsersThisMonth = usersReportData?.usersCreatedThisMonth ?? stats.newUsersThisMonth;
+  const summaryMaleUsers = usersReportData?.maleCount ?? 0;
+  const summaryFemaleUsers = usersReportData?.femaleCount ?? 0;
+  const summaryLoading = usersReportLoading && !usersReportData;
 
   return (
     <div className="px-10 pt-[32px] pb-[56px] space-y-6">
@@ -264,9 +248,9 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <div className="text-2xl font-bold">{summaryLoading ? "..." : summaryTotalUsers}</div>
             <p className="text-xs text-muted-foreground">
-              Across all organizations
+              Across all organizations • M: {summaryMaleUsers} / F: {summaryFemaleUsers}
             </p>
           </CardContent>
         </Card>
@@ -277,9 +261,9 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
             <Users className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.activeUsers}</div>
+            <div className="text-2xl font-bold text-green-600">{summaryLoading ? "..." : summaryActiveUsers}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}% of total
+              {summaryTotalUsers > 0 ? Math.round((summaryActiveUsers / summaryTotalUsers) * 100) : 0}% of total
             </p>
           </CardContent>
         </Card>
@@ -290,9 +274,9 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
             <UserX className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.inactiveUsers}</div>
+            <div className="text-2xl font-bold text-red-600">{summaryLoading ? "..." : summaryInactiveUsers}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalUsers > 0 ? Math.round((stats.inactiveUsers / stats.totalUsers) * 100) : 0}% of total
+              {summaryTotalUsers > 0 ? Math.round((summaryInactiveUsers / summaryTotalUsers) * 100) : 0}% of total
             </p>
           </CardContent>
         </Card>
@@ -303,7 +287,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
             <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.newUsersThisMonth}</div>
+            <div className="text-2xl font-bold text-blue-600">{summaryLoading ? "..." : summaryNewUsersThisMonth}</div>
             <p className="text-xs text-muted-foreground">
               New registrations
             </p>
@@ -312,7 +296,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -333,254 +317,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
             </ChartWrapper>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Users by Organization
-            </CardTitle>
-            <CardDescription>Distribution across organizations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartWrapper width="100%" height={300}>
-              <PieChart key="users-by-organization">
-                <Pie
-                  data={stats.usersByOrganization}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ organization, percent }) => `${organization} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                  key="users-organization-pie"
-                >
-                  {stats.usersByOrganization.map((entry, index) => (
-                    <Cell key={`cell-${entry.key || index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ChartWrapper>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Activity Logs Section */}
-      <ActivityLogDisplay
-        activities={userActivities}
-        title="Recent User Activity"
-        description="Latest user-related activities across the system"
-        isLoading={activityLoading}
-        maxItems={5}
-      />
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filters
-            </CardTitle>
-            <CardDescription>
-              {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} match{filteredUsers.length === 1 ? 'es' : ''} current filters
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Date Range */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <DatePickerWrapper
-                dateRange={filters.dateRange}
-                onDateRangeChange={(range) => setFilters(prev => ({ ...prev, dateRange: range }))}
-                placeholder="Pick a date range"
-                className="w-full"
-              />
-            </div>
-
-            {/* Organization Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Organization</label>
-              <Select
-                value={filters.organization}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, organization: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {(tenantsData as Tenant[])?.map((tenant: Tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Search */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search users..."
-                  value={filters.searchTerm}
-                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
-                  className="pl-10"
-                  onBlur={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
-                  name="search-user"
-                />
-              </div>
-            </div>
-
-            {/* Include Inactive */}
-            <div className="flex items-center space-x-2 pt-6">
-              <Checkbox
-                id="includeInactive"
-                checked={filters.includeInactive}
-                onCheckedChange={(checked) => 
-                  setFilters(prev => ({ ...prev, includeInactive: checked as boolean }))
-                }
-              />
-              <label htmlFor="includeInactive" className="text-sm font-medium">
-                Include Inactive Users
-              </label>
-            </div>
-          </div>
-          
-          {/* Clear Filters Button */}
-          {(filters.dateRange || filters.organization !== "all" || filters.searchTerm || filters.includeInactive) && (
-            <div className="mt-4 flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFilters({
-                  dateRange: undefined,
-                  organization: "all",
-                  includeInactive: false,
-                  searchTerm: ""
-                })}
-              >
-                Clear All Filters
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Users Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Users List</CardTitle>
-              <CardDescription>
-                Showing {filteredUsers.length} users
-                {filters.dateRange?.from && filters.dateRange?.to && 
-                  ` from ${format(filters.dateRange.from, "MMM dd, yyyy")} to ${format(filters.dateRange.to, "MMM dd, yyyy")}`
-                }
-              </CardDescription>
-            </div>
-            <ListView pageSize={pageSize} setPageSize={setPageSize} />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable tableDataObj={{
-            id: "ID",
-            name: "Name",
-            email: "Email",
-            organization: "Organization",
-            phone: "Phone",
-            status: "Status",
-            created: "Created Date",
-            actions: "Actions"
-          }}>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell><SkeletonBox className="h-4 w-8" /></TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <SkeletonBox className="w-8 h-8 rounded-full" />
-                      <SkeletonBox className="h-4 w-24" />
-                    </div>
-                  </TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-32" /></TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-20" /></TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-16" /></TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-12" /></TableCell>
-                  <TableCell><SkeletonBox className="h-4 w-20" /></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <SkeletonBox className="h-8 w-8 rounded" />
-                      <SkeletonBox className="h-8 w-8 rounded" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : filteredUsers.length > 0 ? (
-              filteredUsers
-                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                .map((user,idx) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{idx + 1}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                          <User className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <span className="font-medium">
-                          {user.firstname} {user.lastname}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.tenant?.name || 'N/A'}</TableCell>
-                    <TableCell>N/A</TableCell>
-                    <TableCell>
-                      <Badge variant={user.is_active ? "default" : "secondary"}>
-                        {user.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(user?.createdAt), "MMM dd, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                  No users found matching your criteria
-                </TableCell>
-              </TableRow>
-            )}
-          </DataTable>
-
-          <Pagination
-            dataLength={filteredUsers.length}
-            numOfPages={Math.ceil(filteredUsers.length / pageSize)}
-            pageSize={pageSize}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-          />
-        </CardContent>
-      </Card>
     </div>
   );
 } 

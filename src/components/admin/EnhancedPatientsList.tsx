@@ -3,38 +3,26 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { 
-  Search, 
-  Filter, 
   Download, 
   Printer, 
   Users, 
   Building2,
   Calendar,
   BarChart3,
-  MapPin,
-  Eye,
-  Edit,
-  User
 } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
-import { DatePickerWrapper } from "@/components/ui/date-picker-wrapper";
 import DataTable from "@/components/shared/table/DataTable";
 import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
-import { useTenantsData, useAllPatientsData, useTenantPatientsData } from "@/hooks/swr";
-import { Tenant } from "@/lib/types";
+import { useAllPatientsData, useTenantPatientsData, usePatientAgeDistribution } from "@/hooks/swr";
 import { toast } from "react-toastify";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { ChartWrapper } from "@/components/ui/chart-wrapper";
-import ActivityLogDisplay from "@/components/shared/ActivityLogDisplay";
-import { useRecentActivity } from "@/hooks/useActivityLogs";
 
 interface Patient {
   id: number;
@@ -121,13 +109,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
   const isAllOrganizations = !organizationId || organizationId === "all";
   const { data: allPatientsData, isLoading: allLoading, error: allError } = useAllPatientsData();
   const { data: tenantPatientsData, isLoading: tenantLoading, error: tenantError } = useTenantPatientsData(organizationId || '');
-  const { data: tenantsData } = useTenantsData({ limit: 100 });
-  
-  // Fetch patient-related activity logs
-  const { activityLogs: patientActivities, isLoading: activityLoading } = useRecentActivity({
-    resource: 'patient',
-    limit: 5
-  });
+  const { data: patientAgeDistributionData } = usePatientAgeDistribution();
 
   // Use the appropriate data based on whether organizationId is provided
   const patientsData = isAllOrganizations ? allPatientsData : tenantPatientsData;
@@ -136,6 +118,8 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
 
   // Ensure patientsData is always an array
   const patients = Array.isArray(patientsData) ? patientsData : [];
+  const patientAgeDistributionKey = JSON.stringify(patientAgeDistributionData?.ageDistribution ?? []);
+  const patientAgeDistributionTotal = Number(patientAgeDistributionData?.totalPatients ?? 0);
 
   // Calculate stats based on filtered data
   useEffect(() => {
@@ -164,12 +148,22 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
         const ageGroup = AGE_GROUPS.find(group => age >= group.min && age <= group.max)?.label || 'Unknown';
         ageCounts.set(ageGroup, (ageCounts.get(ageGroup) || 0) + 1);
       });
-      const ageDistribution = AGE_GROUPS.map(group => ({
+      const localAgeDistribution = AGE_GROUPS.map(group => ({
         ageGroup: group.label,
         count: ageCounts.get(group.label) || 0,
         percentage: Math.round(((ageCounts.get(group.label) || 0) / totalPatients) * 100),
         key: group.label
       })).filter(item => item.count > 0);
+
+      const apiAgeDistribution =
+        patientAgeDistributionData?.ageDistribution && patientAgeDistributionData.ageDistribution.length > 0
+          ? patientAgeDistributionData.ageDistribution.map((item) => ({
+              ageGroup: item.range,
+              count: item.count,
+              percentage: item.percentage,
+              key: item.range,
+            }))
+          : localAgeDistribution;
 
       // Location distribution
       const locationCounts = new Map<string, number>();
@@ -191,11 +185,11 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
         totalPatients,
         totalOrganizations: uniqueOrganizations,
         genderDistribution,
-        ageDistribution,
+        ageDistribution: apiAgeDistribution,
         locationDistribution
       });
     }
-  }, [patientsData, filters]);
+  }, [patientsData, filters, patientAgeDistributionKey, patientAgeDistributionTotal]);
 
   const filterPatients = (patients: Patient[]) => {
     return patients.filter(patient => {
@@ -351,7 +345,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gender Distribution */}
         <Card>
           <CardHeader>
@@ -407,137 +401,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
           </CardContent>
         </Card>
 
-        {/* Location Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Top Locations
-            </CardTitle>
-            <CardDescription>Patients by state/country</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartWrapper width="100%" height={300}>
-              <BarChart data={stats.locationDistribution} layout="horizontal" key="patients-location-bar">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="location" type="category" width={80} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#10B981" key="patients-location-bar-chart" />
-              </BarChart>
-            </ChartWrapper>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Activity Logs Section */}
-      <ActivityLogDisplay
-        activities={patientActivities}
-        title="Recent Patient Activity"
-        description="Latest patient-related activities across the system"
-        isLoading={activityLoading}
-        maxItems={5}
-      />
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Date Range */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Service Date Range</label>
-              <DatePickerWrapper
-                dateRange={filters.dateRange}
-                onDateRangeChange={(range) => setFilters(prev => ({ ...prev, dateRange: range }))}
-                placeholder="Pick a date range"
-                className="w-full"
-              />
-            </div>
-
-            {/* Organization Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Organization</label>
-              <Select
-                value={filters.organization}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, organization: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {(tenantsData as Tenant[])?.map((tenant: Tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Gender Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Gender</label>
-              <Select
-                value={filters.gender}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Genders</SelectItem>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Age Group Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Age Group</label>
-              <Select
-                value={filters.ageGroup}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select age group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Ages</SelectItem>
-                  {AGE_GROUPS.map(group => (
-                    <SelectItem key={group.label} value={group.label}>
-                      {group.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Search */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search patients..."
-                  value={filters.searchTerm}
-                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
-                  onBlur={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value })) as any}
-                  name="searchTerm"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Patients Table */}
       <Card>
@@ -557,15 +421,14 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
         </CardHeader>
         <CardContent>
           <DataTable tableDataObj={{
-            id: "Patient ID",
+            id: "S/N",
             name: "Patient Name",
             address: "Address",
             age: "Age",
             gender: "Gender",
             organization: "Organization",
             phone: "Phone",
-            email: "Email",
-            actions: "Actions"
+            email: "Email"
           }}>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
@@ -583,18 +446,12 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                   <TableCell><SkeletonBox className="h-4 w-20" /></TableCell>
                   <TableCell><SkeletonBox className="h-4 w-16" /></TableCell>
                   <TableCell><SkeletonBox className="h-4 w-32" /></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <SkeletonBox className="h-8 w-8 rounded" />
-                      <SkeletonBox className="h-8 w-8 rounded" />
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))
             ) : filteredPatients.length > 0 ? (
               filteredPatients
                 .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                .map((patient) => {
+                .map((patient, index) => {
                   const birthYear = patient?.date_of_birth
                     ? new Date(patient.date_of_birth).getFullYear()
                     : NaN;
@@ -603,16 +460,11 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                     : "—";
                   return (
                     <TableRow key={patient.id}>
-                      <TableCell className="font-medium">{patient.id}</TableCell>
+                      <TableCell className="font-medium">{(currentPage - 1) * pageSize + index + 1}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            <User className="w-4 h-4 text-gray-500" />
-                          </div>
-                          <span className="font-medium">
-                            {patient.first_name} {patient.last_name}
-                          </span>
-                        </div>
+                        <span className="font-medium">
+                          {patient.first_name} {patient.last_name}
+                        </span>
                       </TableCell>
                       <TableCell>{patient?.contact_info?.address || patient?.address || "—"}</TableCell>
                       <TableCell>{age}</TableCell>
@@ -624,22 +476,12 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
                       <TableCell>{patient?.tenant?.name || "—"}</TableCell>
                       <TableCell>{patient?.contact_info?.phone_number_home || patient?.phone || "—"}</TableCell>
                       <TableCell>{patient?.contact_info?.email || patient?.email || "—"}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
                     </TableRow>
                   );
                 })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No patients found matching your criteria
                 </TableCell>
               </TableRow>

@@ -462,7 +462,7 @@ const TenantLoginPage = () => {
                     className="font-medium text-[#003465] underline underline-offset-2 hover:text-[#00254a]"
                   >
                     contact us here
-                  </a>{" "}
+                  </a>{" "} support@locicare.com
                   for support.
                 </p>
               </div>

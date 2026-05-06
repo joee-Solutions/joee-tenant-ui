@@ -376,6 +376,112 @@ interface DashboardPatientsData {
   };
   ageDistribution?: AgeGroup[];
 }
+
+export interface PatientAgeDistributionRow {
+  range: string;
+  count: number;
+  percentage: number;
+}
+
+export interface PatientAgeDistributionData {
+  totalPatients: number;
+  ageDistribution: PatientAgeDistributionRow[];
+}
+
+export interface VisitReportData {
+  totalVisits: number;
+  visitsThisMonth: number;
+}
+
+export interface PatientsPrescriptionReportItem {
+  patientId: number;
+  patientName: string;
+  notes: string;
+  dosage: string;
+  startDate: string;
+  directions: string;
+  medicationName: string;
+  prescriberName: string;
+  controlledSubstance: boolean;
+  checkedDrugFormulary: boolean;
+}
+
+export const useVisitReport = () => {
+  const { data, isLoading, error } = useSWR(
+    API_ENDPOINTS.GET_VISIT_REPORT,
+    authFectcher,
+    {
+      onError: (err) => {
+        console.error("Visit report fetch failed:", err);
+      },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  const payload = (() => {
+    const resp = data as any;
+    if (!resp) return null;
+    if (resp?.data && typeof resp.data === "object") return resp.data;
+    return resp;
+  })();
+
+  const normalized: VisitReportData = {
+    totalVisits: Number(payload?.totalVisits ?? 0),
+    visitsThisMonth: Number(payload?.visitsThisMonth ?? 0),
+  };
+
+  return {
+    data: normalized,
+    isLoading,
+    error,
+  };
+};
+
+export const usePatientsPrescriptionReport = () => {
+  const { data, isLoading, error } = useSWR(
+    API_ENDPOINTS.GET_PATIENTS_PRESCRIPTION_REPORT,
+    authFectcher,
+    {
+      onError: (err) => {
+        console.error("Patients prescription report fetch failed:", err);
+      },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  const payload = (() => {
+    const resp = data as any;
+    if (!resp) return null;
+    if (resp?.data?.data && Array.isArray(resp.data.data)) return resp.data.data;
+    if (resp?.data && Array.isArray(resp.data)) return resp.data;
+    if (Array.isArray(resp)) return resp;
+    return [];
+  })();
+
+  const normalized: PatientsPrescriptionReportItem[] = Array.isArray(payload)
+    ? payload.map((item: any) => ({
+        patientId: Number(item?.patientId ?? 0),
+        patientName: String(item?.patientName ?? ""),
+        notes: String(item?.notes ?? ""),
+        dosage: String(item?.dosage ?? ""),
+        startDate: String(item?.startDate ?? ""),
+        directions: String(item?.directions ?? ""),
+        medicationName: String(item?.medicationName ?? ""),
+        prescriberName: String(item?.prescriberName ?? ""),
+        controlledSubstance: Boolean(item?.controlledSubstance),
+        checkedDrugFormulary: Boolean(item?.checkedDrugFormulary),
+      }))
+    : [];
+
+  return {
+    data: normalized,
+    isLoading,
+    error,
+  };
+};
+
 // Custom hook for dashboard appointments data
 export const useDashboardAppointments = () => {
   const { data, isLoading, error } = useSWR(
@@ -527,6 +633,54 @@ export const useDashboardPatients = () => {
 
   return {
     data: transformedData,
+    isLoading,
+    error,
+  };
+};
+
+export const usePatientAgeDistribution = () => {
+  const { data, isLoading, error } = useSWR(
+    API_ENDPOINTS.GET_PATIENT_AGE_DISTRIBUTION,
+    authFectcher,
+    {
+      onError: (err) => {
+        console.error("Patient age distribution fetch failed:", err);
+      },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  // Expected shape:
+  // {
+  //   success: true,
+  //   data: { data: { totalPatients, ageDistribution: [...] } }
+  // }
+  const payload = (() => {
+    const resp = data as any;
+    if (!resp) return null;
+    const nested = resp?.data?.data;
+    if (nested && typeof nested === "object") return nested;
+    if (resp?.data && typeof resp.data === "object") return resp.data;
+    return resp;
+  })();
+
+  const totalPatients = Number(payload?.totalPatients ?? 0);
+  const ageDistribution: PatientAgeDistributionRow[] = Array.isArray(payload?.ageDistribution)
+    ? payload.ageDistribution.map((row: any) => ({
+        range: String(row?.range ?? ""),
+        count: Number(row?.count ?? 0),
+        percentage: Number(row?.percentage ?? 0),
+      }))
+    : [];
+
+  const normalized: PatientAgeDistributionData = {
+    totalPatients,
+    ageDistribution,
+  };
+
+  return {
+    data: normalized,
     isLoading,
     error,
   };
@@ -968,6 +1122,41 @@ export const useAdminProfile = () => {
   return {
     data: extractData<AdminUser>(data),
     meta: extractMeta(data),
+    isLoading,
+    error,
+  };
+};
+
+export interface TenantsUsersReportData {
+  totalUsers: number;
+  maleCount: number;
+  femaleCount: number;
+  activeCount: number;
+  inactiveCount: number;
+  usersCreatedThisMonth: number;
+}
+
+export const useTenantsUsersReport = () => {
+  const { data, isLoading, error } = useSWR(
+    API_ENDPOINTS.GET_TENANTS_USERS_REPORT,
+    authFectcher,
+    {
+      onError: (err) => {
+        console.error("Tenants users report fetch failed:", err);
+      },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  const raw = data as any;
+  const normalized: TenantsUsersReportData | null =
+    raw?.data?.data ??
+    raw?.data ??
+    (raw && typeof raw === "object" && "totalUsers" in raw ? raw : null);
+
+  return {
+    data: normalized,
     isLoading,
     error,
   };

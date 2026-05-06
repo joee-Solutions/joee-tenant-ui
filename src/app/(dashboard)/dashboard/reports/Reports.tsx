@@ -366,15 +366,22 @@ export default function ReportsPage() {
                         }
                       };
 
+                      const actorNameRaw = activity.userContext?.name;
+                      const actorName = typeof actorNameRaw === "string" ? actorNameRaw.trim() : "";
+                      const hasValidActorName =
+                        actorName.length > 0 &&
+                        actorName.toLowerCase() !== "undefined undefined" &&
+                        actorName.toLowerCase() !== "undefined";
+
                       return (
                         <div key={activity.id} className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-3 hover:bg-purple-100 transition-colors">
                           <div className={`w-2 h-2 ${getActivityColor(activity.activityType)} rounded-full`}></div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-gray-900">{activity.metadata?.description || activity.action}</span>
-                              {activity.userContext?.name && (
+                              {hasValidActorName && (
                                 <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded-full">
-                                  by {activity.userContext.name}
+                                  by {actorName}
                                 </span>
                               )}
                             </div>

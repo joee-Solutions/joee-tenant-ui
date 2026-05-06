@@ -4,15 +4,14 @@ import { IoSettingsSharp } from "react-icons/io5";
 import { SearchIcon, Menu, X } from "lucide-react";
 import { BellIcon } from "../icons/icon";
 import Image from "next/image";
-import profileImage from "./../../../public/assets/profile.png";
-import { useAdminProfile, useNotificationsData } from "@/hooks/swr";
+import { authFectcher, useAdminProfile, useNotificationsData } from "@/hooks/swr";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "react-toastify";
 import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
-import { mutate } from "swr";
+import useSWR, { mutate } from "swr";
 import { Button } from "@/components/ui/button";
 import { Notification } from "@/lib/types";
 
@@ -54,6 +53,13 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
   const adminData = Array.isArray(admin) ? admin[0] : admin;
   const fullName = adminData ? `${adminData.first_name || ""} ${adminData.last_name || ""}`.trim() : "";
   const role = adminData?.roles?.[0]?.split("_").join(" ") || "Admin";
+  const { data: systemSettings } = useSWR(API_ENDPOINTS.GET_SYSTEM_SETTINGS, authFectcher);
+  const systemSettingsData = (systemSettings as any)?.data || systemSettings;
+  const profileImageSrc =
+    (typeof systemSettingsData?.profileImage === "string" && systemSettingsData.profileImage.trim()) ||
+    (typeof systemSettingsData?.logo === "string" && systemSettingsData.logo.trim()) ||
+    "/assets/profile.png";
+  const profileImageIsDataUrl = profileImageSrc.startsWith("data:");
   
   // Use SWR hook for notifications to enable automatic refetching
   const { data: notificationsData, isLoading: loadingNotifications } = useNotificationsData();
@@ -86,7 +92,6 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
         console.error("Error loading read notifications from localStorage:", error);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notificationsData]);
   
   // Calculate unread count from notifications list and get top 10 latest notifications
@@ -440,11 +445,12 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
               <div className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity">
                 <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
                   <Image
-                    src={profileImage}
+                    src={profileImageSrc}
                     alt="profile image"
                     width={40}
                     height={40}
                     className="aspect-square w-full h-full object-cover"
+                    unoptimized={profileImageIsDataUrl}
                   />
                 </span>
                 <div className="hidden sm:block">
@@ -489,11 +495,12 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
           >
             <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
               <Image
-                src={profileImage}
+                src={profileImageSrc}
                 alt="profile image"
                 width={40}
                 height={40}
                 className="aspect-square w-full h-full object-cover"
+                unoptimized={profileImageIsDataUrl}
               />
             </span>
             <div className="hidden sm:block">

@@ -315,6 +315,14 @@ const processRequestAuth = async (
       return null;
     }
 
+    // DELETE 404s are often idempotent "already removed" outcomes.
+    // Avoid noisy console errors for this expected case.
+    if (statusCode === 404 && method === "delete") {
+      console.warn("[API 404][DELETE]", path, "Resource already missing");
+      if (callback) callback(path, null, error);
+      return null;
+    }
+
     console.error("API request error:", path, error);
     if (callback) {
       callback(path, null, error);

@@ -49,6 +49,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
   const tenantId = typeof data === "object" && data && (data as any)?.id != null ? (data as any).id : (orgSlug && /^\d+$/.test(orgSlug) ? parseInt(orgSlug, 10) : null);
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
 
   const handleCreateBackup = async () => {
@@ -79,6 +80,18 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
       setCreatingBackup(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoading && data && typeof data === "object" && (data as { domain?: string }).domain) {
@@ -130,7 +143,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
             <AlertDialog open={backupModalOpen} onOpenChange={setBackupModalOpen}>
               <AlertDialogTrigger asChild>
                 <Button
-                  disabled={creatingBackup}
+                  disabled={creatingBackup || !isOnline}
                   className="bg-[#003465] text-white hover:bg-[#003465]/90 h-10 px-4 text-sm"
                 >
                   <Cloud className="w-4 h-4 mr-2" />
@@ -149,8 +162,13 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
                   <AlertDialogAction
                     onClick={(e) => {
                       e.preventDefault();
+                      if (!isOnline) {
+                        toast.info("Backup is disabled while offline.");
+                        return;
+                      }
                       handleCreateBackup();
                     }}
+                    disabled={!isOnline}
                     className="bg-[#003465] text-white hover:bg-[#003465]/90"
                   >
                     {creatingBackup ? "Creating..." : "Confirm"}
@@ -161,6 +179,7 @@ const OrgLayout = ({ children }: { children: React.ReactNode }) => {
             <Link href={`/dashboard/organization/${orgSlug}/backup`}>
               <Button
                 variant="outline"
+                disabled={!isOnline}
                 className="h-10 px-4 text-sm border-[#003465] text-[#003465] hover:bg-[#D9EDFF]"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />

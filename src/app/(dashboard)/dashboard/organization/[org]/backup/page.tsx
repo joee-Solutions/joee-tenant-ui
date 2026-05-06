@@ -62,7 +62,20 @@ export default function BackupPage() {
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<BackupEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const { triggerSuccess, SuccessModal } = useCrudSuccessModal();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
 
   // Fetch backups
   const { data: backupsData, isLoading, error, mutate } = useSWR(
@@ -123,6 +136,10 @@ export default function BackupPage() {
   // Handle restore (backupId can be uuid string or number)
   const handleRestore = async (backupId: string | number) => {
     if (!orgIdNumber) return;
+    if (!isOnline) {
+      toast.info("Restore is disabled while offline.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -151,17 +168,43 @@ export default function BackupPage() {
 
     setLoading(true);
     try {
-      await processRequestAuth(
-        "delete",
-        API_ENDPOINTS.DELETE_TENANT_BACKUP(orgIdNumber, backupId)
-      );
+      let deleted = false;
+      const deletePaths = [
+        API_ENDPOINTS.DELETE_TENANT_BACKUP(orgIdNumber, backupId), // preferred
+        `/super/tenants/${orgIdNumber}/backup/${backupId}`, // fallback for legacy singular route
+      ];
+
+      for (const deletePath of deletePaths) {
+        try {
+          await processRequestAuth("delete", deletePath);
+          deleted = true;
+          break;
+        } catch (err: any) {
+          if (err?.response?.status !== 404) {
+            throw err;
+          }
+        }
+      }
+
+      if (!deleted) {
+        throw new Error("Backup delete endpoint not found");
+      }
+
       toast.success("Backup deleted successfully");
       mutate();
       setDeleteModalOpen(false);
       setSelectedBackup(null);
     } catch (error: any) {
       console.error("Delete error:", error);
-      toast.error(error?.response?.data?.message || "Failed to delete backup");
+      if (error?.response?.status === 404) {
+        // Treat missing backup as already deleted to keep UI consistent.
+        toast.success("Backup removed");
+        mutate();
+        setDeleteModalOpen(false);
+        setSelectedBackup(null);
+      } else {
+        toast.error(error?.response?.data?.message || "Failed to delete backup");
+      }
     } finally {
       setLoading(false);
     }
@@ -250,6 +293,7 @@ export default function BackupPage() {
                     <Button
                       type="button"
                       size="sm"
+                      disabled={!isOnline}
                       className="h-8 bg-[#003465] text-white hover:bg-[#0d2337] gap-1.5 text-xs"
                       onClick={() => {
                         setSelectedBackup(backup);

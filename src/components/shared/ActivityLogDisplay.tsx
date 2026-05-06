@@ -62,6 +62,12 @@ export default function ActivityLogDisplay({
 
   const displayedActivities = activities.slice(0, maxItems);
 
+  const isValidActorName = (name?: string) => {
+    if (!name) return false;
+    const normalized = name.trim().toLowerCase();
+    return normalized.length > 0 && normalized !== "undefined" && normalized !== "undefined undefined";
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -115,15 +121,15 @@ export default function ActivityLogDisplay({
                   </div>
                   
                   {/* User Information */}
-                  {activity.userContext?.name && (
+                  {isValidActorName(activity.userContext?.name) && (
                     <div className="flex items-center gap-2 mb-1">
                       <User className="w-3 h-3 text-gray-500" />
                       <span className="text-xs text-blue-600 font-medium">
-                        {activity.userContext.name}
+                        {activity.userContext?.name}
                       </span>
-                      {activity.userContext.email && (
+                      {activity.userContext?.email && (
                         <span className="text-xs text-gray-500">
-                          ({activity.userContext.email})
+                          ({activity.userContext?.email})
                         </span>
                       )}
                     </div>
