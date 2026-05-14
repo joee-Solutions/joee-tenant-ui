@@ -270,6 +270,7 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
       <div className="flex items-center gap-3 flex-1 md:flex-none md:basis-[50%]">
         {/* Mobile Menu Button */}
         <button
+          data-tour="guide-mobile-menu"
           onClick={toggleMobileMenu}
           className="lg:hidden flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors flex-shrink-0"
           aria-label="Toggle menu"
@@ -282,7 +283,11 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
         </button>
 
         {/* Search Form */}
-        <form onSubmit={handleSearch} className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] flex-1">
+        <form
+          data-tour="guide-search"
+          onSubmit={handleSearch}
+          className="relative flex items-center justify-center px-2 py-[10px] rounded-[60px] bg-white shadow-[4px_4px_4px_0px_#B7B5B566] flex-1"
+        >
           <input
             type="text"
             placeholder="Search organizations, employees, departments..."
@@ -305,7 +310,10 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
         {popoversReady ? (
           <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
             <PopoverTrigger asChild>
-              <span className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors">
+              <span
+                data-tour="guide-notifications"
+                className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors"
+              >
                 <BellIcon className="h-6 w-6" />
               </span>
             </PopoverTrigger>
@@ -353,6 +361,7 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
           </Popover>
         ) : (
           <span
+            data-tour="guide-notifications"
             className="relative flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors"
             aria-hidden
           >
@@ -432,6 +441,7 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
 
         {/* Settings */}
         <span
+          data-tour="guide-settings"
           onClick={handleSettings}
           className="flex items-center justify-center bg-white w-[40px] h-[40px] rounded-[10px] shadow-[0px_4px_25px_0px_#0000001A] cursor-pointer hover:bg-gray-50 transition-colors"
         >
@@ -442,7 +452,10 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
         {popoversReady ? (
           <Popover open={isProfileOpen} onOpenChange={setIsProfileOpen}>
             <PopoverTrigger asChild>
-              <div className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity">
+              <div
+                data-tour="guide-profile"
+                className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity"
+              >
                 <span className="block w-[40px] h-[40px] rounded-full overflow-hidden flex-shrink-0">
                   <Image
                     src={profileImageSrc}
@@ -490,6 +503,7 @@ const MainHeaderContent = ({ isMobileMenuOpen, toggleMobileMenu }: MainHeaderCon
           </Popover>
         ) : (
           <div
+            data-tour="guide-profile"
             className="flex items-center gap-[10.32px] cursor-pointer hover:opacity-80 transition-opacity"
             aria-hidden
           >

@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import { preCacheService } from "@/lib/offline/preCacheService";
 import { offlineService } from "@/lib/offline/offlineService";
 import dynamic from "next/dynamic";
+import DashboardAppGuide from "@/components/shared/DashboardAppGuide";
 
 // Only load debug panel in development - not bundled in production
 const OfflineDebugPanel = process.env.NODE_ENV === 'development' 
@@ -30,7 +31,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex w-full relative">
       {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden lg:!block ">
+      <div className="hidden lg:!block" data-tour="guide-sidebar-desktop">
         <SideNavigation isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
       </div>
 
@@ -54,8 +55,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <OfflineIndicator />
         <OfflineSWRBridge />
         <MainHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
-        {children}
+        <main className="w-full flex-1 min-h-0" data-tour="guide-main-content">
+          {children}
+        </main>
         <OfflineDebugPanel />
+        <DashboardAppGuide />
       </div>
     </div>
   );
