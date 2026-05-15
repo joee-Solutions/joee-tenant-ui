@@ -24,15 +24,27 @@ function buildSteps(): NonNullable<TourProps["steps"]> {
     },
     {
       title: "Navigation",
-      description: isLgUp()
-        ? "Use the sidebar for Dashboard, Organization (list, active and inactive tenants), Notifications, Admin, Reports & Analytics, training guides, system settings, and logout."
-        : "Tap the menu icon to open the sidebar. From there you can reach Dashboard, Organization, Notifications, Admin, Reports, settings, and logout.",
+      description: isLgUp() ? (
+        <div style={{ maxWidth: 400, lineHeight: 1.55 }}>
+          Use the sidebar for Dashboard, Organization (list, active and inactive tenants),
+          Notifications, Admin, Reports & Analytics, training guides, system settings, and
+          logout.
+        </div>
+      ) : (
+        <div style={{ maxWidth: 360, lineHeight: 1.55 }}>
+          Tap the menu icon to open the sidebar. From there you can reach Dashboard,
+          Organization, Notifications, Admin, Reports, settings, and logout.
+        </div>
+      ),
       target: () => {
         if (isLgUp()) {
           return el("[data-tour='guide-sidebar-desktop']");
         }
         return el("[data-tour='guide-mobile-menu']");
       },
+      // Keep the card in the main column on desktop so the title and copy are not clipped by the rail.
+      placement: isLgUp() ? "right" : "bottom",
+      style: { maxWidth: 440 },
       nextButtonProps: { children: "Next" },
     },
     {
@@ -110,6 +122,7 @@ const DashboardAppGuide = () => {
       steps={steps}
       type="primary"
       zIndex={11000}
+      gap={{ offset: 10 }}
       closeIcon={null}
       actionsRender={(originNode) => (
         <div className="flex w-full items-center justify-between gap-2 pt-1">
