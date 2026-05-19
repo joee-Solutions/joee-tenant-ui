@@ -680,16 +680,11 @@ export class OfflineService {
         return true;
       }
 
-      let updatedList: any;
-      if (Array.isArray(cached)) {
-        updatedList = mergeRow(cached);
-      } else if (cached.data && Array.isArray(cached.data)) {
-        updatedList = { ...cached, data: mergeRow(cached.data) };
-      } else if (cached.results && Array.isArray(cached.results)) {
-        updatedList = { ...cached, results: mergeRow(cached.results) };
-      } else {
-        return true;
-      }
+      const updatedList = this.setListRows(
+        cached,
+        mergeRow(this.getListRows(cached)),
+        listEndpoint
+      );
 
       await this.cacheResponse(listEndpoint, updatedList);
       await swrMutateForOffline(listEndpoint, updatedList, { revalidate: false });
@@ -736,6 +731,82 @@ export class OfflineService {
     return { pending, syncing, failed };
   }
 
+  /** How list payloads are nested in API / SWR cache (matches table parsers). */
+  private detectListCacheShape(cached: any): 'root' | 'data' | 'nested' | 'results' {
+    if (Array.isArray(cached)) return 'root';
+    if (cached && typeof cached === 'object') {
+      if (Array.isArray(cached.results)) return 'results';
+      if (
+        cached.data != null &&
+        typeof cached.data === 'object' &&
+        !Array.isArray(cached.data) &&
+        Array.isArray((cached.data as { data?: unknown }).data)
+      ) {
+        return 'nested';
+      }
+      if (Array.isArray(cached.data)) return 'data';
+    }
+    return 'data';
+  }
+
+  /** Default empty list shell when nothing was cached yet (patients/appointments use data.data). */
+  private inferDefaultListCache(listEndpoint: string): any {
+    if (
+      listEndpoint.includes('/patients') ||
+      listEndpoint.includes('/appointments')
+    ) {
+      return { data: { data: [] } };
+    }
+    return { data: [] };
+  }
+
+  private getListRows(cached: any): any[] {
+    if (!cached) return [];
+    if (Array.isArray(cached)) return [...cached];
+    if (Array.isArray(cached.results)) return [...cached.results];
+    if (
+      cached.data != null &&
+      typeof cached.data === 'object' &&
+      !Array.isArray(cached.data) &&
+      Array.isArray((cached.data as { data?: unknown }).data)
+    ) {
+      return [...(cached.data as { data: any[] }).data];
+    }
+    if (Array.isArray(cached.data)) return [...cached.data];
+    return [];
+  }
+
+  private setListRows(cached: any | null, rows: any[], listEndpoint: string): any {
+    const shape =
+      cached != null
+        ? this.detectListCacheShape(cached)
+        : this.detectListCacheShape(this.inferDefaultListCache(listEndpoint));
+
+    if (shape === 'root') return rows;
+
+    const base =
+      cached != null && typeof cached === 'object' && !Array.isArray(cached)
+        ? { ...cached }
+        : this.inferDefaultListCache(listEndpoint);
+
+    if (shape === 'results') {
+      return { ...base, results: rows };
+    }
+    if (shape === 'nested') {
+      const inner =
+        base.data != null && typeof base.data === 'object' && !Array.isArray(base.data)
+          ? { ...(base.data as object) }
+          : {};
+      return { ...base, data: { ...inner, data: rows } };
+    }
+    return { ...base, data: rows };
+  }
+
+  private rowMatchesId(row: any, itemId: string | number | null): boolean {
+    if (itemId == null) return false;
+    return row.id === itemId || row.id?.toString() === itemId?.toString();
+  }
+
   /**
    * Build updated list + API-shaped response for offline writes (single source of truth).
    */
@@ -747,6 +818,7 @@ export class OfflineService {
     queueId?: number
   ): { updatedList: any; apiResponse: any } | null {
     const listEndpoint = this.getListEndpoint(endpoint);
+    const rows = this.getListRows(cachedList);
 
     if (method === 'post') {
       const newItem = {
@@ -757,17 +829,7 @@ export class OfflineService {
         ...(queueId != null ? { _queueId: queueId } : {}),
       };
 
-      let updatedData: any;
-      if (Array.isArray(cachedList)) {
-        updatedData = [newItem, ...cachedList];
-      } else if (cachedList.data && Array.isArray(cachedList.data)) {
-        updatedData = { ...cachedList, data: [newItem, ...cachedList.data] };
-      } else if (cachedList.results && Array.isArray(cachedList.results)) {
-        updatedData = { ...cachedList, results: [newItem, ...cachedList.results] };
-      } else {
-        offlineLogger.debug(`Unknown list structure for ${listEndpoint}`);
-        return null;
-      }
+      const updatedData = this.setListRows(cachedList, [newItem, ...rows], listEndpoint);
 
       return {
         updatedList: updatedData,
@@ -782,36 +844,12 @@ export class OfflineService {
 
     if (method === 'put' || method === 'patch') {
       const itemId = this.extractIdFromEndpoint(endpoint);
-
-      let updatedData: any;
-      if (Array.isArray(cachedList)) {
-        updatedData = cachedList.map((item: any) =>
-          item.id === itemId || item.id?.toString() === itemId?.toString()
-            ? { ...item, ...data, _offline: true, _pending: true }
-            : item
-        );
-      } else if (cachedList.data && Array.isArray(cachedList.data)) {
-        updatedData = {
-          ...cachedList,
-          data: cachedList.data.map((item: any) =>
-            item.id === itemId || item.id?.toString() === itemId?.toString()
-              ? { ...item, ...data, _offline: true, _pending: true }
-              : item
-          ),
-        };
-      } else if (cachedList.results && Array.isArray(cachedList.results)) {
-        updatedData = {
-          ...cachedList,
-          results: cachedList.results.map((item: any) =>
-            item.id === itemId || item.id?.toString() === itemId?.toString()
-              ? { ...item, ...data, _offline: true, _pending: true }
-              : item
-          ),
-        };
-      } else {
-        offlineLogger.debug(`Unknown list structure for update: ${listEndpoint}`);
-        return null;
-      }
+      const updatedRows = rows.map((item: any) =>
+        this.rowMatchesId(item, itemId)
+          ? { ...item, ...data, _offline: true, _pending: true }
+          : item
+      );
+      const updatedData = this.setListRows(cachedList, updatedRows, listEndpoint);
 
       return {
         updatedList: updatedData,
@@ -826,30 +864,8 @@ export class OfflineService {
 
     if (method === 'delete') {
       const itemId = this.extractIdFromEndpoint(endpoint);
-
-      let updatedData: any;
-      if (Array.isArray(cachedList)) {
-        updatedData = cachedList.filter(
-          (item: any) => item.id !== itemId && item.id?.toString() !== itemId?.toString()
-        );
-      } else if (cachedList.data && Array.isArray(cachedList.data)) {
-        updatedData = {
-          ...cachedList,
-          data: cachedList.data.filter(
-            (item: any) => item.id !== itemId && item.id?.toString() !== itemId?.toString()
-          ),
-        };
-      } else if (cachedList.results && Array.isArray(cachedList.results)) {
-        updatedData = {
-          ...cachedList,
-          results: cachedList.results.filter(
-            (item: any) => item.id !== itemId && item.id?.toString() !== itemId?.toString()
-          ),
-        };
-      } else {
-        offlineLogger.debug(`Unknown list structure for delete: ${listEndpoint}`);
-        return null;
-      }
+      const updatedRows = rows.filter((item: any) => !this.rowMatchesId(item, itemId));
+      const updatedData = this.setListRows(cachedList, updatedRows, listEndpoint);
 
       return {
         updatedList: updatedData,
@@ -864,18 +880,10 @@ export class OfflineService {
     return null;
   }
 
-  private stripClientTempRowsFromListCache(cached: any): any {
+  private stripClientTempRowsFromListCache(cached: any, listEndpoint: string): any {
     const keep = (item: any) => !String(item?.id ?? '').startsWith('temp_');
-    if (Array.isArray(cached)) {
-      return cached.filter(keep);
-    }
-    if (cached?.data && Array.isArray(cached.data)) {
-      return { ...cached, data: cached.data.filter(keep) };
-    }
-    if (cached?.results && Array.isArray(cached.results)) {
-      return { ...cached, results: cached.results.filter(keep) };
-    }
-    return cached;
+    const rows = this.getListRows(cached).filter(keep);
+    return this.setListRows(cached, rows, listEndpoint);
   }
 
   /** Drop optimistic `temp_*` rows from the patients list so they are not duplicated after sync. */
@@ -895,7 +903,7 @@ export class OfflineService {
       const cached = await this.getCachedResponse(listEndpoint);
       if (!cached) return;
 
-      const cleaned = this.stripClientTempRowsFromListCache(cached);
+      const cleaned = this.stripClientTempRowsFromListCache(cached, listEndpoint);
       await this.cacheResponse(listEndpoint, cleaned);
       await swrMutateForOffline(listEndpoint, cleaned, { revalidate: false });
       await swrMutateForOffline(
@@ -968,13 +976,13 @@ export class OfflineService {
 
       const updater = async (current: any) => {
         const fromDb = await this.getCachedResponse(listEndpoint);
-        // Prefer SWR (what the table is showing), then IndexedDB for offline-first pages
-        const base = current ?? fromDb ?? null;
-        if (!base) {
-          offlineLogger.debug(
-            `No list in IndexedDB or SWR for optimistic UI: ${listEndpoint}`
+        // Prefer SWR (what the table is showing), then IndexedDB; seed empty list if neither exists
+        const base =
+          current ?? fromDb ?? this.inferDefaultListCache(listEndpoint);
+        if (!current && !fromDb) {
+          offlineLogger.info(
+            `Seeding empty list cache for optimistic UI: ${listEndpoint}`
           );
-          return current;
         }
 
         const computed = this.computeOptimisticListAndResponse(

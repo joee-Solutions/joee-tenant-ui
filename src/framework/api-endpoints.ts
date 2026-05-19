@@ -104,5 +104,5 @@ export const API_ENDPOINTS = {
   CREATE_TENANT_BACKUP: (tenantId: number) => `/super/tenants/${tenantId}/backup`,
   GET_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backups/${backupId}`,
   RESTORE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/restore/${backupId}`,
-  DELETE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backups/${backupId}`,
+  DELETE_TENANT_BACKUP: (tenantId: number | string, backupId: number | string) => `/super/tenants/${tenantId}/backup/${backupId}`,
 };
