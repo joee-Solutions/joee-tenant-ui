@@ -1,13 +1,32 @@
 import { processResponse } from "@/framework/joee.client";
+import {
+  formatApiRouteNetworkError,
+  isBackendUnreachableError,
+} from "@/framework/api-errors";
 import { getRequestInfo } from "@/framework/log-request-helper";
 import { siteConfig } from "@/framework/site-config";
 import axios from "axios";
 import { NextResponse, type NextRequest } from "next/server";
 import FormDataNode from "form-data";
 
-
-
 const apiUrl = siteConfig.host;
+
+function handleProxyError(error: unknown) {
+  if (error && typeof error === "object" && "response" in error) {
+    const err = error as { response: { data: unknown; status: number } };
+    if (err.response) {
+      return NextResponse.json(err.response.data, {
+        status: err.response.status,
+      });
+    }
+  }
+  if (isBackendUnreachableError(error)) {
+    return NextResponse.json(formatApiRouteNetworkError(error), {
+      status: 503,
+    });
+  }
+  return NextResponse.json(formatApiRouteNetworkError(error), { status: 503 });
+}
 
 export async function GET(req: NextRequest) {
   console.log("req-->", apiUrl);
@@ -32,16 +51,8 @@ console.log("pathUrl-->", pathUrl);
     );
     const response = processResponse(res);
     return Response.json({ ...response });
-  } catch (error: any) {
-    if (error && error.response) {
-      return NextResponse.json(error.response.data, {
-        status: error.response.status,
-      });
-    } else if (error) {
-      return NextResponse.json(error, { status: 500 });
-    } else {
-      return NextResponse.json("An error occurred", { status: 500 });
-    }
+  } catch (error: unknown) {
+    return handleProxyError(error);
   }
 }
 
@@ -132,23 +143,9 @@ export async function POST(req: NextRequest) {
     );
     const response = processResponse(res);
     return Response.json({ ...response });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("POST error:", error);
-    if (error && error.response) {
-      return NextResponse.json(error.response.data, {
-        status: error.response.status,
-      });
-    } else if (error) {
-      return NextResponse.json(
-        { 
-          error: error.message || "An error occurred",
-          details: error.toString() 
-        }, 
-        { status: 500 }
-      );
-    } else {
-      return NextResponse.json("An error occurred", { status: 500 });
-    }
+    return handleProxyError(error);
   }
 }
 
@@ -189,18 +186,8 @@ export async function PUT(req: NextRequest) {
     );
     const response = processResponse(res);
     return Response.json({ ...response });
-  } catch (error: any) {
-    if (error && error.response) {
-      console.log(error, "--> error");
-
-      return NextResponse.json(error.response.data, {
-        status: error.response.status,
-      });
-    } else if (error) {
-      return NextResponse.json(error, { status: 500 });
-    } else {
-      return NextResponse.json("An error occurred", { status: 500 });
-    }
+  } catch (error: unknown) {
+    return handleProxyError(error);
   }
 }
 
@@ -223,23 +210,9 @@ export async function DELETE(req: NextRequest) {
     });
     const response = processResponse(res);
     return Response.json({ ...response });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("DELETE error:", error);
-    if (error && error.response) {
-      return NextResponse.json(error.response.data, {
-        status: error.response.status,
-      });
-    } else if (error) {
-      return NextResponse.json(
-        { 
-          error: error.message || "An error occurred",
-          details: error.toString() 
-        }, 
-        { status: 500 }
-      );
-    } else {
-      return NextResponse.json("An error occurred", { status: 500 });
-    }
+    return handleProxyError(error);
   }
 }
 
@@ -281,16 +254,8 @@ export async function PATCH(req: NextRequest) {
 
     const response = processResponse(res);
     return Response.json({ ...response });
-  } catch (error: any) {
-    if (error && error.response) {
-      return NextResponse.json(error.response.data, {
-        status: error.response.status,
-      });
-    } else if (error) {
-      return NextResponse.json(error, { status: 500 });
-    } else {
-      return NextResponse.json("An error occurred", { status: 500 });
-    }
+  } catch (error: unknown) {
+    return handleProxyError(error);
   }
 }
 

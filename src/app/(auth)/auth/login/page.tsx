@@ -28,6 +28,11 @@ import { getToken } from "@/framework/get-token";
 import { offlineAuthService } from "@/lib/offline/offlineAuth";
 import { ensureOfflineDbReady } from "@/lib/offline/database";
 import {
+  BACKEND_UNREACHABLE_MESSAGE,
+  getClientErrorMessage,
+  isBackendUnreachableError,
+} from "@/framework/api-errors";
+import {
   extractLoginSession,
   extractMfaChallenge,
   isMfaRequiredResponse,
@@ -113,48 +118,62 @@ const TenantLoginPage = () => {
   const handleShowPassword = () => {
     setShowPassword((prev) => !prev);
   };
+
+  const completeOfflineLogin = (
+    token: string,
+    userData: Parameters<typeof setUser>[0]
+  ) => {
+    Cookies.set("auth_token", token, { expires: 1 });
+    Cookies.set("user", JSON.stringify(userData), { expires: 1 });
+    setUser(userData);
+    toast.success("Signed in offline using saved credentials.", {
+      toastId: "offline-login-success",
+    });
+    router.push("/dashboard");
+  };
+
+  const attemptOfflineLogin = async (
+    data: LoginProps
+  ): Promise<{ ok: true } | { ok: false; message: string }> => {
+    const offlineResult = await offlineAuthService.verifyCredentialsOffline(
+      data.email,
+      data.password
+    );
+    if (
+      offlineResult.success &&
+      offlineResult.token &&
+      offlineResult.userData
+    ) {
+      completeOfflineLogin(
+        offlineResult.token,
+        offlineResult.userData as Parameters<typeof setUser>[0]
+      );
+      return { ok: true };
+    }
+    return {
+      ok: false,
+      message:
+        offlineResult.error ||
+        "No saved credentials on this device. Sign in while online once to enable offline sign-in.",
+    };
+  };
   
   const handleFormSubmit = async (data: LoginProps) => {
     // Check if offline - try offline login first
     if (isOffline || !navigator.onLine) {
       try {
-        // Attempt offline login using cached credentials
-        const offlineResult = await offlineAuthService.verifyCredentialsOffline(
-          data.email,
-          data.password
-        );
-
-        if (offlineResult.success && offlineResult.token && offlineResult.userData) {
-          // Offline login successful
-          Cookies.set("auth_token", offlineResult.token, { expires: 1 });
-          Cookies.set("user", JSON.stringify(offlineResult.userData), { expires: 1 });
-          setUser(offlineResult.userData);
-          
-          toast.success("Offline login successful", { toastId: "offline-login-success" });
-          router.push("/dashboard");
-          return;
-        } else {
-          // No cached credentials or invalid
-          const errorMessage = offlineResult.error || 
-            "No offline credentials found. Please login while online first to enable offline login.";
-          toast.error(errorMessage, {
-            toastId: "offline-login-error",
-            autoClose: 5000,
-          });
-          
-          // Log for debugging
-          console.error('[OFFLINE LOGIN] Failed:', {
-            success: offlineResult.success,
-            hasToken: !!offlineResult.token,
-            hasUserData: !!offlineResult.userData,
-            error: offlineResult.error,
-          });
-          return;
-        }
-      } catch (error: any) {
-        toast.error("Offline login failed. Please check your credentials or login while online.", {
+        const offline = await attemptOfflineLogin(data);
+        if (offline.ok) return;
+        toast.error(offline.message, {
           toastId: "offline-login-error",
+          autoClose: 5000,
         });
+        return;
+      } catch {
+        toast.error(
+          "Offline sign-in failed. Check your credentials or try again when online.",
+          { toastId: "offline-login-error" }
+        );
         return;
       }
     }
@@ -259,36 +278,44 @@ const TenantLoginPage = () => {
           );
         }
       }
-    } catch (error: any) {
-      // Check if error is due to offline
-      if (!navigator.onLine || isOffline) {
-        // Try offline login as fallback
-        try {
-          const offlineResult = await offlineAuthService.verifyCredentialsOffline(
-            data.email,
-            data.password
-          );
+    } catch (error: unknown) {
+      const backendDown = isBackendUnreachableError(error);
+      const shouldTryOffline =
+        backendDown || !navigator.onLine || isOffline;
 
-          if (offlineResult.success && offlineResult.token && offlineResult.userData) {
-            Cookies.set("auth_token", offlineResult.token, { expires: 1 });
-            Cookies.set("user", JSON.stringify(offlineResult.userData), { expires: 1 });
-            setUser(offlineResult.userData);
-            
-            toast.success("Offline login successful", { toastId: "offline-login-success" });
-            router.push("/dashboard");
-            return;
-          }
-        } catch (offlineError) {
-          // Fall through to show error
+      if (shouldTryOffline) {
+        try {
+          const offline = await attemptOfflineLogin(data);
+          if (offline.ok) return;
+          toast.error(offline.message, {
+            toastId: "offline-login-error",
+            autoClose: 5000,
+          });
+          return;
+        } catch {
+          // fall through to generic message
         }
-        
-        toast.error("Login requires internet connection. Please check your network and try again.", {
-          toastId: "offline-login-error",
+      }
+
+      if (backendDown) {
+        toast.error(BACKEND_UNREACHABLE_MESSAGE, {
+          toastId: "backend-unreachable",
+          autoClose: 6000,
         });
-      } else {
-        toast.error(error?.response?.data?.error || "Login failed");
-        if (error?.status === 401) {
-          setErrMessage(error?.response?.data?.error);
+        return;
+      }
+
+      const err = error as {
+        response?: { data?: { error?: string }; status?: number };
+        status?: number;
+      };
+      toast.error(getClientErrorMessage(error, "Login failed"), {
+        toastId: "login-error",
+      });
+      if (err?.response?.status === 401 || err?.status === 401) {
+        const authErr = err?.response?.data?.error;
+        if (authErr && typeof authErr === "string") {
+          setErrMessage(authErr);
         }
       }
     }
