@@ -1,5 +1,7 @@
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import { isBackendUnreachableError } from "@/framework/api-errors";
 import { processRequestAuth } from "@/framework/https";
+import { resolveUnreachableGet } from "@/lib/offline/resolve-unreachable-get";
 import { toast } from "react-toastify";
 import useSWR from "swr";
 import {
@@ -66,89 +68,48 @@ const EMPTY_ORGANIZATION_USERS: OrganizationUser[] = [];
 
 export const authFectcher = async (url: string) => {
   try {
-    return await processRequestAuth("get", url);
-  } catch (error: any) {
-    // If request fails and we're offline or have network issues, try to get cached data
-    if (typeof window !== 'undefined') {
+    const result = await processRequestAuth("get", url);
+    if (result != null) {
+      return result;
+    }
+    const cached = await resolveUnreachableGet(url);
+    if (cached != null) {
+      return cached;
+    }
+    return null;
+  } catch (error: unknown) {
+    if (typeof window !== "undefined") {
+      const err = error as { response?: { status?: number }; message?: string };
       const isOffline = !navigator.onLine;
-      const statusCode = error?.response?.status;
-      const isNetworkError = error?.code === 'ERR_NETWORK' || 
-                            error?.message?.includes('Network') ||
-                            error?.message?.includes('timeout') ||
-                            statusCode >= 500;
-      // Also check for 401 (unauthorized) - might be temporary API issue, use cache if available
-      const isAuthError = statusCode === 401;
-      
-      if (isOffline || isNetworkError || isAuthError) {
-        try {
-          const { offlineService } = await import('@/lib/offline/offlineService');
-          // Parse URL to handle query parameters
-          let basePath = url;
-          let queryString = '';
-          
-          try {
-            // Try to parse as full URL
-            const urlObj = new URL(url.startsWith('http') ? url : `http://localhost${url.startsWith('/') ? url : `/${url}`}`);
-            basePath = urlObj.pathname;
-            queryString = urlObj.search;
-          } catch {
-            // If URL parsing fails, try to extract path and query manually
-            const queryIndex = url.indexOf('?');
-            if (queryIndex !== -1) {
-              basePath = url.substring(0, queryIndex);
-              queryString = url.substring(queryIndex);
-            } else {
-              basePath = url;
-            }
-          }
-          
-          // Try multiple cache key formats since endpoints might be stored differently
-          const cacheKeys = [
-            url, // Original URL
-            url.startsWith('/') ? url : `/${url}`, // With leading slash
-            basePath, // Base path without query
-            basePath.startsWith('/') ? basePath : `/${basePath}`, // Base path with leading slash
-            queryString ? `${basePath}${queryString}` : basePath, // Base path with query
-            url.replace(/^\/api/, ''), // Remove /api prefix if present
-            url.replace(/^\/api/, '').startsWith('/') ? url.replace(/^\/api/, '') : `/${url.replace(/^\/api/, '')}`, // Without /api and with slash
-          ];
-          
-          // Remove duplicates
-          const uniqueCacheKeys = [...new Set(cacheKeys)];
-          
-          for (const cacheKey of uniqueCacheKeys) {
-            const cachedData = await offlineService.getCachedResponse(cacheKey);
-            if (cachedData) {
-              console.log('✅ Using cached data for:', url, '(matched key:', cacheKey, ')');
-              // Suppress the error by returning cached data successfully
-              return cachedData;
-            }
-          }
-        } catch (cacheError) {
-          // Silently fail - no cached data available
-          console.warn('No cached data available for:', url, cacheError);
+      const isAuthError = err?.response?.status === 401;
+      const useCache =
+        isOffline || isAuthError || isBackendUnreachableError(error);
+
+      if (useCache) {
+        const cached = await resolveUnreachableGet(url);
+        if (cached != null) {
+          return cached;
         }
       }
-    }
-    
-    // If offline and error message indicates no cache, modify error message to be more user-friendly
-    if (typeof window !== 'undefined' && !navigator.onLine && error?.message?.includes('No cached data available')) {
-      const friendlyError = new Error('No cached data available. Please connect to the internet to load this page, or visit it while online to cache it for offline use.');
-      (friendlyError as any).isOfflineError = true;
-      throw friendlyError;
-    }
-    
-    // 401: session ended or invalid token — processRequestAuth redirects to login
-    if (error?.response?.status === 401 && typeof window !== 'undefined') {
-      return null;
-    }
-    // 5xx: avoid uncaught AxiosError in console if request still threw
-    if (
-      typeof error?.response?.status === 'number' &&
-      error.response.status >= 500 &&
-      error.response.status < 600
-    ) {
-      return null;
+
+      if (
+        isOffline &&
+        typeof err?.message === "string" &&
+        err.message.includes("No cached data available")
+      ) {
+        const friendlyError = new Error(
+          "No cached data available. Please connect to the internet to load this page, or visit it while online to cache it for offline use."
+        );
+        (friendlyError as { isOfflineError?: boolean }).isOfflineError = true;
+        throw friendlyError;
+      }
+
+      if (err?.response?.status === 401) {
+        return null;
+      }
+      if (isBackendUnreachableError(error)) {
+        return null;
+      }
     }
     throw error;
   }

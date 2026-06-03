@@ -3,6 +3,7 @@ import axios from "axios";
 import { getRefreshToken, getToken, isTokenExpiredOrExpiringSoon } from "./get-token";
 import Cookies from "js-cookie";
 import { API_ENDPOINTS } from "./api-endpoints";
+import { isBackendUnreachableError } from "./api-errors";
 
 let httpNoAuth: any;
 let refreshingToking = false;
@@ -167,19 +168,14 @@ const processRequestAuth = async (
 ) => {
   console.debug("request -> processDataRequest", path);
 
-  // Check offline status first (only in browser environment)
-  if (typeof window !== 'undefined') {
-    const { offlineService } = await import('@/lib/offline/offlineService');
-    const { offlineLogger } = await import('@/lib/offline/offlineLogger');
-    
-    // Always check online status before making requests
-    if (!offlineService.getOnlineStatus()) {
-      offlineLogger.info(`Intercepted ${method.toUpperCase()} request - routing to offline service`, { path });
-      // Use offline service for all requests when offline
-      return await offlineService.makeRequest(method, path, data);
-    }
-    // If online, continue with normal flow
-    offlineLogger.debug(`Processing ${method.toUpperCase()} request normally (online)`, { path });
+  // Navigator offline: skip network and use IndexedDB + queue (browser only)
+  if (typeof window !== "undefined" && !navigator.onLine) {
+    const { offlineService } = await import("@/lib/offline/offlineService");
+    const { offlineLogger } = await import("@/lib/offline/offlineLogger");
+    offlineLogger.info(`Intercepted ${method.toUpperCase()} request - navigator offline`, {
+      path,
+    });
+    return offlineService.makeRequest(method, path, data, { forceOffline: true });
   }
 
   let rt;
@@ -300,7 +296,23 @@ const processRequestAuth = async (
       return null;
     }
 
-    // Server errors: do not throw — avoids SWR/React uncaught AxiosError spam; UI can treat data as null
+    // API down while browser still "online" → queue + cache (same as offline mutations)
+    if (typeof window !== "undefined" && isBackendUnreachableError(error)) {
+      try {
+        const { offlineService } = await import("@/lib/offline/offlineService");
+        const { offlineLogger } = await import("@/lib/offline/offlineLogger");
+        offlineLogger.info(
+          `API unreachable in processRequestAuth - offline layer for ${method.toUpperCase()} ${path}`
+        );
+        return await offlineService.makeRequest(method, path, data, {
+          forceOffline: true,
+        });
+      } catch (offlineErr) {
+        console.warn("[API] Offline layer fallback failed:", path, offlineErr);
+      }
+    }
+
+    // Other server errors: do not throw — SWR can treat as null
     const isServerError =
       typeof statusCode === "number" && statusCode >= 500 && statusCode < 600;
     if (isServerError) {
@@ -499,11 +511,18 @@ export const convertToFormData = (data, files) => {
   return formData;
 };
 
+/**
+ * Try the live API when the browser is online; on backend_unreachable use
+ * IndexedDB cache (GET) and queue + optimistic list updates (writes).
+ */
+const processRequestOfflineAuth = processRequestAuth;
+
 export {
   httpAuth,
   httpNoAuth,
   refreshUser,
   processRequestAuth,
+  processRequestOfflineAuth,
   processRequestNoAuth,
 };
 

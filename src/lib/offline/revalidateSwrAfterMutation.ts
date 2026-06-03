@@ -13,8 +13,7 @@ export function revalidateListAfterMutation(
   res: unknown,
   revalidate: () => void | Promise<unknown>
 ): void {
-  // Never force SWR network revalidation while offline.
-  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  // Queued writes already merged into IndexedDB + SWR; skip redundant refetch.
   if (isOfflineQueuedResponse(res)) return;
   void revalidate();
 }

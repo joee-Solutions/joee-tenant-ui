@@ -1,6 +1,12 @@
 import { db, SyncQueueItem } from './database';
 import { offlineLogger } from './offlineLogger';
 import { swrMutateForOffline } from './swrMutateBridge';
+import { isBackendUnreachableError } from '@/framework/api-errors';
+
+export type OfflineMakeRequestOptions = {
+  /** Use IndexedDB + queue even when navigator.onLine is true (API down). */
+  forceOffline?: boolean;
+};
 
 export class OfflineService {
   private static instance: OfflineService;
@@ -47,69 +53,85 @@ export class OfflineService {
     return this.isOnline;
   }
 
-  // Intercept API calls and handle offline/online scenarios
-  async makeRequest(
+  /**
+   * IndexedDB cache + sync queue (no live API). Used when navigator is offline
+   * or when the browser is online but the API is unreachable.
+   */
+  private async executeOfflineLayer(
     method: 'get' | 'post' | 'put' | 'patch' | 'delete',
     endpoint: string,
     data?: any
   ): Promise<any> {
-    // Update online status before checking (only in browser)
+    if (method === 'get') {
+      const cached = await this.getCachedResponse(endpoint);
+      if (cached) {
+        return cached;
+      }
+      const empty = this.inferDefaultListCache(endpoint);
+      offlineLogger.warn(`Cache MISS for ${endpoint} - returning empty list shell`);
+      return empty;
+    }
+
+    offlineLogger.info(`Queuing ${method.toUpperCase()} action for sync when online`, {
+      endpoint,
+    });
+    const queueId = await this.queueAction(method, endpoint, data);
+    const optimisticResponse = await this.applyOfflineOptimisticUI(
+      method,
+      endpoint,
+      data,
+      queueId
+    );
+
+    if (optimisticResponse) {
+      return {
+        ...optimisticResponse,
+        status: true,
+        success: true,
+        _offline: true,
+        _queueId: queueId,
+      };
+    }
+
+    return {
+      status: true,
+      success: true,
+      message: 'Action queued for sync when online',
+      data,
+      _offline: true,
+      _queueId: queueId,
+    };
+  }
+
+  // Intercept API calls and handle offline/online scenarios
+  async makeRequest(
+    method: 'get' | 'post' | 'put' | 'patch' | 'delete',
+    endpoint: string,
+    data?: any,
+    options?: OfflineMakeRequestOptions
+  ): Promise<any> {
     if (typeof window !== 'undefined') {
       this.isOnline = navigator.onLine;
     }
-    
+
+    const forceOffline = options?.forceOffline === true;
+    const useOfflineLayer = forceOffline || !this.isOnline;
+
     offlineLogger.debug(`API Request: ${method.toUpperCase()} ${endpoint}`, {
       isOnline: this.isOnline,
+      forceOffline,
       hasData: !!data,
     });
-    
-    if (!this.isOnline) {
-      offlineLogger.info(`Device is OFFLINE - handling ${method.toUpperCase()} request for ${endpoint}`);
-      
-      // We're offline
-      if (method === 'get') {
-        // Try to get from cache
-        const cached = await this.getCachedResponse(endpoint);
-        if (cached) {
-          // Cache hit is already logged in getCachedResponse
-          return cached;
-        }
-        offlineLogger.warn(`Cache MISS for ${endpoint} - no cached data available`);
-        throw new Error('No cached data available and device is offline');
-      } else {
-        // Queue write operations (POST, PUT, PATCH, DELETE)
-        offlineLogger.info(`Queuing ${method.toUpperCase()} action for sync when online`, { endpoint });
-        const queueId = await this.queueAction(method, endpoint, data);
-        
-        // Merge IndexedDB + in-memory SWR data, update both so tables refresh without reload
-        const optimisticResponse = await this.applyOfflineOptimisticUI(method, endpoint, data, queueId);
-        
-        offlineLogger.info(`Optimistic update applied for ${method.toUpperCase()} ${endpoint}`);
-        
-        // Return optimistic response that matches expected format
-        // Components expect: { status: true, success: true, message: string, data?: any }
-        if (optimisticResponse) {
-          return {
-            ...optimisticResponse,
-            status: true,
-            success: true,
-            _offline: true,
-            _queueId: queueId
-          };
-        }
-        
-        // Fallback response format
-        return { 
-          status: true,
-          success: true, 
-          message: 'Action queued for sync when online',
-          data: data,
-          _offline: true,
-          _queueId: queueId
-        };
-      }
+
+    if (useOfflineLayer) {
+      offlineLogger.info(
+        forceOffline
+          ? `API unreachable - offline layer for ${method.toUpperCase()} ${endpoint}`
+          : `Device is OFFLINE - handling ${method.toUpperCase()} ${endpoint}`
+      );
+      return this.executeOfflineLayer(method, endpoint, data);
     }
-    
+
     offlineLogger.debug(`Device is ONLINE - making ${method.toUpperCase()} request for ${endpoint}`);
     
     // If we reach here, we're online - make the actual HTTP request
@@ -215,15 +237,18 @@ export class OfflineService {
       if (typeof window !== 'undefined') {
         this.isOnline = navigator.onLine;
       }
-      if (!this.isOnline && method === 'get') {
-        offlineLogger.info(`Went offline during request - trying cache for ${endpoint}`);
-        // Try cache as fallback
-        const cached = await this.getCachedResponse(endpoint);
-        if (cached) {
-          offlineLogger.info(`Cache fallback SUCCESS for ${endpoint}`);
-          return cached;
+      if (isBackendUnreachableError(error) || !this.isOnline) {
+        offlineLogger.info(
+          `Falling back to offline layer after failed ${method.toUpperCase()} ${endpoint}`
+        );
+        try {
+          return await this.executeOfflineLayer(method, endpoint, data);
+        } catch (offlineErr: any) {
+          offlineLogger.error('Offline layer fallback failed', {
+            endpoint,
+            error: offlineErr?.message,
+          });
         }
-        offlineLogger.warn(`Cache fallback FAILED for ${endpoint}`);
       }
       throw error;
     }
