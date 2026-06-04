@@ -287,12 +287,27 @@ const TenantLoginPage = () => {
         try {
           const offline = await attemptOfflineLogin(data);
           if (offline.ok) return;
-          toast.error(offline.message, {
-            toastId: "offline-login-error",
-            autoClose: 5000,
-          });
+          // API failed while browser is online — don't mask it with offline-only messaging
+          if (backendDown) {
+            toast.error(BACKEND_UNREACHABLE_MESSAGE, {
+              toastId: "backend-unreachable",
+              autoClose: 6000,
+            });
+          } else {
+            toast.error(offline.message, {
+              toastId: "offline-login-error",
+              autoClose: 5000,
+            });
+          }
           return;
         } catch {
+          if (backendDown) {
+            toast.error(BACKEND_UNREACHABLE_MESSAGE, {
+              toastId: "backend-unreachable",
+              autoClose: 6000,
+            });
+            return;
+          }
           // fall through to generic message
         }
       }

@@ -14,6 +14,10 @@ import {
   AgeGroup,
 } from "@/lib/types";
 import { extractData, extractMeta } from "@/framework/joee.client";
+import {
+  ageGroupsToDistribution,
+  getPatientAgeGroupColor,
+} from "@/utils/patientAgeGroups";
 
 // Define OrganizationUser interface based on actual API response
 export interface OrganizationUser {
@@ -553,42 +557,47 @@ export const useDashboardPatients = () => {
   );
   
   const rawData = extractNestedData(data);
-  const extractedData = extractData<DashboardPatientsData>(rawData);
-  
-  // Transform ageGroups object to ageDistribution array if needed
+  let extractedData = extractData<DashboardPatientsData>(rawData);
+
+  // Unwrap { status, data: { totalPatients, ageGroups } } from dashboard patients API
+  if (
+    extractedData &&
+    typeof extractedData === "object" &&
+    !Array.isArray(extractedData) &&
+    "data" in extractedData &&
+    typeof (extractedData as { data?: unknown }).data === "object"
+  ) {
+    extractedData = (extractedData as { data: DashboardPatientsData }).data;
+  }
+
   let transformedData: DashboardPatientsData | null = null;
-  
-  // Ensure extractedData is a single object, not an array
-  const dataObj = Array.isArray(extractedData) ? null : (extractedData as DashboardPatientsData);
-  
+  const dataObj = Array.isArray(extractedData)
+    ? null
+    : (extractedData as DashboardPatientsData);
+
   if (dataObj) {
-    transformedData = { ...dataObj };
-    
-    // If we have ageGroups object but no ageDistribution array, transform it
-    if (dataObj.ageGroups && !dataObj.ageDistribution) {
-      const ageGroupColors: { [key: string]: string } = {
-        "0-18": "#003465",
-        "19-25": "#FAD900",
-        "26-50": "#3FA907",
-        "50+": "#EC0909",
-      };
-      
-      const total = dataObj.totalPatients || 0;
-      const ageDistribution: AgeGroup[] = Object.entries(dataObj.ageGroups)
-        .sort(([a], [b]) => {
-          // Sort by age range: 0-18, 19-25, 26-50, 50+
-          const order = ["0-18", "19-25", "26-50", "50+"];
-          const indexA = order.indexOf(a);
-          const indexB = order.indexOf(b);
-          return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-        })
-        .map(([range, count]) => ({
-          range,
-          percentage: total > 0 ? Math.round((Number(count) / total) * 100) : 0,
-          color: ageGroupColors[range] || "#999999",
-        }));
-      
-      transformedData.ageDistribution = ageDistribution;
+    const totalPatients = Number(dataObj.totalPatients ?? 0);
+    const averageAge =
+      dataObj.averageAge != null ? Number(dataObj.averageAge) : undefined;
+
+    transformedData = {
+      totalPatients,
+      averageAge,
+      ageDistribution: dataObj.ageDistribution,
+      ageGroups: dataObj.ageGroups,
+    };
+
+    if (dataObj.ageGroups && !dataObj.ageDistribution?.length) {
+      transformedData.ageDistribution = ageGroupsToDistribution(
+        dataObj.ageGroups,
+        totalPatients
+      );
+    } else if (Array.isArray(dataObj.ageDistribution)) {
+      transformedData.ageDistribution = dataObj.ageDistribution.map((row) => ({
+        ...row,
+        count: row.count ?? 0,
+        color: row.color || getPatientAgeGroupColor(row.range),
+      }));
     }
   }
 

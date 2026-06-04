@@ -8,6 +8,7 @@ import PatientsDonut from "@/components/dashboard/PatientsDonut";
 import OrganizationList from "@/components/dashboard/OrganizationList";
 import OrganizationStatus from "@/components/dashboard/OrganizationStatus";
 import { colors } from "@/utils/dashboard";
+import { ageGroupsToDistribution } from "@/utils/patientAgeGroups";
 import { useDashboardAppointments, useDashboardPatients } from "@/hooks/swr";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { useDashboardData } from "@/hooks/swr";
@@ -35,6 +36,7 @@ type AgeGroup = {
   range: string;
   percentage: number;
   color: string;
+  count?: number;
 };
 
 type DashboardAppointmentsData = {
@@ -45,6 +47,7 @@ type DashboardAppointmentsData = {
 
 type DashboardPatientsData = {
   totalPatients: number;
+  averageAge?: number;
   ageDistribution: AgeGroup[];
 };
 
@@ -155,14 +158,23 @@ const DashboardPage: NextPage = () => {
     ],
   };
   const fallbackPatientsData: DashboardPatientsData = {
-    totalPatients: 1240,
-    ageDistribution: [
-      { range: "0-18", percentage: 18, color: "#003465" },
-      { range: "19-30", percentage: 32, color: "#FAD900" },
-      { range: "31-45", percentage: 24, color: "#3FA907" },
-      { range: "46-60", percentage: 16, color: "#EC0909" },
-      { range: "60+", percentage: 10, color: "#999999" },
-    ],
+    totalPatients: 16,
+    averageAge: 7,
+    ageDistribution: ageGroupsToDistribution(
+      {
+        "Under 1": 12,
+        "2-5": 0,
+        "6-10": 0,
+        "11-17": 1,
+        "18-25": 0,
+        "26-35": 2,
+        "36-45": 1,
+        "46-55": 0,
+        "56-65": 0,
+        "66+": 0,
+      },
+      16
+    ),
   };
   const appointmentsChartData: DashboardAppointmentsData =
     !errorAppointments &&
@@ -355,8 +367,8 @@ const DashboardPage: NextPage = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="flex flex-col space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 min-w-0">
+          <div className="flex flex-col space-y-4 min-w-0">
             {loadingAppointments ? (
               <SkeletonBox className="h-[300px] w-full" />
             ) : appointmentsChartData && !Array.isArray(appointmentsChartData) && appointmentsChartData.appointmentsByDay && appointmentsChartData.appointmentsByDay.length > 0 ? (
@@ -406,7 +418,7 @@ const DashboardPage: NextPage = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
           {loadingTenants ? (
             <SkeletonBox className="h-[300px] w-full" />
           ) : errorTenants && (!organizations || organizations.length === 0) ? (

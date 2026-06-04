@@ -36,6 +36,7 @@ export interface Organization {
     range: string;
     percentage: number;
     color: string;
+    count?: number;
   }
   
   export interface AppointmentData {
