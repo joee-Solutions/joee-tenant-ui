@@ -5,7 +5,7 @@ import { ToastContainer } from "react-toastify";
 import { TenantStoreProvider } from "@/contexts/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "Joee Solutions",
+  title: "LociCare",
   description: "Your health is our priority",
   icons: {
     icon: "/assets/logo/logo.png",
