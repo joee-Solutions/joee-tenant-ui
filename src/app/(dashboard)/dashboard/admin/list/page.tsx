@@ -33,6 +33,7 @@ import {
   runAuthMutation,
 } from "@/framework/mutation-request";
 import { resolveSuperAdminDeleteErrorMessage } from "@/framework/api-errors";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 // Mock table data structure - replace with actual data from API
 const adminTableData = [
@@ -102,7 +103,7 @@ export default function AdminListPage() {
       });
     }
 
-    // Sort
+    // Sort: user column choice, otherwise created date ascending
     if (sortBy) {
       filtered.sort((a: AdminUser, b: AdminUser) => {
         switch (sortBy) {
@@ -120,9 +121,10 @@ export default function AdminListPage() {
             return 0;
         }
       });
+      return filtered;
     }
-    
-    return filtered;
+
+    return sortByCreatedAtAsc(filtered);
   }, [normalizedAdmins, search, sortBy]);
 
   // Paginate filtered data

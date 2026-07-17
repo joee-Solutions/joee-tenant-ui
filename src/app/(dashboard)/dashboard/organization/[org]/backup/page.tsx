@@ -29,6 +29,7 @@ import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import ConfirmationModal from "@/components/shared/modals/ConfirmationModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 type BackupTab = "departments" | "employees" | "patients" | "appointments" | "schedule" | "medical_records";
 
@@ -102,27 +103,29 @@ export default function BackupPage() {
       data = Array.isArray(backupsData.results) ? backupsData.results : [];
     }
 
-    return data
-      .filter((backup: any) => !backup.deleted && !backup.isDeleted)
-      .map((backup: any) => {
-        const status = backup.status?.toUpperCase?.() ?? backup.status ?? "";
-        const filePath = backup.filePath ?? backup.originalLocation ?? backup.original_location ?? backup.location ?? "";
-        const tablesIncluded = backup.metadata?.tablesIncluded ?? backup.tablesIncluded;
-        return {
-          id: backup.id ?? backup.backupId,
-          date: backup.date ?? backup.createdAt ?? backup.created_at ?? "",
-          fileName: backup.filename ?? backup.fileName ?? backup.file_name ?? backup.name ?? backup.entityName ?? "—",
-          filePath: typeof filePath === "string" ? filePath : "",
-          backupCompletionTime: backup.updatedAt ?? backup.createdAt ?? backup.completedAt ?? backup.date ?? "",
-          fileSize: typeof backup.size === "number" ? backup.size : backup.fileSize ?? backup.file_size ?? 0,
-          status: status === "COMPLETED" ? "successful" : status === "FAILED" ? "failed" : (backup.success ? "successful" : "failed"),
-          backupType: backup.metadata?.backupType ?? backup.itemType ?? backup.item_type ?? "FULL",
-          tablesIncluded: Array.isArray(tablesIncluded) ? tablesIncluded : [],
-          entityType: backup.entityType ?? backup.entity_type ?? backup.type,
-          originalLocation: filePath,
-          itemType: backup.metadata?.backupType ?? backup.itemType ?? backup.item_type ?? "Backup",
-        };
-      });
+    return sortByCreatedAtAsc(
+      data
+        .filter((backup: any) => !backup.deleted && !backup.isDeleted)
+        .map((backup: any) => {
+          const status = backup.status?.toUpperCase?.() ?? backup.status ?? "";
+          const filePath = backup.filePath ?? backup.originalLocation ?? backup.original_location ?? backup.location ?? "";
+          const tablesIncluded = backup.metadata?.tablesIncluded ?? backup.tablesIncluded;
+          return {
+            id: backup.id ?? backup.backupId,
+            date: backup.date ?? backup.createdAt ?? backup.created_at ?? "",
+            fileName: backup.filename ?? backup.fileName ?? backup.file_name ?? backup.name ?? backup.entityName ?? "—",
+            filePath: typeof filePath === "string" ? filePath : "",
+            backupCompletionTime: backup.updatedAt ?? backup.createdAt ?? backup.completedAt ?? backup.date ?? "",
+            fileSize: typeof backup.size === "number" ? backup.size : backup.fileSize ?? backup.file_size ?? 0,
+            status: status === "COMPLETED" ? "successful" : status === "FAILED" ? "failed" : (backup.success ? "successful" : "failed"),
+            backupType: backup.metadata?.backupType ?? backup.itemType ?? backup.item_type ?? "FULL",
+            tablesIncluded: Array.isArray(tablesIncluded) ? tablesIncluded : [],
+            entityType: backup.entityType ?? backup.entity_type ?? backup.type,
+            originalLocation: filePath,
+            itemType: backup.metadata?.backupType ?? backup.itemType ?? backup.item_type ?? "Backup",
+          };
+        })
+    );
   }, [backupsData]);
 
   // Pagination

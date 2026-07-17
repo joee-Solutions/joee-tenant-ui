@@ -18,6 +18,7 @@ import { DateRange } from "react-day-picker";
 import DataTable from "@/components/shared/table/DataTable";
 import { ListView } from "@/components/shared/table/DataTableFilter";
 import Pagination from "@/components/shared/table/pagination";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { useAllPatientsData, useTenantPatientsData, usePatientAgeDistribution } from "@/hooks/swr";
 import { toast } from "react-toastify";
@@ -272,7 +273,7 @@ export default function EnhancedPatientsList({ organizationId }: EnhancedPatient
     window.print();
   };
 
-  const filteredPatients = patients ? filterPatients(patients) : [];
+  const filteredPatients = patients ? sortByCreatedAtAsc(filterPatients(patients)) : [];
 
   return (
     <div className="px-10 pt-[32px] pb-[56px] space-y-6">

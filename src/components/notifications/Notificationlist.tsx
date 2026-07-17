@@ -16,6 +16,7 @@ import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { toast } from "react-toastify";
 import { mutate } from "swr";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 export type TabType = "all" | "sent" | "received";
 const tabs: Record<TabType, string> = {
@@ -118,18 +119,20 @@ export default function NotificationList() {
     return true;
   });
   
-  // Filter notifications by search query
-  const filteredNotifications = tabFilteredNotifications.filter((notif: any) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      notif.title?.toLowerCase().includes(query) ||
-      notif.message?.toLowerCase().includes(query) ||
-      notif.sender?.toLowerCase().includes(query) ||
-      (notif.user?.first_name && `${notif.user.first_name} ${notif.user.last_name}`.toLowerCase().includes(query)) ||
-      notif.tenant?.name?.toLowerCase().includes(query)
-    );
-  });
+  // Filter notifications by search query, oldest created first
+  const filteredNotifications = sortByCreatedAtAsc(
+    tabFilteredNotifications.filter((notif: any) => {
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        notif.title?.toLowerCase().includes(query) ||
+        notif.message?.toLowerCase().includes(query) ||
+        notif.sender?.toLowerCase().includes(query) ||
+        (notif.user?.first_name && `${notif.user.first_name} ${notif.user.last_name}`.toLowerCase().includes(query)) ||
+        notif.tenant?.name?.toLowerCase().includes(query)
+      );
+    })
+  );
   
   const totalCount = filteredNotifications.length;
   

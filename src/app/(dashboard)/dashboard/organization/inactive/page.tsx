@@ -28,6 +28,7 @@ import { extractData } from "@/framework/joee.client";
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
 import {
   normalizeTenantsArray,
@@ -70,7 +71,7 @@ function PageContent() {
     Location: "domain",
     Status: "status",
   };
-  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : undefined;
+  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : "createdAt:asc";
   
   // Fetch inactive tenants directly from the inactive endpoint
   const { data: inactiveTenantsResponse, isLoading: tenantsLoading, error: tenantsError } = useSWR(
@@ -107,23 +108,25 @@ function PageContent() {
   const filteredTenantsData = useMemo(() => {
     if (!Array.isArray(tenantsData)) return [];
     const query = search.trim().toLowerCase();
-    if (!query) return tenantsData;
+    const filtered = !query
+      ? tenantsData
+      : tenantsData.filter((org: any) => {
+          const name = (org?.name || "").toString().toLowerCase();
+          const email = (org?.email || "").toString().toLowerCase();
+          const domain = (org?.domain || "").toString().toLowerCase();
+          const address = (org?.address || "").toString().toLowerCase();
+          const statusValue = (org?.status || "").toString().toLowerCase();
 
-    return tenantsData.filter((org: any) => {
-      const name = (org?.name || "").toString().toLowerCase();
-      const email = (org?.email || "").toString().toLowerCase();
-      const domain = (org?.domain || "").toString().toLowerCase();
-      const address = (org?.address || "").toString().toLowerCase();
-      const statusValue = (org?.status || "").toString().toLowerCase();
+          return (
+            name.includes(query) ||
+            email.includes(query) ||
+            domain.includes(query) ||
+            address.includes(query) ||
+            statusValue.includes(query)
+          );
+        });
 
-      return (
-        name.includes(query) ||
-        email.includes(query) ||
-        domain.includes(query) ||
-        address.includes(query) ||
-        statusValue.includes(query)
-      );
-    });
+    return sortByCreatedAtAsc(filtered);
   }, [tenantsData, search]);
 
   // Get meta from response

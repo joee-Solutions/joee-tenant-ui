@@ -23,6 +23,7 @@ import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { usePatientsPrescriptionReport } from "@/hooks/swr";
 import { toast } from "react-toastify";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 interface Prescription {
   id: number;
@@ -141,7 +142,7 @@ export default function EnhancedPrescriptionsList() {
   };
 
   const filteredPrescriptions = useMemo(
-    () => filterPrescriptions(prescriptionsData),
+    () => sortByCreatedAtAsc(filterPrescriptions(prescriptionsData)),
     [prescriptionsData, filters]
   );
 

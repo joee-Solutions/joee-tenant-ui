@@ -28,6 +28,7 @@ import Pagination from "@/components/shared/table/pagination";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -196,28 +197,30 @@ export default function Page({ slug }: { slug: string }) {
 
   /* ---------------- filtering ---------------- */
 
-  const filtered = appointments.filter((a: any) => {
-    if (search) {
-      const s = search.toLowerCase();
-      const patientName = `${a.patient?.first_name || ''} ${a.patient?.last_name || ''}`.toLowerCase();
-      const doctorName = `${a.user?.firstname || ''} ${a.user?.lastname || ''}`.toLowerCase();
-      const department = (a.user?.department?.name || '').toLowerCase();
-      const date = (a.date || '').toLowerCase();
-      const time = `${a.startTime || ''} - ${a.endTime || ''}`.toLowerCase();
-      
-      if (
-        !patientName.includes(s) &&
-        !doctorName.includes(s) &&
-        !department.includes(s) &&
-        !date.includes(s) &&
-        !time.includes(s)
-      ) {
-        return false;
+  const filtered = sortByCreatedAtAsc(
+    appointments.filter((a: any) => {
+      if (search) {
+        const s = search.toLowerCase();
+        const patientName = `${a.patient?.first_name || ''} ${a.patient?.last_name || ''}`.toLowerCase();
+        const doctorName = `${a.user?.firstname || ''} ${a.user?.lastname || ''}`.toLowerCase();
+        const department = (a.user?.department?.name || '').toLowerCase();
+        const date = (a.date || '').toLowerCase();
+        const time = `${a.startTime || ''} - ${a.endTime || ''}`.toLowerCase();
+
+        if (
+          !patientName.includes(s) &&
+          !doctorName.includes(s) &&
+          !department.includes(s) &&
+          !date.includes(s) &&
+          !time.includes(s)
+        ) {
+          return false;
+        }
       }
-    }
-    if (filterProvider && String(a.user?.id) !== filterProvider) return false;
-    return true;
-  });
+      if (filterProvider && String(a.user?.id) !== filterProvider) return false;
+      return true;
+    })
+  );
 
   /* ---------------- calendar mapping ---------------- */
 

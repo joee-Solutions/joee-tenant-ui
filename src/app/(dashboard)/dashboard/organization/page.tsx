@@ -38,6 +38,7 @@ import {
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import {
   normalizeTenantsArray,
   resolveTenantStatCount,
@@ -149,7 +150,7 @@ function PageContent() {
     Location: "domain",
     Status: "status",
   };
-  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : undefined;
+  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : "createdAt:asc";
   // Fetch all tenants (without status filter - we'll filter on frontend)
   const { data: allTenantsData, meta, isLoading: tenantsLoading, error: tenantsError } = useTenantsData({
     search,
@@ -207,15 +208,11 @@ function PageContent() {
     }
   }, [tenantsData]);
 
-  // Keep organizations ordered by creation date so edited items don't jump to the end
+  // Keep organizations ordered by creation date (ascending)
   const sortedTenantsData = useMemo(() => {
     const source = localTenants ?? tenantsData;
     if (!Array.isArray(source)) return [];
-    return [...source].sort((a: any, b: any) => {
-      const aDate = new Date(a?.created_at || a?.createdAt || "").getTime();
-      const bDate = new Date(b?.created_at || b?.createdAt || "").getTime();
-      return aDate - bDate;
-    });
+    return sortByCreatedAtAsc(source);
   }, [localTenants, tenantsData]);
 
   const prevFilters = useRef({ search, sortBy, status, pageSize });

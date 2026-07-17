@@ -31,6 +31,7 @@ import {
   runAuthMutation,
 } from "@/framework/mutation-request";
 import { resolveResourceDeleteErrorMessage } from "@/framework/api-errors";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 // Define Employee type
 interface Employee {
@@ -80,30 +81,28 @@ export default function Page({ slug }: { slug: string }) {
   );
 
   // Filter employees by search query on the frontend
-  const filteredEmployees = useMemo(() => {
+  const filteredEmployees = useMemo((): Employee[] => {
     if (!Array.isArray(data?.data)) return [];
-    
-    if (!search.trim()) {
-      // No search query - return all employees
-      return data.data;
-    }
-    
-    // Filter by search query (case-insensitive)
-    // Search in employee name, email, department, designation
-    const searchLower = search.toLowerCase().trim();
-    return data.data.filter((employee: Employee) => {
-      const fullName = `${employee?.firstname || ''} ${employee?.lastname || ''}`.toLowerCase();
-      const email = employee?.email?.toLowerCase() || '';
-      const department = typeof employee.department === 'string'
-        ? employee.department.toLowerCase()
-        : employee.department?.name?.toLowerCase() || '';
-      const designation = employee?.designation?.toLowerCase() || '';
-      
-      return fullName.includes(searchLower) ||
-             email.includes(searchLower) ||
-             department.includes(searchLower) ||
-             designation.includes(searchLower);
-    });
+
+    const list = (!search.trim()
+      ? data.data
+      : data.data.filter((employee: Employee) => {
+          const searchLower = search.toLowerCase().trim();
+          const fullName = `${employee?.firstname || ''} ${employee?.lastname || ''}`.toLowerCase();
+          const email = employee?.email?.toLowerCase() || '';
+          const department = typeof employee.department === 'string'
+            ? employee.department.toLowerCase()
+            : employee.department?.name?.toLowerCase() || '';
+          const designation = employee?.designation?.toLowerCase() || '';
+
+          return fullName.includes(searchLower) ||
+                 email.includes(searchLower) ||
+                 department.includes(searchLower) ||
+                 designation.includes(searchLower);
+        })
+    ) as Employee[];
+
+    return sortByCreatedAtAsc(list);
   }, [data?.data, search]);
 
   // Reset to page 1 when search changes

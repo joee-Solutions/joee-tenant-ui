@@ -28,6 +28,7 @@ import { extractData } from "@/framework/joee.client";
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
 import {
   normalizeTenantsArray,
@@ -91,7 +92,7 @@ function PageContent() {
     Location: "domain",
     Status: "status",
   };
-  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : undefined;
+  const mappedSort = sortBy && sortFieldMap[sortBy] ? `${sortFieldMap[sortBy]}:asc` : "createdAt:asc";
   
   // Fetch all tenants (without status filter - we'll filter on frontend)
   const { data: allTenantsData, meta, isLoading: tenantsLoading, error: tenantsError } = useTenantsData({
@@ -101,33 +102,34 @@ function PageContent() {
     limit: pageSize,
   });
 
-  // Filter organizations by status on the frontend
+  // Filter organizations by status on the frontend, oldest created first
   const tenantsData = useMemo(() => {
     if (!Array.isArray(allTenantsData)) return [];
-    
-    if (!status || status === "all" || status === "") {
-      // No filter - return all
-      return allTenantsData;
-    }
-    
-    // Filter by status (case-insensitive)
-    const statusLower = status.toLowerCase();
-    return allTenantsData.filter((org: any) => {
-      const statusFromField = (org?.status ?? "").toString().toLowerCase().trim();
-      const statusFromIsActive =
-        typeof org?.is_active === "boolean"
-          ? org.is_active
-            ? "active"
-            : "inactive"
-          : "";
-      const normalizedOrgStatus = statusFromField || statusFromIsActive || "";
-      const normalized =
-        normalizedOrgStatus === "deactivated" ? "inactive" : normalizedOrgStatus;
 
-      if (statusLower === "inactive") return normalized === "inactive";
-      if (statusLower === "active") return normalized === "active";
-      return normalized === statusLower;
-    });
+    let filtered: typeof allTenantsData;
+    if (!status || status === "all" || status === "") {
+      filtered = allTenantsData;
+    } else {
+      const statusLower = status.toLowerCase();
+      filtered = allTenantsData.filter((org: any) => {
+        const statusFromField = (org?.status ?? "").toString().toLowerCase().trim();
+        const statusFromIsActive =
+          typeof org?.is_active === "boolean"
+            ? org.is_active
+              ? "active"
+              : "inactive"
+            : "";
+        const normalizedOrgStatus = statusFromField || statusFromIsActive || "";
+        const normalized =
+          normalizedOrgStatus === "deactivated" ? "inactive" : normalizedOrgStatus;
+
+        if (statusLower === "inactive") return normalized === "inactive";
+        if (statusLower === "active") return normalized === "active";
+        return normalized === statusLower;
+      });
+    }
+
+    return sortByCreatedAtAsc(filtered);
   }, [allTenantsData, status]);
 
   // Read search query from URL params

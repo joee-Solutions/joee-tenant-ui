@@ -28,6 +28,7 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
@@ -213,21 +214,19 @@ export default function Page({ slug }: { slug: string }) {
 
 
   // Filter departments by search query on the frontend
-  const filteredDepartments = useMemo(() => {
+  const filteredDepartments = useMemo((): Department[] => {
     if (!Array.isArray(data?.data)) return [];
-    
-    if (!search.trim()) {
-      // No search query - return all departments
-      return data.data;
-    }
-    
-    // Filter by search query (case-insensitive)
-    // Search in department name
-    const searchLower = search.toLowerCase().trim();
-    return data.data.filter((dept: Department) => {
-      const deptName = dept?.name?.toLowerCase() || '';
-      return deptName.includes(searchLower);
-    });
+
+    const list = (!search.trim()
+      ? data.data
+      : data.data.filter((dept: Department) => {
+          const searchLower = search.toLowerCase().trim();
+          const deptName = dept?.name?.toLowerCase() || '';
+          return deptName.includes(searchLower);
+        })
+    ) as Department[];
+
+    return sortByCreatedAtAsc(list);
   }, [data?.data, search]);
 
   // Reset to page 1 when search changes

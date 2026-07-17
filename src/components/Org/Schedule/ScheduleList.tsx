@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/icons/Spinner";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
@@ -325,23 +326,24 @@ export default function Page({ slug }: { slug: string }) {
   const schedules = data?.data?.data || [];
   
   // Filter schedules based on search query
-  const filteredSchedules = Array.isArray(schedules)
-    ? schedules.filter((schedule: any) => {
-        if (!search.trim()) return true;
-        const searchLower = search.toLowerCase();
-        const employeeName = `${schedule.user?.firstname || ''} ${schedule.user?.lastname || ''}`.toLowerCase();
-        const department = (schedule.department || '').toLowerCase();
-        
-        // Check if any day matches
-        const dayMatch = schedule.availableDays?.some((day: any) => 
-          day.day?.toLowerCase().includes(searchLower)
-        );
-        
-        return employeeName.includes(searchLower) ||
-               department.includes(searchLower) ||
-               dayMatch;
-      })
-    : [];
+  const filteredSchedules = sortByCreatedAtAsc(
+    Array.isArray(schedules)
+      ? schedules.filter((schedule: any) => {
+          if (!search.trim()) return true;
+          const searchLower = search.toLowerCase();
+          const employeeName = `${schedule.user?.firstname || ''} ${schedule.user?.lastname || ''}`.toLowerCase();
+          const department = (schedule.department || '').toLowerCase();
+
+          const dayMatch = schedule.availableDays?.some((day: any) =>
+            day.day?.toLowerCase().includes(searchLower)
+          );
+
+          return employeeName.includes(searchLower) ||
+                 department.includes(searchLower) ||
+                 dayMatch;
+        })
+      : []
+  );
 
   // Flatten schedules for display – keep original schedule fields on the item
   const flattenedSchedules = filteredSchedules.flatMap((schedule: any) =>

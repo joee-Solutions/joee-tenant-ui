@@ -28,6 +28,7 @@ import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMut
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 // Helper function to validate and normalize image URLs
 function getValidImageSrc(imageSrc: string | undefined | null, fallback: any): string | any {
@@ -106,17 +107,19 @@ export default function PatientList({ org }: { org: string }) {
   );
 
   // Get patients array from multiple possible API response shapes
-  const patients = (() => {
-    if (!data) return [];
-    const d = data as any;
-    if (Array.isArray(d)) return d;
-    if (Array.isArray(d?.data)) return d.data;
-    if (Array.isArray(d?.data?.data)) return d.data.data;
-    if (Array.isArray(d?.data?.patients)) return d.data.patients;
-    if (Array.isArray(d?.patients)) return d.patients;
-    if (Array.isArray(d?.results)) return d.results;
-    return [];
-  })();
+  const patients: any[] = sortByCreatedAtAsc(
+    (() => {
+      if (!data) return [] as any[];
+      const d = data as any;
+      if (Array.isArray(d)) return d as any[];
+      if (Array.isArray(d?.data)) return d.data as any[];
+      if (Array.isArray(d?.data?.data)) return d.data.data as any[];
+      if (Array.isArray(d?.data?.patients)) return d.data.patients as any[];
+      if (Array.isArray(d?.patients)) return d.patients as any[];
+      if (Array.isArray(d?.results)) return d.results as any[];
+      return [] as any[];
+    })()
+  );
 
   // Pagination meta from multiple possible shapes
   const meta = (() => {

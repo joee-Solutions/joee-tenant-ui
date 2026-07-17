@@ -18,6 +18,7 @@ import { useAllUsersData, useTenantsData, useTenantUsersData, useTenantsUsersRep
 import { OrganizationUser } from "@/hooks/swr";
 import { toast } from "react-toastify";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 import { ChartWrapper } from "@/components/ui/chart-wrapper";
 
 interface UserStats {
@@ -202,7 +203,7 @@ export default function EnhancedUsersList({ organizationId }: EnhancedUsersListP
     window.print();
   };
 
-  const filteredUsers = users ? filterUsers(users as any[]) : [];
+  const filteredUsers = users ? sortByCreatedAtAsc(filterUsers(users as any[])) : [];
   const summaryTotalUsers = usersReportData?.totalUsers ?? stats.totalUsers;
   const summaryActiveUsers = usersReportData?.activeCount ?? stats.activeUsers;
   const summaryInactiveUsers = usersReportData?.inactiveCount ?? stats.inactiveUsers;

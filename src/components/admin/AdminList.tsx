@@ -14,6 +14,7 @@ import useSWR from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { authFectcher } from "@/hooks/swr";
 import { AdminUser } from "@/lib/types";
+import { sortByCreatedAtAsc } from "@/utils/sortByCreatedAt";
 
 export default function AdminList() {
   const [pageSize, setPageSize] = useState(10);
@@ -26,19 +27,19 @@ export default function AdminList() {
     authFectcher
   );
 
-  console.log('Admin users data:', adminUsers);
-
   // Filter admin users based on search term
-  const filteredAdmins = adminUsers?.filter((admin: AdminUser) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      admin.first_name?.toLowerCase().includes(searchLower) ||
-      admin.last_name?.toLowerCase().includes(searchLower) ||
-      admin.email?.toLowerCase().includes(searchLower) ||
-      admin.phone_number?.toLowerCase().includes(searchLower)
-    );
-  }) || [];
+  const filteredAdmins: AdminUser[] = sortByCreatedAtAsc(
+    ((adminUsers as AdminUser[] | undefined) ?? []).filter((admin: AdminUser) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        admin.first_name?.toLowerCase().includes(searchLower) ||
+        admin.last_name?.toLowerCase().includes(searchLower) ||
+        admin.email?.toLowerCase().includes(searchLower) ||
+        admin.phone_number?.toLowerCase().includes(searchLower)
+      );
+    })
+  );
 
   const handleSearch = (query: string) => {
     setSearchTerm(query);
