@@ -89,7 +89,7 @@ const SideNavigation = ({ isMobileMenuOpen, setIsMobileMenuOpen }: SideNavigatio
           className="w-16 h-16"
           priority
         />
-        <p>LociCare by Joee</p>
+        <p> LociCare by JOEE Solutions</p>
       </div>
       <div className="border-b border-white"></div>
       {sideNavigation.map((item, index) => (

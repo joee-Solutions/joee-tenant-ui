@@ -26,8 +26,15 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FieldBox from "../shared/form/FieldBox";
-import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
+import {
+  getClientErrorMessage,
+  isAccessDeniedAfterPartialCreate,
+} from "@/framework/api-errors";
+import {
+  isMutationSuccess,
+  runAuthMutation,
+} from "@/framework/mutation-request";
 import { Input } from "../ui/input";
 import { Spinner } from "../icons/Spinner";
 import { toast } from "react-toastify";
@@ -93,6 +100,15 @@ export default function AdminForm() {
     },
   });
 
+  const completeCreateSuccess = () => {
+    form.reset();
+    toast.success("Admin created successfully.", {
+      position: "top-right",
+      autoClose: 4000,
+    });
+    setSuccessOpen(true);
+  };
+
   const onSubmit = async (payload: AdminFormSchemaType) => {
     try {
       // Match API contract exactly: first_name, last_name, email, password, phone_number, address, role
@@ -105,97 +121,70 @@ export default function AdminForm() {
         address: payload.address ?? "",
         role: payload.role,
       };
-      const response = await processRequestAuth('post', API_ENDPOINTS.ADD_SUPER_ADMIN, body);
-      
-      // Check if admin creation was successful
-      // Handle both success response format and error response format
-      const hasError = response?.error || response?.validationErrors || (response?.statusCode && response.statusCode >= 400);
-      const isSuccess = (response?.success || response?.status) && !hasError;
-      
-      if (!isSuccess || hasError) {
-        // Extract error message from various possible locations
-        const errorMessage = response?.error || 
-                            response?.validationErrors || 
-                            response?.message || 
-                            "Failed to create admin";
+      const { response, error } = await runAuthMutation(
+        "post",
+        API_ENDPOINTS.ADD_SUPER_ADMIN,
+        body
+      );
 
-                            
-        // Check if it's a duplicate user error
-        const isDuplicateError = errorMessage.toLowerCase().includes("user already exists") || 
-                                 errorMessage.toLowerCase().includes("already exists") ||
-                                 errorMessage.toLowerCase().includes("duplicate");
-        
+      // Backend sometimes creates the user then returns 500 Access Denied on a side-effect.
+      if (isAccessDeniedAfterPartialCreate(error ?? response)) {
+        completeCreateSuccess();
+        return;
+      }
+
+      if (!isMutationSuccess(response, error)) {
+        const errorMessage = getClientErrorMessage(
+          error ?? response,
+          "Failed to create admin"
+        );
+
+        const isDuplicateError =
+          errorMessage.toLowerCase().includes("user already exists") ||
+          errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("duplicate");
+
         if (isDuplicateError) {
-          // Clear any previous errors first
           form.clearErrors();
-          // Set error on email field (will display in red text under the field)
           form.setError("email", {
             type: "manual",
             message: errorMessage,
           });
         } else {
-          // For other errors, show toast
           toast.error(errorMessage, {
             position: "top-right",
             autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
           });
         }
         return;
       }
 
-      form.reset();
-      toast.success("Admin created successfully.", {
-        position: "top-right",
-        autoClose: 4000,
-      });
-      setSuccessOpen(true);
-    } catch (error: any) {
+      completeCreateSuccess();
+    } catch (error: unknown) {
       console.error("Error creating admin:", error);
-      
-      // Extract error message from various possible locations in the error response
-      let errorMessage = "Failed to create admin";
-      
-      if (error?.response?.data) {
-        // Check for error in response.data
-        errorMessage = error.response.data.error || 
-                     error.response.data.validationErrors || 
-                     error.response.data.message || 
-                     errorMessage;
-      } else if (error?.error) {
-        // Direct error property
-        errorMessage = error.error;
-      } else if (error?.message) {
-        // Error message property
-        errorMessage = error.message;
+
+      if (isAccessDeniedAfterPartialCreate(error)) {
+        completeCreateSuccess();
+        return;
       }
-      
-      // Check if it's a duplicate user error
-      const isDuplicateError = errorMessage.toLowerCase().includes("user already exists") || 
-                               errorMessage.toLowerCase().includes("already exists") ||
-                               errorMessage.toLowerCase().includes("duplicate");
-      
+
+      const message = getClientErrorMessage(error, "Failed to create admin");
+      const isDuplicateError =
+        message.toLowerCase().includes("user already exists") ||
+        message.toLowerCase().includes("already exists") ||
+        message.toLowerCase().includes("duplicate");
+
       if (isDuplicateError) {
-        // Clear any previous errors first
         form.clearErrors();
-        // Set error on email field (will display in red text under the field)
         form.setError("email", {
           type: "manual",
-          message: errorMessage,
+          message,
         });
       } else {
-        // For other errors, show toast
-        toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+        toast.error(message, {
+          position: "top-right",
+          autoClose: 5000,
+        });
       }
     }
   };

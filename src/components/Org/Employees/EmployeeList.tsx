@@ -21,12 +21,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import EditEmployee from "./EditEmployee";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
+import {
+  isDeleteMutationSuccess,
+  runAuthMutation,
+} from "@/framework/mutation-request";
+import { resolveResourceDeleteErrorMessage } from "@/framework/api-errors";
 
 // Define Employee type
 interface Employee {
@@ -136,11 +140,19 @@ export default function Page({ slug }: { slug: string }) {
     if (!employeeToDelete) return;
     setDeletingId(employeeToDelete.id);
     try {
-      const res = await processRequestAuth(
+      const { response, error } = await runAuthMutation(
         "delete",
         API_ENDPOINTS.UPDATE_TENANT_EMPLOYEE(parseInt(slug), employeeToDelete.id)
       );
-      revalidateListAfterMutation(res, () => mutate());
+
+      if (!isDeleteMutationSuccess(response, error)) {
+        toast.error(
+          resolveResourceDeleteErrorMessage(error ?? response, "employee")
+        );
+        return;
+      }
+
+      revalidateListAfterMutation(response, () => mutate());
       setShowDeleteWarning(false);
       setEmployeeToDelete(null);
       triggerSuccess({
@@ -148,7 +160,7 @@ export default function Page({ slug }: { slug: string }) {
       });
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete employee");
+      toast.error(resolveResourceDeleteErrorMessage(error, "employee"));
     } finally {
       setDeletingId(null);
     }

@@ -25,11 +25,19 @@ import { Suspense } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { extractData } from "@/framework/joee.client";
-import { processRequestAuth } from "@/framework/https";
 import { toast } from "react-toastify";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import OrganizationSuccessModal from "@/components/shared/modals/OrganizationSuccessModal";
 import EditOrganizationModal from "@/components/Org/Organizations/EditOrganizationModal";
+import {
+  normalizeTenantsArray,
+  resolveTenantStatCount,
+} from "@/utils/tenantStats";
+import {
+  isDeleteMutationSuccess,
+  runAuthMutation,
+} from "@/framework/mutation-request";
+import { resolveOrgDeleteErrorMessage } from "@/framework/api-errors";
 
 function resolveOrgLogoSrc(logo: unknown): string | typeof orgPlaceholder {
   if (typeof logo !== "string") return orgPlaceholder;
@@ -195,10 +203,16 @@ function PageContent() {
     
     setUpdatingId(selectedOrg.id);
     try {
-      await processRequestAuth(
+      const { response, error } = await runAuthMutation(
         "delete",
         API_ENDPOINTS.EDIT_ORGANIZATION(String(selectedOrg.id))
       );
+
+      if (!isDeleteMutationSuccess(response, error)) {
+        toast.error(resolveOrgDeleteErrorMessage(error ?? response));
+        return;
+      }
+
       const removedName = selectedOrg.name || "Organization";
       toast.success("Organization deleted successfully");
       setDeleteModalOpen(false);
@@ -210,27 +224,27 @@ function PageContent() {
       );
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete organization");
+      toast.error(resolveOrgDeleteErrorMessage(error));
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // Fetch stat card data from separate endpoints (matching main dashboard)
+  // Fetch full lists for accurate counts (API default page size is often 10)
   const { data: allTenantsStatsData, isLoading: loadingAllTenants } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS,
+    `${API_ENDPOINTS.GET_ALL_TENANTS}?limit=1000`,
     authFectcher,
     { revalidateOnFocus: false }
   );
   
   const { data: activeTenantsStatsData, isLoading: loadingActiveTenants } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE,
+    `${API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE}?limit=1000`,
     authFectcher,
     { revalidateOnFocus: false }
   );
   
   const { data: inactiveTenantsStatsData, isLoading: loadingInactiveTenants } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE,
+    `${API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE}?limit=1000`,
     authFectcher,
     { revalidateOnFocus: false }
   );
@@ -239,34 +253,20 @@ function PageContent() {
   const allTenantsRaw: any = extractData<Tenant | Tenant[]>(allTenantsStatsData);
   const activeTenantsRaw: any = extractData<Tenant | Tenant[]>(activeTenantsStatsData);
   const inactiveTenantsRaw: any = extractData<Tenant | Tenant[]>(inactiveTenantsStatsData);
+
+  const allTenants = normalizeTenantsArray(allTenantsRaw);
+  const activeTenants = normalizeTenantsArray(activeTenantsRaw);
+  const inactiveTenants = normalizeTenantsArray(inactiveTenantsRaw);
   
-  // Helper function to normalize to array (handle nested arrays and single objects)
-  const normalizeToArray = (data: any): Tenant[] => {
-    if (!data) return [];
-    if (Array.isArray(data)) {
-      // Flatten if nested arrays exist
-      const flattened = data.flat();
-      // Ensure all items are Tenant objects (not arrays)
-      return flattened.filter((item): item is Tenant => 
-        item && typeof item === 'object' && 'id' in item && !Array.isArray(item)
-      );
-    }
-    // Single object
-    if (data && typeof data === 'object' && 'id' in data) {
-      return [data as Tenant];
-    }
-    return [];
-  };
-  
-  // Ensure we have arrays (handle both single object and array responses)
-  const allTenants = normalizeToArray(allTenantsRaw);
-  const activeTenants = normalizeToArray(activeTenantsRaw);
-  const inactiveTenants = normalizeToArray(inactiveTenantsRaw);
-  
-  // Calculate counts
-  const totalTenantsCount = allTenants.length;
-  const activeTenantsCount = activeTenants.length;
-  const inactiveTenantsCount = inactiveTenants.length;
+  const totalTenantsCount = resolveTenantStatCount(allTenantsStatsData, allTenants);
+  const activeTenantsCount = resolveTenantStatCount(
+    activeTenantsStatsData,
+    activeTenants
+  );
+  const inactiveTenantsCount = resolveTenantStatCount(
+    inactiveTenantsStatsData,
+    inactiveTenants
+  );
   
   const isLoadingStats = loadingAllTenants || loadingActiveTenants || loadingInactiveTenants;
   

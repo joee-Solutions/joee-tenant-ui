@@ -352,7 +352,7 @@ const TenantLoginPage = () => {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 gap-6 px-4 sm:px-8 lg:px-24 py-10 items-center justify-center font-poppins place-items-center">
       <div className="content col-span-1 text-white hidden md:flex flex-col justify-center space-y-8 w-full max-w-3xl">
-      <h1 className="header font-bold text-2xl md:text-3xl lg:text-4xl leading-tight">Welcome to LoCiCare!</h1>
+      <h1 className="header font-bold text-2xl md:text-3xl lg:text-4xl leading-tight">Welcome to LociCare!</h1>
         <div className="line border-2 border-white w-32 md:w-40"></div>
         <div className="line border-3 border-white"></div>
         <span className="welcom md:w-3/4 text-base md:text-lg leading-7 md:leading-8">

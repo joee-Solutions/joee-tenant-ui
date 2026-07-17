@@ -335,6 +335,39 @@ const processRequestAuth = async (
       return null;
     }
 
+    // DELETE 409: resource still linked / in use — UI shows a tailored toast; don't spam console.error
+    if (statusCode === 409 && method === "delete") {
+      console.warn(
+        "[API 409][DELETE]",
+        path,
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          "Resource still in use"
+      );
+      if (callback) callback(path, null, error);
+      else throw error;
+      return null;
+    }
+
+    // 4xx with callback (e.g. runAuthMutation): caller shows toast/field errors — don't console.error Axios spam
+    if (
+      callback &&
+      typeof statusCode === "number" &&
+      statusCode >= 400 &&
+      statusCode < 500
+    ) {
+      console.warn(
+        `[API ${statusCode}]`,
+        path,
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error?.response?.data?.validationErrors ||
+          error?.message
+      );
+      callback(path, null, error);
+      return null;
+    }
+
     console.error("API request error:", path, error);
     if (callback) {
       callback(path, null, error);

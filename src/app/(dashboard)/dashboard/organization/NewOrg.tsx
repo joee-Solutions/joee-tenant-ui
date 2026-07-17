@@ -103,7 +103,20 @@ function extractCreatedTenantId(res: unknown): number | null {
 }
 
 // Helper function to handle organization creation errors
-// Returns "PARTIAL_SUCCESS" if organization was created but admin email failed (should proceed with success)
+// Returns "PARTIAL_SUCCESS" if organization was created but a side-effect failed (should proceed with success)
+const isOrgCreatedDespiteSideEffect = (errorString: string): boolean => {
+  const s = errorString.toLowerCase();
+  return (
+    (s.includes("created") &&
+      (s.includes("welcome email") ||
+        s.includes("failed to send") ||
+        s.includes("send email") ||
+        s.includes("email failed"))) ||
+    s.includes("failed to send welcome email") ||
+    s.includes("uq_80e5f0171fb2f6ac7196005f30b")
+  );
+};
+
 const handleOrganizationError = (
   errorMessage: unknown,
   form: UseFormReturn<NewOrganizationSchemaType>
@@ -127,18 +140,24 @@ const handleOrganizationError = (
   const hasDuplicateEmailConstraint =
     errorString.includes("uq_5b5d9635409048b7144f5f23198") ||
     errorString.includes('duplicate key value violates unique constraint "uq_5b5d9635409048b7144f5f23198"');
-  
-  // Check for specific unique constraint violations using constraint IDs
-  // Admin email duplicate constraint: UQ_80e5f0171fb2f6ac7196005f30b
-  // Note: Admin email duplicates are allowed - organization is created but admin user creation fails
-  // We treat this as a warning, not an error, since the organization was successfully created
-  if (errorString.includes("uq_80e5f0171fb2f6ac7196005f30b")) {
-    // Don't set form error or block - just show a warning
-    // The organization was created successfully, admin email just couldn't be linked
-    toast.warning("Organization created successfully, but admin email already exists. The organization admin may need to be set manually.", {
-      toastId: "org-create-admin-warning",
-    });
-    // Return a special flag to indicate partial success
+
+  // Tenant was created; welcome email (or similar) failed — treat as success and return to table
+  if (isOrgCreatedDespiteSideEffect(errorString)) {
+    if (
+      errorString.includes("welcome email") ||
+      errorString.includes("failed to send") ||
+      errorString.includes("send email")
+    ) {
+      toast.warning(
+        "Organization created successfully, but the welcome email could not be sent.",
+        { toastId: "org-create-email-warning" }
+      );
+    } else {
+      toast.warning(
+        "Organization created successfully, but admin email already exists. The organization admin may need to be set manually.",
+        { toastId: "org-create-admin-warning" }
+      );
+    }
     return "PARTIAL_SUCCESS";
   }
   
@@ -183,7 +202,7 @@ const handleOrganizationError = (
   
   // Check for "Tenant already exists" - this is a general tenant duplicate error
   // This should be checked after specific constraint checks
-  if (errorString.includes("tenant") && (errorString.includes("already") || errorString.includes("exist"))) {
+  if (errorString.includes("tenant") && (errorString.includes("already") || errorString.includes("exist")) && !errorString.includes("created")) {
     // This could be domain, name, or email - check which field might be the issue
     // Since we can't determine which field, show a general message and let user know
     form.setError("domain", {
@@ -199,7 +218,7 @@ const handleOrganizationError = (
   // Check for duplicate organization email errors - ONLY if error specifically mentions email
   // Don't catch generic "duplicate" errors that might be about tenant/organization
   // Note: Admin email duplicates are allowed, so we skip admin email checks
-  if (errorString.includes("email") && (errorString.includes("already") || errorString.includes("exist") || errorString.includes("duplicate")) && !errorString.includes("admin")) {
+  if (errorString.includes("email") && (errorString.includes("already") || errorString.includes("exist") || errorString.includes("duplicate")) && !errorString.includes("admin") && !errorString.includes("welcome") && !errorString.includes("send")) {
     // Only set email error if error specifically mentions "email" and not "admin"
     form.setError("email", {
       type: "manual",
@@ -263,6 +282,23 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       domain: ""
     },
   });
+
+  const finishCreateAndGoToTable = () => {
+    globalMutate(
+      (key) =>
+        typeof key === "string" &&
+        (key.includes(API_ENDPOINTS.GET_ALL_TENANTS) ||
+          key.includes(API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE) ||
+          key.includes(API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE) ||
+          key.includes(API_ENDPOINTS.GET_DASHBOARD_DATA)),
+      undefined,
+      { revalidate: true }
+    );
+    toast.success("Organization created successfully!", {
+      toastId: "org-create-success",
+    });
+    setSuccessOpen(true);
+  };
 
   // Get selected country and state from form (stored as country/state names)
   const selectedCountryName = form.watch("country");
@@ -413,15 +449,47 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       
       // Check if response contains an error (even if status code suggests success)
       // Check for error field, statusCode >= 400, validationErrors, or constraint violations
-      const errorText = typeof res?.error === 'string' ? res.error : '';
-      const hasConstraintError = errorText.includes('duplicate key value violates unique constraint');
-      const hasError = res?.error || 
-                       res?.statusCode === 500 || 
-                       (res?.statusCode && res.statusCode >= 400) || 
-                       res?.validationErrors ||
-                       hasConstraintError ||
-                       !res;
-      
+      const errorText = typeof res?.error === "string" ? res.error : "";
+      const responseMessage = String(
+        res?.message || res?.error || hiddenErrorMessage || ""
+      );
+      const hasConstraintError = errorText.includes(
+        "duplicate key value violates unique constraint"
+      );
+      const hasError =
+        res?.error ||
+        res?.statusCode === 500 ||
+        (res?.statusCode && res.statusCode >= 400) ||
+        res?.validationErrors ||
+        hasConstraintError ||
+        !res;
+
+      // Org was created but welcome email (or similar) failed — continue to table
+      if (
+        isOrgCreatedDespiteSideEffect(responseMessage.toLowerCase()) ||
+        (hasError &&
+          isOrgCreatedDespiteSideEffect(
+            String(
+              res?.validationErrors ||
+                res?.error ||
+                res?.message ||
+                hiddenErrorMessage ||
+                ""
+            ).toLowerCase()
+          ))
+      ) {
+        const msg = (
+          res?.validationErrors ||
+          res?.error ||
+          res?.message ||
+          hiddenErrorMessage ||
+          responseMessage
+        );
+        handleOrganizationError(msg, form);
+        finishCreateAndGoToTable();
+        return;
+      }
+
       if (hasError) {
         const errorMessage =
           res?.validationErrors ||
@@ -430,21 +498,27 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
           hiddenErrorMessage ||
           "Unable to create organization.";
         const errorResult = handleOrganizationError(errorMessage, form);
-        
-        // If it's a partial success (org created but admin email failed), proceed with success flow
+
+        // If it's a partial success (org created but side-effect failed), proceed with success flow
         if (errorResult === "PARTIAL_SUCCESS") {
-          toast.success("Organization created successfully!", {
-            toastId: "org-create-success",
-          });
-          setSuccessOpen(true);
+          finishCreateAndGoToTable();
           return;
         }
-        
+
         return; // IMPORTANT: Return early to prevent success flow for real errors
       }
-      
+
       // Only proceed with success if we have explicit success indicators
       if (res?.status || res?.success) {
+        if (
+          isOrgCreatedDespiteSideEffect(responseMessage.toLowerCase())
+        ) {
+          toast.warning(
+            "Organization created successfully, but the welcome email could not be sent.",
+            { toastId: "org-create-email-warning" }
+          );
+        }
+
         if (deferLogoUpload) {
           const newId = extractCreatedTenantId(res);
           if (newId != null) {
@@ -487,26 +561,7 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
           }
         }
 
-        toast.success("Organization created successfully!", {
-          toastId: "org-create-success",
-        });
-
-        // Invalidate and revalidate SWR cache to update the table
-        globalMutate(
-          (key) => typeof key === "string" && key.includes(API_ENDPOINTS.GET_ALL_TENANTS),
-          undefined,
-          { revalidate: true }
-        );
-
-        // Also invalidate dashboard data to update stat cards
-        globalMutate(
-          (key) => typeof key === "string" && key.includes(API_ENDPOINTS.GET_DASHBOARD_DATA),
-          undefined,
-          { revalidate: true }
-        );
-
-        // Show success modal; navigation handled on Continue
-        setSuccessOpen(true);
+        finishCreateAndGoToTable();
       }
     } catch (error: any) {
       console.error("Error creating organization:", error);
@@ -530,30 +585,9 @@ export default function NewOrg({ setIsAddOrg }: NewOrgProps) {
       // Use the helper function to handle the error
       const errorResult = handleOrganizationError(errorMessage, form);
       
-      // If it's a partial success (org created but admin email failed), proceed with success flow
+      // If it's a partial success (org created but side-effect failed), proceed with success flow
       if (errorResult === "PARTIAL_SUCCESS") {
-        toast.success("Organization created successfully!", {
-          toastId: "org-create-success",
-        });
-        
-        // Invalidate and revalidate SWR cache to update the table
-        globalMutate(
-          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_ALL_TENANTS),
-          undefined,
-          { revalidate: true }
-        );
-        
-        // Also invalidate dashboard data to update stat cards
-        globalMutate(
-          (key) => typeof key === 'string' && key.includes(API_ENDPOINTS.GET_DASHBOARD_DATA),
-          undefined,
-          { revalidate: true }
-        );
-        
-        setTimeout(() => {
-          setIsAddOrg("none");
-          form.reset();
-        }, 1000);
+        finishCreateAndGoToTable();
         return;
       }
       

@@ -213,7 +213,8 @@ export default function BackupPage() {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return format(date, "dd/MM/yyyy");
+      // e.g. July 16, 2026
+      return format(date, "MMMM d, yyyy");
     } catch {
       return dateString;
     }

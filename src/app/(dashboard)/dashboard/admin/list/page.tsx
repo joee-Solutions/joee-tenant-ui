@@ -20,11 +20,19 @@ import {
 import EditAdminModal from "@/components/admin/EditAdminModal";
 import SuperAdminGuard from "@/components/admin/SuperAdminGuard";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
-import { processRequestAuth } from "@/framework/https";
 import { API_ENDPOINTS } from "@/framework/api-endpoints";
 import { useSWRConfig } from "swr";
 import { toast } from "react-toastify";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
+import {
+  isSuperAdminAccount,
+  SUPER_ADMIN_DELETE_MESSAGE,
+} from "@/utils/adminRoles";
+import {
+  isDeleteMutationSuccess,
+  runAuthMutation,
+} from "@/framework/mutation-request";
+import { resolveSuperAdminDeleteErrorMessage } from "@/framework/api-errors";
 
 // Mock table data structure - replace with actual data from API
 const adminTableData = [
@@ -142,12 +150,24 @@ export default function AdminListPage() {
   };
 
   const handleDeleteClick = (admin: AdminUser) => {
+    if (isSuperAdminAccount(admin)) {
+      toast.error(SUPER_ADMIN_DELETE_MESSAGE);
+      return;
+    }
     setAdminToDelete(admin);
     setDeleteModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!adminToDelete) return;
+
+    if (isSuperAdminAccount(adminToDelete)) {
+      toast.error(SUPER_ADMIN_DELETE_MESSAGE);
+      setDeleteModalOpen(false);
+      setAdminToDelete(null);
+      return;
+    }
+
     const userId =
       adminToDelete.user_id ??
       adminToDelete.userId ??
@@ -160,10 +180,15 @@ export default function AdminListPage() {
 
     setDeletingId(adminToDelete.id);
     try {
-      await processRequestAuth(
+      const { response, error } = await runAuthMutation(
         "delete",
         API_ENDPOINTS.DELETE_ADMIN(userIdNum)
       );
+
+      if (!isDeleteMutationSuccess(response, error)) {
+        toast.error(resolveSuperAdminDeleteErrorMessage(error ?? response));
+        return;
+      }
 
       setDeleteModalOpen(false);
       setAdminToDelete(null);
@@ -174,13 +199,8 @@ export default function AdminListPage() {
       triggerSuccess({
         message: "Admin deleted successfully.",
       });
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Failed to delete admin";
-      toast.error(message);
+    } catch (err: unknown) {
+      toast.error(resolveSuperAdminDeleteErrorMessage(err));
     } finally {
       setDeletingId(null);
     }

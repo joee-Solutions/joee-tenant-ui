@@ -9,6 +9,10 @@ import OrganizationList from "@/components/dashboard/OrganizationList";
 import OrganizationStatus from "@/components/dashboard/OrganizationStatus";
 import { colors } from "@/utils/dashboard";
 import { ageGroupsToDistribution } from "@/utils/patientAgeGroups";
+import {
+  normalizeTenantsArray,
+  resolveTenantStatCount,
+} from "@/utils/tenantStats";
 import { useDashboardAppointments, useDashboardPatients } from "@/hooks/swr";
 import { SkeletonBox } from "@/components/shared/loader/skeleton";
 import { useDashboardData } from "@/hooks/swr";
@@ -76,21 +80,21 @@ const isSyntaxError = (error: any): boolean => {
 };
 
 const DashboardPage: NextPage = () => {
-  // Fetch stat card data from separate endpoints
+  // Fetch full lists for accurate counts (API default page size is often 10)
   const { data: allTenantsData, isLoading: loadingAllTenants } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS,
+    `${API_ENDPOINTS.GET_ALL_TENANTS}?limit=1000`,
     authFectcher,
     { revalidateOnFocus: false }
   );
   
   const { data: activeTenantsData, isLoading: loadingActiveTenants } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE,
+    `${API_ENDPOINTS.GET_ALL_TENANTS_ACTIVE}?limit=1000`,
     authFectcher,
     { revalidateOnFocus: false }
   );
   
   const { data: inactiveTenantsData, isLoading: loadingInactiveTenants } = useSWR(
-    API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE,
+    `${API_ENDPOINTS.GET_ALL_TENANTS_INACTIVE}?limit=1000`,
     authFectcher,
     { revalidateOnFocus: false }
   );
@@ -99,34 +103,20 @@ const DashboardPage: NextPage = () => {
   const allTenantsRaw: any = extractData<Tenant | Tenant[]>(allTenantsData);
   const activeTenantsRaw: any = extractData<Tenant | Tenant[]>(activeTenantsData);
   const inactiveTenantsRaw: any = extractData<Tenant | Tenant[]>(inactiveTenantsData);
-  
-  // Helper function to normalize to array (handle nested arrays and single objects)
-  const normalizeToArray = (data: any): Tenant[] => {
-    if (!data) return [];
-    if (Array.isArray(data)) {
-      // Flatten if nested arrays exist
-      const flattened = data.flat();
-      // Ensure all items are Tenant objects (not arrays)
-      return flattened.filter((item): item is Tenant => 
-        item && typeof item === 'object' && 'id' in item && !Array.isArray(item)
-      );
-    }
-    // Single object
-    if (data && typeof data === 'object' && 'id' in data) {
-      return [data as Tenant];
-    }
-    return [];
-  };
-  
-  // Ensure we have arrays (handle both single object and array responses)
-  const allTenants = normalizeToArray(allTenantsRaw);
-  const activeTenants = normalizeToArray(activeTenantsRaw);
-  const inactiveTenants = normalizeToArray(inactiveTenantsRaw);
-  
-  // Calculate counts
-  const totalTenantsCount = allTenants.length;
-  const activeTenantsCount = activeTenants.length;
-  const inactiveTenantsCount = inactiveTenants.length;
+
+  const allTenants = normalizeTenantsArray(allTenantsRaw);
+  const activeTenants = normalizeTenantsArray(activeTenantsRaw);
+  const inactiveTenants = normalizeTenantsArray(inactiveTenantsRaw);
+
+  const totalTenantsCount = resolveTenantStatCount(allTenantsData, allTenants);
+  const activeTenantsCount = resolveTenantStatCount(
+    activeTenantsData,
+    activeTenants
+  );
+  const inactiveTenantsCount = resolveTenantStatCount(
+    inactiveTenantsData,
+    inactiveTenants
+  );
   
   const isLoadingStats = loadingAllTenants || loadingActiveTenants || loadingInactiveTenants;
   

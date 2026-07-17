@@ -32,6 +32,11 @@ import { Spinner } from "@/components/icons/Spinner";
 import DeleteWarningModal from "@/components/shared/modals/DeleteWarningModal";
 import { useCrudSuccessModal } from "@/hooks/useCrudSuccessModal";
 import { revalidateListAfterMutation } from "@/lib/offline/revalidateSwrAfterMutation";
+import {
+  isDeleteMutationSuccess,
+  runAuthMutation,
+} from "@/framework/mutation-request";
+import { resolveResourceDeleteErrorMessage } from "@/framework/api-errors";
 
 // Define Department type
 interface Department {
@@ -259,11 +264,19 @@ export default function Page({ slug }: { slug: string }) {
     if (!deptToDelete) return;
     setDeletingId(deptToDelete.id);
     try {
-      const res = await processRequestAuth(
+      const { response, error } = await runAuthMutation(
         "delete",
         `${API_ENDPOINTS.TENANTS_DEPARTMENTS(parseInt(slug))}/${deptToDelete.id}`
       );
-      revalidateListAfterMutation(res, () => mutate());
+
+      if (!isDeleteMutationSuccess(response, error)) {
+        toast.error(
+          resolveResourceDeleteErrorMessage(error ?? response, "department")
+        );
+        return;
+      }
+
+      revalidateListAfterMutation(response, () => mutate());
       setShowDeleteWarning(false);
       setDeptToDelete(null);
       triggerSuccess({
@@ -271,7 +284,7 @@ export default function Page({ slug }: { slug: string }) {
       });
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete department");
+      toast.error(resolveResourceDeleteErrorMessage(error, "department"));
     } finally {
       setDeletingId(null);
     }
