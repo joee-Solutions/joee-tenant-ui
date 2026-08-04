@@ -177,6 +177,8 @@ export default function AdminListPage() {
     const userIdNum = Number(userId);
     if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
       toast.error("Could not resolve user id for this admin.");
+      setDeleteModalOpen(false);
+      setAdminToDelete(null);
       return;
     }
 
@@ -192,8 +194,6 @@ export default function AdminListPage() {
         return;
       }
 
-      setDeleteModalOpen(false);
-      setAdminToDelete(null);
       globalMutate(
         (key) =>
           typeof key === "string" && key.includes(API_ENDPOINTS.GET_SUPER_ADMIN)
@@ -205,6 +205,8 @@ export default function AdminListPage() {
       toast.error(resolveSuperAdminDeleteErrorMessage(err));
     } finally {
       setDeletingId(null);
+      setDeleteModalOpen(false);
+      setAdminToDelete(null);
     }
   };
 

@@ -364,8 +364,6 @@ function PageContent() {
         setPage(page - 1);
       }
       
-      setDeleteModalOpen(false);
-      setSelectedOrg(null);
       setDeletedOrgName(removedName);
       setDeleteSuccessOpen(true);
 
@@ -379,6 +377,8 @@ function PageContent() {
       toast.error(resolveOrgDeleteErrorMessage(error));
     } finally {
       setUpdatingId(null);
+      setDeleteModalOpen(false);
+      setSelectedOrg(null);
     }
   };
 

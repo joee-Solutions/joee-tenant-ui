@@ -217,8 +217,6 @@ function PageContent() {
 
       const removedName = selectedOrg.name || "Organization";
       toast.success("Organization deleted successfully");
-      setDeleteModalOpen(false);
-      setSelectedOrg(null);
       setDeletedOrgName(removedName);
       setDeleteSuccessOpen(true);
       globalMutate(
@@ -229,6 +227,8 @@ function PageContent() {
       toast.error(resolveOrgDeleteErrorMessage(error));
     } finally {
       setUpdatingId(null);
+      setDeleteModalOpen(false);
+      setSelectedOrg(null);
     }
   };
 
