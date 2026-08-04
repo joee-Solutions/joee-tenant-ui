@@ -276,8 +276,6 @@ export default function Page({ slug }: { slug: string }) {
       }
 
       revalidateListAfterMutation(response, () => mutate());
-      setShowDeleteWarning(false);
-      setDeptToDelete(null);
       triggerSuccess({
         message: "Department deleted successfully.",
       });
@@ -286,6 +284,8 @@ export default function Page({ slug }: { slug: string }) {
       toast.error(resolveResourceDeleteErrorMessage(error, "department"));
     } finally {
       setDeletingId(null);
+      setShowDeleteWarning(false);
+      setDeptToDelete(null);
     }
   };
 

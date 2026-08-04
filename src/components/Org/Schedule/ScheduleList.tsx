@@ -390,23 +390,22 @@ export default function Page({ slug }: { slug: string }) {
       const employeeId = scheduleToDelete.user?.id || scheduleToDelete.userId || scheduleToDelete.employeeId;
       if (!employeeId) {
         toast.error("Employee ID not found");
-        setDeletingId(null);
         return;
       }
-      
+
       const res = await processRequestAuth(
         "delete",
         `${API_ENDPOINTS.TENANTS_SCHEDULES(parseInt(slug))}/${employeeId}`
       );
       triggerSuccess({ message: "Schedule deleted successfully." });
       revalidateListAfterMutation(res, () => mutate());
-      setShowDeleteWarning(false);
-      setScheduleToDelete(null);
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete schedule");
     } finally {
       setDeletingId(null);
+      setShowDeleteWarning(false);
+      setScheduleToDelete(null);
     }
   };
 

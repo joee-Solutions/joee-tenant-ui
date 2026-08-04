@@ -162,9 +162,6 @@ export default function NotificationList() {
         API_ENDPOINTS.DELETE_NOTIFICATION(notificationToDelete.id)
       );
 
-      setShowDeleteWarning(false);
-      setNotificationToDelete(null);
-
       // Refetch notifications from API to update the table
       mutateTabNotifications();
 
@@ -179,6 +176,8 @@ export default function NotificationList() {
       toast.error("Failed to delete notification");
     } finally {
       setDeletingId(null);
+      setShowDeleteWarning(false);
+      setNotificationToDelete(null);
     }
   };
 

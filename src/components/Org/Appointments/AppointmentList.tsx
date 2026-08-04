@@ -259,23 +259,25 @@ export default function Page({ slug }: { slug: string }) {
   const handleDeleteConfirm = async () => {
     if (!appointmentToDelete || (tenantIdForPath == null || tenantIdForPath === "")) {
       toast.error("Invalid appointment or organization ID");
+      setShowDeleteWarning(false);
+      setAppointmentToDelete(null);
       return;
     }
     setDeletingId(appointmentToDelete.id);
     try {
-    const res = await processRequestAuth(
-      "delete",
+      const res = await processRequestAuth(
+        "delete",
         `${API_ENDPOINTS.TENANTS_APPOINTMENTS(tenantIdForPath)}/${appointmentToDelete.id}`
-    );
+      );
       triggerSuccess({ message: "Appointment deleted successfully." });
-    revalidateListAfterMutation(res, () => mutate());
-      setShowDeleteWarning(false);
-      setAppointmentToDelete(null);
+      revalidateListAfterMutation(res, () => mutate());
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete appointment");
     } finally {
-    setDeletingId(null);
+      setDeletingId(null);
+      setShowDeleteWarning(false);
+      setAppointmentToDelete(null);
     }
   };
 

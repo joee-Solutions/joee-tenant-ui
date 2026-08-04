@@ -152,8 +152,6 @@ export default function Page({ slug }: { slug: string }) {
       }
 
       revalidateListAfterMutation(response, () => mutate());
-      setShowDeleteWarning(false);
-      setEmployeeToDelete(null);
       triggerSuccess({
         message: "Employee deleted successfully.",
       });
@@ -162,6 +160,8 @@ export default function Page({ slug }: { slug: string }) {
       toast.error(resolveResourceDeleteErrorMessage(error, "employee"));
     } finally {
       setDeletingId(null);
+      setShowDeleteWarning(false);
+      setEmployeeToDelete(null);
     }
   };
 

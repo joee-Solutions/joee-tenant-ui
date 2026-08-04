@@ -160,7 +160,6 @@ export default function TrainingGuidesPage() {
       );
       if (isTrainingGuideMutationSuccess(response, "delete")) {
         await mutate();
-        setDeletingGuide(null);
         triggerSuccess({
           title: "Success",
           message: "Training guide deleted successfully.",
@@ -179,6 +178,7 @@ export default function TrainingGuidesPage() {
       toast.error("Failed to delete file");
     } finally {
       setDeleteProcessing(false);
+      setDeletingGuide(null);
     }
   };
 

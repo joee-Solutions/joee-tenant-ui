@@ -141,6 +141,8 @@ export default function BackupPage() {
     if (!orgIdNumber) return;
     if (!isOnline) {
       toast.info("Restore is disabled while offline.");
+      setRestoreModalOpen(false);
+      setSelectedBackup(null);
       return;
     }
 
@@ -155,13 +157,13 @@ export default function BackupPage() {
         message: "Operation completed successfully.",
       });
       mutate();
-      setRestoreModalOpen(false);
-      setSelectedBackup(null);
     } catch (error: any) {
       console.error("Restore error:", error);
       toast.error(error?.response?.data?.message || "Failed to restore backup");
     } finally {
       setLoading(false);
+      setRestoreModalOpen(false);
+      setSelectedBackup(null);
     }
   };
 
@@ -195,21 +197,19 @@ export default function BackupPage() {
 
       toast.success("Backup deleted successfully");
       mutate();
-      setDeleteModalOpen(false);
-      setSelectedBackup(null);
     } catch (error: any) {
       console.error("Delete error:", error);
       if (error?.response?.status === 404) {
         // Treat missing backup as already deleted to keep UI consistent.
         toast.success("Backup removed");
         mutate();
-        setDeleteModalOpen(false);
-        setSelectedBackup(null);
       } else {
         toast.error(error?.response?.data?.message || "Failed to delete backup");
       }
     } finally {
       setLoading(false);
+      setDeleteModalOpen(false);
+      setSelectedBackup(null);
     }
   };
 
